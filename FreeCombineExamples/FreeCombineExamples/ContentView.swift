@@ -2,12 +2,11 @@
 //  ContentView.swift
 //  FreeCombineExamples
 //
-//  Created by Van Simmons on 8/27/22.
+//  Created by Van Simmons on 9/11/22.
 //
 
 import SwiftUI
 import FreeCombine
-import Atomics
 
 struct ContentView: View {
     var body: some View {
@@ -24,6 +23,5 @@ struct ContentView: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
-            .previewLayout(.sizeThatFits)
     }
 }

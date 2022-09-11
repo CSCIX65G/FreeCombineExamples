@@ -1,0 +1,78 @@
+//
+//  Resumption.swift
+//  UsingFreeCombine
+//
+//  Created by Van Simmons on 9/5/22.
+//
+@preconcurrency import Atomics
+
+public final class Resumption<Output: Sendable>: Sendable {
+    public enum Error: Swift.Error {
+        case leaked
+        case alreadyResumed
+    }
+
+    private let deallocGuard: ManagedAtomic<Bool>
+    private let continuation: UnsafeContinuation<Output, Swift.Error>
+
+    init(
+        continuation: UnsafeContinuation<Output, Swift.Error>
+    ) {
+        self.deallocGuard = ManagedAtomic<Bool>(false)
+        self.continuation = continuation
+    }
+
+    public var canDeallocate: Bool {
+        deallocGuard.load(ordering: .sequentiallyConsistent)
+    }
+
+    deinit {
+        guard canDeallocate else {
+            assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)")
+            continuation.resume(throwing: Error.leaked)
+            return
+        }
+    }
+
+    // Note this has a sideffect on first call and must be private
+    private var canResume: Bool {
+        let (success, _) = deallocGuard.compareExchange(
+            expected: false,
+            desired: true,
+            ordering: .sequentiallyConsistent
+        )
+        return success
+    }
+
+    public func resume(returning output: Output) {
+        guard canResume else {
+            preconditionFailure(
+                "\(type(of: Self.self)) FAILED. ALREADY RESUMED \(type(of: Self.self)):\(self)"
+            )
+        }
+        continuation.resume(returning: output)
+    }
+
+    public func resume(throwing error: Swift.Error) {
+        guard canResume else {
+            preconditionFailure(
+                "\(type(of: Self.self)) FAILED. ALREADY RESUMED \(type(of: Self.self)):\(self)"
+            )
+        }
+        continuation.resume(throwing: error)
+    }
+}
+
+extension Resumption where Output == Void {
+    public func resume() {
+        resume(returning: ())
+    }
+}
+
+public func withResumption<Output>(
+    _ resumingWith: (Resumption<Output>) -> Void
+) async throws -> Output {
+    try await withUnsafeThrowingContinuation { continuation in
+        resumingWith(.init(continuation: continuation))
+    }
+}
