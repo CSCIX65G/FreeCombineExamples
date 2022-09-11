@@ -65,8 +65,6 @@ func zipReduce<Left: Sendable, Right: Sendable>(
                 fatalError("Illegal state")
         }
     } catch {
-        state.rightCancellable?.cancel()
-        state.leftCancellable?.cancel()
         state.current = .errored(error)
         return .completion(.exit)
     }
@@ -85,15 +83,13 @@ func zipFinalize<Left: Sendable, Right: Sendable>(
     completion: Reducer<ZipState<Left, Right>, ZipState<Left, Right>.Action>.Completion
 ) async -> Void {
     state.rightCancellable?.cancel()
-    _ = await state.rightCancellable?.result
     state.leftCancellable?.cancel()
-    _ = await state.leftCancellable?.result
 }
 
 func extractZipState<Left: Sendable, Right: Sendable>(_ state: ZipState<Left, Right>) throws -> (Left, Right) {
     switch state.current {
         case .nothing, .hasLeft, .hasRight:
-            fatalError("Invalid ending fold state")
+            throw Future<(Left, Right)>.Error.cancelled
         case let .complete(leftValue, rightValue):
             return (leftValue, rightValue)
         case let .errored(error):
@@ -107,18 +103,25 @@ public func zip<Left, Right>(
 ) -> Future<(Left, Right)> {
     .init { resumption, downstream in .init {
         do {
-            let zipState = try await Channel<ZipState<Left, Right>.Action>(buffering: .bufferingOldest(2))
-                .fold(
-                    onStartup: resumption,
-                    into: .init(
-                        initializer: zipInitialize(left: left, right: right),
-                        reducer: zipReduce,
-                        disposer: zipDispose,
-                        finalizer: zipFinalize
-                    )
-                ).value
-            let value = try extractZipState(zipState)
-            return await downstream(.success(value))
+            let channel = Channel<ZipState<Left, Right>.Action>(buffering: .bufferingOldest(2))
+            try await withTaskCancellationHandler(
+                operation: {
+                    let zipState = try await channel.fold(
+                        onStartup: resumption,
+                        into: .init(
+                            initializer: zipInitialize(left: left, right: right),
+                            reducer: zipReduce,
+                            disposer: zipDispose,
+                            finalizer: zipFinalize
+                        )
+                    ).value
+                    let value = try extractZipState(zipState)
+                    return await downstream(.success(value))
+                },
+                onCancel: {
+                    channel.finish()
+                }
+            )
         } catch {
             return await downstream(.failure(error))
         }

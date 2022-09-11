@@ -95,7 +95,7 @@ extension Reducer {
     func dispose(
         channel: Channel<Action>,
         error: Swift.Error
-    ) async throws -> Void {
+    ) async -> Void {
         channel.finish()
         for await action in channel.stream {
             switch error {
@@ -121,11 +121,11 @@ extension Reducer {
             case .cancelled:
                 await self(&state, .cancel)
                 throw completion
-            case .completed:
-                await self(&state, .exit)
             case .internalError:
                 await self(&state, .failure(Error.internalError))
                 throw completion
+            case .completed:
+                await self(&state, .exit)
         }
     }
 

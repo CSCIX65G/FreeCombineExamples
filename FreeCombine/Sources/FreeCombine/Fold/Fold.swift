@@ -109,9 +109,11 @@ public final class Fold<State, Action: Sendable> {
 
 extension Fold {
     var future: Future<State> {
-        .init { resumption, downstream in .init {
-            await downstream(self.cancellable.result)
-        } }
+        .init { resumption, downstream in
+            .init {
+                await downstream(self.cancellable.result)
+            }
+        }
     }
 }
 
@@ -154,33 +156,35 @@ extension Fold {
             line: line,
             channel: channel,
             cancellable: .init(function: function, file: file, line: line) {
-                // provide the intial state
-                var state = await reducer.initialize(channel: channel)
-                onStartup.resume()
-                do {
-                    try await withTaskCancellationHandler(
-                        operation: {
-                            // This is the runloop for the Fold
-                            // Loop over the channel, reducing each action into state
-                            for await action in channel.stream {
-                                try await reducer.reduce(
-                                    state: &state,
-                                    action: action,
-                                    channel: channel
-                                )
-                            }
-                            // Finalize state given upstream finish
-                            await reducer.finalize(&state, .finished)
-                        },
-                        onCancel: channel.finish
-                    )
-                } catch {
-                    // Dispose of any pending actions since downstream has finished
-                    try await reducer.dispose(channel: channel, error: error)
-                    // Finalize the state given downstream finish
-                    try await reducer.finalize(state: &state, error: error)
-                }
-                return state
+                try await withTaskCancellationHandler(
+                    operation: {
+                        var state = await reducer.initialize(channel: channel)
+                        onStartup.resume()
+                        do {
+                            try await withTaskCancellationHandler(
+                                operation: {
+                                    for await action in channel.stream {
+                                        try await reducer.reduce(
+                                            state: &state,
+                                            action: action,
+                                            channel: channel
+                                        )
+                                    }
+                                    await reducer.finalize(&state, .finished)
+                                },
+                                onCancel: channel.finish
+                            )
+                        } catch {
+                            await reducer.dispose(channel: channel, error: error)
+                            try await reducer.finalize(state: &state, error: error)
+                        }
+                        return state
+
+                    },
+                    onCancel: {
+                        channel.finish()
+                    }
+                )
             }
         )
     }
