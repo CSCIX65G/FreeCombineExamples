@@ -45,9 +45,9 @@ extension Channel where Element == Void {
 
 extension Channel {
     public func fold<State>(
-        initialState: @escaping (Self) async -> State,
-        with fold: @escaping (inout State, Element) async -> Fold<State, Element>.Completion
+        onStartup: Resumption<Void>,
+        into reducer: Reducer<State, Element>
     ) -> Fold<State, Element> {
-        .init(initialState: initialState, channel: self, fold: fold)
+        .init(onStartup: onStartup, channel: self, reducer: reducer)
     }
 }

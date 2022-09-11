@@ -15,9 +15,19 @@ public final class Resumption<Output: Sendable>: Sendable {
     private let deallocGuard: ManagedAtomic<Bool>
     private let continuation: UnsafeContinuation<Output, Swift.Error>
 
+    public let function: StaticString
+    public let file: StaticString
+    public let line: UInt
+
     init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         continuation: UnsafeContinuation<Output, Swift.Error>
     ) {
+        self.function = function
+        self.file = file
+        self.line = line
         self.deallocGuard = ManagedAtomic<Bool>(false)
         self.continuation = continuation
     }
@@ -28,7 +38,9 @@ public final class Resumption<Output: Sendable>: Sendable {
 
     deinit {
         guard canDeallocate else {
-            assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)")
+            assertionFailure(
+                "ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
+            )
             continuation.resume(throwing: Error.leaked)
             return
         }
@@ -70,9 +82,19 @@ extension Resumption where Output == Void {
 }
 
 public func withResumption<Output>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ resumingWith: (Resumption<Output>) -> Void
 ) async throws -> Output {
     try await withUnsafeThrowingContinuation { continuation in
-        resumingWith(.init(continuation: continuation))
+        resumingWith(
+            .init(
+                function: function,
+                file: file,
+                line: line,
+                continuation: continuation
+            )
+        )
     }
 }

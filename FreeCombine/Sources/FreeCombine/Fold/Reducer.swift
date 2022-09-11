@@ -37,18 +37,25 @@ public struct Reducer<State, Action> {
         case cancelled
     }
 
+    let initializer: (Channel<Action>) async -> State
     let reducer: (inout State, Action) async throws -> Effect
     let disposer: (Action, Completion) async -> Void
     let finalizer: (inout State, Completion) async -> Void
 
     public init(
+        initializer: @escaping (Channel<Action>) async -> State,
         reducer: @escaping (inout State, Action) async throws -> Effect,
         disposer: @escaping (Action, Completion) async -> Void = { _, _ in },
         finalizer: @escaping (inout State, Completion) async -> Void = { _, _ in }
     ) {
+        self.initializer = initializer
         self.finalizer = finalizer
         self.disposer = disposer
         self.reducer = reducer
+    }
+
+    public func callAsFunction(_ channel: Channel<Action>) async -> State {
+        await initializer(channel)
     }
 
     public func callAsFunction(_ state: inout State, _ action: Action) async throws -> Effect {
@@ -65,6 +72,12 @@ public struct Reducer<State, Action> {
 }
 
 extension Reducer {
+    func initialize(
+        channel: Channel<Action>
+    ) async -> State {
+        await self(channel)
+    }
+
     func reduce(
         state: inout State,
         action: Action,

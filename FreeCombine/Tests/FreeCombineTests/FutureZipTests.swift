@@ -17,8 +17,8 @@ final class FutureZipTests: XCTestCase {
     func testZipStateInit() async throws {
         let left = Succeeded(13)
         let right = Succeeded("hello, world!")
-        let channel: Channel<ZipAction<Int, String>> = .init(buffering: .bufferingOldest(2))
-        let f = zipInitializer(left: left, right: right)
+        let channel: Channel<ZipState<Int, String>.Action> = .init(buffering: .bufferingOldest(2))
+        let f = zipInitialize(left: left, right: right)
         let state = await f(channel)
         _ = await state.leftCancellable?.result
         _ = await state.rightCancellable?.result

@@ -6,11 +6,6 @@
 //
 
 public struct Future<Output: Sendable>: Sendable {
-    public enum Error: Swift.Error, Sendable, CaseIterable {
-        case cancelled
-        case internalError
-    }
-
     private let call: @Sendable (
         Resumption<Void>,
         @escaping @Sendable (Result<Output, Swift.Error>) async -> Void
@@ -26,6 +21,13 @@ public struct Future<Output: Sendable>: Sendable {
     }
 }
 
+public extension Future {
+    enum Error: Swift.Error, Sendable, CaseIterable {
+        case cancelled
+        case internalError
+    }
+}
+
 extension Future {
     @discardableResult
     func callAsFunction(
@@ -34,7 +36,7 @@ extension Future {
     ) -> Cancellable<Void> {
         call(onStartup, { result in
             guard !Task.isCancelled else {
-                return await downstream(.failure(Future.Error.cancelled))
+                return await downstream(.failure(Error.cancelled))
             }
             return await downstream(result)
         } )

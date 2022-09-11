@@ -31,8 +31,7 @@ public final class Promise<Arg> {
         var localCancellable: Cancellable<Arg>!
         self.resumption = try! await withResumption { outer in
             localCancellable = .init {
-                do { return try await withResumption(outer.resume) }
-                catch { throw error }
+                try await withResumption(outer.resume)
             }
         }
         self.cancellable = localCancellable

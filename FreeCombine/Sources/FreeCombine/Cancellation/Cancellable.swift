@@ -14,19 +14,28 @@ public final class Cancellable<Output: Sendable>: Sendable {
     private let task: Task<Output, Swift.Error>
     private let deallocGuard: ManagedAtomic<Bool>
 
+    public let function: StaticString
+    public let file: StaticString
+    public let line: UInt
+
     public init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         operation: @escaping @Sendable () async throws -> Output
     ) {
+        self.function = function
+        self.file = file
+        self.line = line
         let atomic = ManagedAtomic<Bool>(false)
         self.deallocGuard = atomic
         self.task = .init {
             do {
                 let retValue = try await operation()
-                atomic.store(true, ordering: .sequentiallyConsistent)
                 guard !Task.isCancelled else { throw Error.cancelled }
+                atomic.store(true, ordering: .sequentiallyConsistent)
                 return retValue
-            }
-            catch {
+            } catch {
                 atomic.store(true, ordering: .sequentiallyConsistent)
                 throw error
             }
@@ -34,8 +43,14 @@ public final class Cancellable<Output: Sendable>: Sendable {
     }
 
     public init<Inner>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         operation: @escaping @Sendable () async throws -> Output
     ) where Output == Cancellable<Inner> {
+        self.function = function
+        self.file = file
+        self.line = line
         let atomic = ManagedAtomic<Bool>(false)
         self.deallocGuard = atomic
         self.task = .init {
@@ -47,8 +62,7 @@ public final class Cancellable<Output: Sendable>: Sendable {
                     throw Error.cancelled
                 }
                 return retValue
-            }
-            catch {
+            } catch {
                 atomic.store(true, ordering: .sequentiallyConsistent)
                 throw error
             }
@@ -74,7 +88,9 @@ public final class Cancellable<Output: Sendable>: Sendable {
 
     deinit {
         guard canDeallocate else {
-            assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self))")
+            assertionFailure(
+                "ABORTING DUE TO LEAKED \(type(of: Self.self)) CREATED in \(function) @ \(file): \(line)"
+            )
             task.cancel()
             return
         }
