@@ -45,21 +45,17 @@ func zipReduce<Left: Sendable, Right: Sendable>(
         switch (action, state.current) {
             case let (.left(leftResult), .nothing):
                 state.current = .hasLeft(try leftResult.get())
-                state.leftCancellable = .none
                 return .none
             case let (.right(rightResult), .nothing):
                 state.current = .hasRight(try rightResult.get())
-                state.rightCancellable = .none
                 return .none
             case let (.right(rightResult), .hasLeft(leftValue)):
                 let rightValue = try rightResult.get()
                 state.current = .complete(leftValue, rightValue)
-                state.rightCancellable = .none
                 return .completion(.exit)
             case let (.left(leftResult), .hasRight(rightValue)):
                 let leftValue = try leftResult.get()
                 state.current = .complete(leftValue, rightValue)
-                state.leftCancellable = .none
                 return .completion(.exit)
             default:
                 fatalError("Illegal state")
@@ -83,7 +79,9 @@ func zipFinalize<Left: Sendable, Right: Sendable>(
     completion: Reducer<ZipState<Left, Right>, ZipState<Left, Right>.Action>.Completion
 ) async -> Void {
     state.rightCancellable?.cancel()
+    state.rightCancellable = .none
     state.leftCancellable?.cancel()
+    state.leftCancellable = .none
 }
 
 func extractZipState<Left: Sendable, Right: Sendable>(_ state: ZipState<Left, Right>) throws -> (Left, Right) {

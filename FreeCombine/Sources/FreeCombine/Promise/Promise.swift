@@ -107,10 +107,10 @@ public extension Promise where Arg == Void {
 
 public extension Promise {
     var future: Future<Arg> {
-        get { .init { resumption, downstream in .init {
+        .init { resumption, downstream in .init {
             resumption.resume()
             await downstream(self.result)
-        } } }
+        } }
     }
 }
 
