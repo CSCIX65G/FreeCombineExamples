@@ -8,13 +8,12 @@
 
 public final class Uncancellable<Output: Sendable>: Sendable {
     private let task: Task<Output, Never>
-    private let deallocGuard: ManagedAtomic<Bool>
+    private let deallocGuard = ManagedAtomic<Bool>(false)
 
     public init(
         operation: @escaping @Sendable () async -> Output
     ) {
-        let atomic = ManagedAtomic<Bool>(false)
-        self.deallocGuard = atomic
+        let atomic = deallocGuard
         self.task = .init {
             let retValue = await operation()
             atomic.store(true, ordering: .sequentiallyConsistent)

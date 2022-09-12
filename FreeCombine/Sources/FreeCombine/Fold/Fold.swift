@@ -19,6 +19,10 @@
 //
 
 /*:
+ # Async let Problems
+
+ 1. Cannot be cancelled
+ 
  # Actor Problems
 
  1. no oneway funcs (i.e. they can’t be called from synchronous code)
@@ -36,7 +40,7 @@
  2. Haskell translation: ∀s in Rank-N types becomes a Task
  3. Use explicit queues to process events
 
- # StateTask Action Requirements:
+ # AsyncFold Action Requirements:
 
  1. Sendable funcs
  2. routable
@@ -47,8 +51,13 @@
  > Systems that rely on queues are often susceptible to queue-flooding, where the queue accepts more work than it can actually handle. This is typically solved by introducing "back-pressure": a queue stops accepting new work, and the systems that are trying to enqueue work there respond by themselves stopping accepting new work. Actor systems often subvert this because it is difficult at the scheduler level to refuse to add work to an actor's queue, since doing so can permanently destabilize the system by leaking resources or otherwise preventing operations from completing. Structured concurrency offers a limited, cooperative solution by allowing systems to communicate up the task hierarchy that they are coming under distress, potentially allowing parent tasks to stop or slow the creation of presumably-similar new work.
 
  FreeCombines addresses this differently by allowing backpressure and explicit disposal of queued items.
+
+ [Child Tasks](https://github.com/apple/swift-evolution/blob/main/proposals/0304-structured-concurrency.md#child-tasks)
+ > An asynchronous function can create a child task. Child tasks inherit some of the structure of their parent task, including its priority, but can run concurrently with it. However, this concurrency is bounded: a function that creates a child task must wait for it to end before returning. This structure means that functions can locally reason about all the work currently being done for the current task, anticipate the effects of cancelling the current task, and so on. It also makes creating the child task substantially more efficient.
+
+ This definition of structured concurrency is extremely limiting and precludes the monadic use of Task.
  */
-public final class Fold<State, Action: Sendable> {
+public final class AsyncFold<State, Action: Sendable> {
     let channel: Channel<Action>
     let cancellable: Cancellable<State>
 
@@ -107,7 +116,7 @@ public final class Fold<State, Action: Sendable> {
     }
 }
 
-extension Fold {
+extension AsyncFold {
     var future: Future<State> {
         .init { resumption, downstream in
             .init {
@@ -117,7 +126,7 @@ extension Fold {
     }
 }
 
-extension Fold {
+extension AsyncFold {
     private enum Error: Swift.Error {
         case completed
         case internalError
@@ -156,36 +165,46 @@ extension Fold {
             line: line,
             channel: channel,
             cancellable: .init(function: function, file: file, line: line) {
-                try await withTaskCancellationHandler(
-                    operation: {
-                        var state = await reducer.initialize(channel: channel)
-                        onStartup.resume()
-                        do {
-                            try await withTaskCancellationHandler(
-                                operation: {
-                                    for await action in channel.stream {
-                                        try await reducer.reduce(
-                                            state: &state,
-                                            action: action,
-                                            channel: channel
-                                        )
-                                    }
-                                    await reducer.finalize(&state, .finished)
-                                },
-                                onCancel: channel.finish
-                            )
-                        } catch {
-                            await reducer.dispose(channel: channel, error: error)
-                            try await reducer.finalize(state: &state, error: error)
-                        }
-                        return state
-
-                    },
-                    onCancel: {
-                        channel.finish()
-                    }
-                )
+                try await Self.cancellationHandler(onStartup: onStartup, channel: channel, reducer: reducer)
             }
         )
+    }
+
+    private static func cancellationHandler(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        onStartup: Resumption<Void>,
+        channel: Channel<Action>,
+        reducer: Reducer<State, Action>
+    ) async throws -> State {
+        return try await withTaskCancellationHandler(
+            operation: {
+                try await runloop(onStartup: onStartup, channel: channel, reducer: reducer)
+            },
+            onCancel: channel.finish
+        )
+    }
+
+    private static func runloop(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        onStartup: Resumption<Void>,
+        channel: Channel<Action>,
+        reducer: Reducer<State, Action>
+    ) async throws -> State {
+        var state = await reducer.initialize(channel: channel)
+        do {
+            onStartup.resume()
+            for await action in channel.stream {
+                try await reducer.reduce(state: &state, action: action)
+            }
+            await reducer.finalize(&state, .finished)
+        } catch {
+            await reducer.dispose(channel: channel, error: error)
+            try await reducer.finalize(state: &state, error: error)
+        }
+        return state
     }
 }

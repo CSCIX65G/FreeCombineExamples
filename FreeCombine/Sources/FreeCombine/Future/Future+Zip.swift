@@ -73,7 +73,6 @@ func zipDispose<Left: Sendable, Right: Sendable>(
 
 }
 
-//@escaping (inout State, Completion) async -> Void
 func zipFinalize<Left: Sendable, Right: Sendable>(
     state: inout ZipState<Left, Right>,
     completion: Reducer<ZipState<Left, Right>, ZipState<Left, Right>.Action>.Completion
@@ -104,17 +103,17 @@ public func zip<Left, Right>(
             let channel = Channel<ZipState<Left, Right>.Action>(buffering: .bufferingOldest(2))
             try await withTaskCancellationHandler(
                 operation: {
-                    let zipState = try await channel.fold(
-                        onStartup: resumption,
-                        into: .init(
-                            initializer: zipInitialize(left: left, right: right),
-                            reducer: zipReduce,
-                            disposer: zipDispose,
-                            finalizer: zipFinalize
-                        )
-                    ).value
-                    let value = try extractZipState(zipState)
-                    return await downstream(.success(value))
+                    try await downstream(.success(extractZipState(
+                        await channel.fold(
+                            onStartup: resumption,
+                            into: .init(
+                                initializer: zipInitialize(left: left, right: right),
+                                reducer: zipReduce,
+                                disposer: zipDispose,
+                                finalizer: zipFinalize
+                            )
+                        ).value
+                    )))
                 },
                 onCancel: {
                     channel.finish()

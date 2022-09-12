@@ -21,6 +21,7 @@
 		FB6322EA28CE4D9200890F7C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FB6322ED28CE4D9200890F7C /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		FB6322F828CE4FFE00890F7C /* FreeCombine */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FreeCombine; path = ../FreeCombine; sourceTree = "<group>"; };
+		FB6322FC28CFEEDD00890F7C /* Atomics.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; path = Atomics.playground; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,6 +39,7 @@
 		FB6322DA28CE4D9100890F7C = {
 			isa = PBXGroup;
 			children = (
+				FB6322FC28CFEEDD00890F7C /* Atomics.playground */,
 				FB6322E528CE4D9100890F7C /* FreeCombineExamples */,
 				FB6322F728CE4FFE00890F7C /* Packages */,
 				FB6322E428CE4D9100890F7C /* Products */,

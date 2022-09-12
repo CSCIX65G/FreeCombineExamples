@@ -47,7 +47,7 @@ extension Channel {
     public func fold<State>(
         onStartup: Resumption<Void>,
         into reducer: Reducer<State, Element>
-    ) -> Fold<State, Element> {
+    ) -> AsyncFold<State, Element> {
         .init(onStartup: onStartup, channel: self, reducer: reducer)
     }
 }

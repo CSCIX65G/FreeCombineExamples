@@ -12,7 +12,7 @@ public final class Resumption<Output: Sendable>: Sendable {
         case alreadyResumed
     }
 
-    private let deallocGuard: ManagedAtomic<Bool>
+    private let deallocGuard = ManagedAtomic<Bool>(false)
     private let continuation: UnsafeContinuation<Output, Swift.Error>
 
     public let function: StaticString
@@ -28,7 +28,6 @@ public final class Resumption<Output: Sendable>: Sendable {
         self.function = function
         self.file = file
         self.line = line
-        self.deallocGuard = ManagedAtomic<Bool>(false)
         self.continuation = continuation
     }
 

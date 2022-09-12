@@ -80,8 +80,7 @@ extension Reducer {
 
     func reduce(
         state: inout State,
-        action: Action,
-        channel: Channel<Action>
+        action: Action
     ) async throws -> Void {
         switch try await reducer(&state, action) {
             case .none: ()
