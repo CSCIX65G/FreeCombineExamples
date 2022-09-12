@@ -79,19 +79,11 @@ public final class AsyncFold<State, Action: Sendable> {
         self.cancellable = cancellable
     }
 
-    deinit {
-        guard canDeinit else {
-            assertionFailure(
-                "ABORTING DUE TO LEAKED \(type(of: Self.self))  CREATED in \(function) @ \(file): \(line)"
-            )
-            cancellable.cancel()
-            return
-        }
-    }
-
     public var isCancelled: Bool { @Sendable get { cancellable.isCancelled } }
-    public var isCompleting: Bool { @Sendable get { cancellable.isCompleting } }
-    public var canDeinit: Bool { @Sendable get { cancellable.isCompleting || cancellable.isCancelled } }
+    public var isCompleting: Bool {
+        @Sendable get async { await cancellable.isCompleting }
+    }
+//    private var canDeinit: Bool { @Sendable get { cancellable.isCompleting || cancellable.isCancelled } }
 
     public var value: State {
         get async throws { try await cancellable.value }
