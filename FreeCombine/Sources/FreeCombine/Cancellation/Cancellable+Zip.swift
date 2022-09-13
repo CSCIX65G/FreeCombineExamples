@@ -13,15 +13,22 @@ func zip<Left, Right>(
     _ right: Cancellable<Right>
 ) -> Cancellable<(Left, Right)> {
     .init {
-        var cancan: Cancellable<Cancellable<Void>>!
-        let result: Result<(Left, Right), Swift.Error> = try await withResumption { resumption in
-            cancan = Cancellable {
-                await zip(left.future, right.future).sink { result in
-                    resumption.resume(returning: result)
-                }
-            }
+        let p: Promise<(Left, Right)> = await .init()
+        let z: Cancellable<Void> = await zip(left.future, right.future).sink {
+            try? p.resolve($0)
         }
-        _ = await cancan.join().result
-        return try result.get()
+        return try await withTaskCancellationHandler(
+            operation: {
+                _ = await z.result
+                let result = await p.result
+                if Task.isCancelled {
+                    throw Cancellable<(Left, Right)>.Error.cancelled
+                }
+                return try result.get()
+            },
+            onCancel: {
+                z.cancel()
+            }
+        )
     }
 }

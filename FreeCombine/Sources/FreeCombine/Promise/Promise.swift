@@ -22,7 +22,7 @@ public final class Promise<Arg> {
     }
 
     private let atomic = ManagedAtomic<UInt8>(Status.waiting.rawValue)
-    public let resumption: Resumption<Arg>
+    private let resumption: Resumption<Arg>
     public let cancellable: Cancellable<Arg>
 
     public init() async {
@@ -80,16 +80,23 @@ public extension Promise {
         .init(rawValue: atomic.load(ordering: .sequentiallyConsistent))!
     }
 
+    func cancel() throws {
+        try set(status: .cancelled).resume(throwing: Cancellable<Arg>.Error.cancelled)
+    }
+
     var isCancelled: Bool {
         cancellable.isCancelled
     }
 
-    func succeed(_ arg: Arg) throws {
-        try set(status: .succeeded).resume(returning: arg)
+    func resolve(_ result: Result<Arg, Swift.Error>) throws {
+        switch result {
+            case let .success(arg): try succeed(arg)
+            case let .failure(error): try fail(error)
+        }
     }
 
-    func cancel() throws {
-        try set(status: .cancelled).resume(throwing: Cancellable<Arg>.Error.cancelled)
+    func succeed(_ arg: Arg) throws {
+        try set(status: .succeeded).resume(returning: arg)
     }
 
     func fail(_ error: Swift.Error) throws {
