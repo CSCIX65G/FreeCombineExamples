@@ -89,9 +89,9 @@ final class FutureSelectTests: XCTestCase {
                     XCTFail("Failed by succeeding")
                     return
                 }
-                let cancelError = error as? Future<Either<Int, String>>.Error
+                let cancelError = error as? Cancellable<Either<Int, String>>.Error
                 XCTAssertNotNil(cancelError, "Wrong error type")
-                XCTAssert(.some(cancelError) == .some(Future<Either<Int, String>>.Error.cancelled), "Incorrect failure")
+                XCTAssert(.some(cancelError) == .some(Cancellable<Either<Int, String>>.Error.cancelled), "Incorrect failure")
             }
         cancellable.cancel()
         _ = await expectation.result

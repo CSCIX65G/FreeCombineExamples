@@ -22,7 +22,7 @@
  # Async let Problems
 
  1. Cannot be cancelled
- 
+
  # Actor Problems
 
  1. no oneway funcs (i.e. they can’t be called from synchronous code)
@@ -105,20 +105,12 @@ public final class AsyncFold<State, Action: Sendable> {
 extension AsyncFold {
     var future: Future<State> {
         .init { resumption, downstream in
-            .init {
-                await downstream(self.cancellable.result)
-            }
+            .init { await downstream(self.cancellable.result) }
         }
     }
 }
 
 extension AsyncFold {
-    private enum Error: Swift.Error {
-        case completed
-        case internalError
-        case cancelled
-    }
-
     static func fold(
         function: StaticString = #function,
         file: StaticString = #file,

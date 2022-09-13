@@ -21,13 +21,6 @@ public struct Future<Output: Sendable>: Sendable {
     }
 }
 
-public extension Future {
-    enum Error: Swift.Error, Sendable, CaseIterable {
-        case cancelled
-        case internalError
-    }
-}
-
 extension Future {
     @discardableResult
     func callAsFunction(
@@ -36,7 +29,7 @@ extension Future {
     ) -> Cancellable<Void> {
         call(onStartup, { result in
             guard !Task.isCancelled else {
-                return await downstream(.failure(Error.cancelled))
+                return await downstream(.failure(Cancellable<Output>.Error.cancelled))
             }
             return await downstream(result)
         } )

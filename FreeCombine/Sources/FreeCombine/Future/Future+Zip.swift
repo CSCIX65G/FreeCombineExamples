@@ -41,7 +41,7 @@ func zipReduce<Left: Sendable, Right: Sendable>(
     _ action: ZipState<Left, Right>.Action
 ) async -> Reducer<ZipState<Left, Right>, ZipState<Left, Right>.Action>.Effect  {
     do {
-        guard !Task.isCancelled else { throw Future<(Left, Right)>.Error.cancelled }
+        guard !Task.isCancelled else { throw Cancellable<(Left, Right)>.Error.cancelled }
         switch (action, state.current) {
             case let (.left(leftResult), .nothing):
                 state.current = .hasLeft(try leftResult.get())
@@ -86,7 +86,7 @@ func zipFinalize<Left: Sendable, Right: Sendable>(
 func extractZipState<Left: Sendable, Right: Sendable>(_ state: ZipState<Left, Right>) throws -> (Left, Right) {
     switch state.current {
         case .nothing, .hasLeft, .hasRight:
-            throw Future<(Left, Right)>.Error.cancelled
+            throw Cancellable<(Left, Right)>.Error.cancelled
         case let .complete(leftValue, rightValue):
             return (leftValue, rightValue)
         case let .errored(error):

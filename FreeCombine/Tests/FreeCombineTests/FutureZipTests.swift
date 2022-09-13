@@ -71,9 +71,9 @@ final class FutureZipTests: XCTestCase {
                 XCTFail("Failed by succeeding")
                 return
             }
-            let cancelError = error as? Future<(Int, String)>.Error
+            let cancelError = error as? Cancellable<(Int, String)>.Error
             XCTAssertNotNil(cancelError, "Wrong error type")
-            XCTAssert(.some(cancelError) == .some(Future<(Int, String)>.Error.cancelled), "Incorrect failure")
+            XCTAssert(.some(cancelError) == .some(Cancellable<(Int, String)>.Error.cancelled), "Incorrect failure")
         }
         cancellable.cancel()
         _ = await expectation.result

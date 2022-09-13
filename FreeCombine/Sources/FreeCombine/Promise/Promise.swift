@@ -11,8 +11,6 @@ public final class Promise<Arg> {
         case alreadyCancelled
         case alreadyCompleted
         case alreadyFailed
-        case cancelled
-        case timedOut
         case internalInconsistency
     }
 
@@ -91,7 +89,7 @@ public extension Promise {
     }
 
     func cancel() throws {
-        try set(status: .cancelled).resume(throwing: Error.cancelled)
+        try set(status: .cancelled).resume(throwing: Cancellable<Arg>.Error.cancelled)
     }
 
     func fail(_ error: Swift.Error) throws {

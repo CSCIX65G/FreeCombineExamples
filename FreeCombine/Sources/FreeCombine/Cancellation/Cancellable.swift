@@ -7,7 +7,7 @@
 @preconcurrency import Atomics
 
 public final class Cancellable<Output: Sendable>: Sendable {
-    public enum Error: Swift.Error {
+    public enum Error: Swift.Error, Sendable {
         case cancelled
         case internalError
     }
