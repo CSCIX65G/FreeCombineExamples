@@ -8,7 +8,7 @@
 // This is stupid and done bc playgrounds can't do atomics
 import Atomics
 
-final class AtomicBool: Sendable {
+final class AtomicBool {
     actor Actor {
         weak var owner: AtomicBool?
         init(owner: AtomicBool?) {

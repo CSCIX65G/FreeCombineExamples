@@ -1,5 +1,5 @@
 //
-//  StateTask.swift
+//  AsyncFold.swift
 //
 //  Created by Van Simmons on 2/17/22.
 //
@@ -79,12 +79,6 @@ public final class AsyncFold<State, Action: Sendable> {
         self.cancellable = cancellable
     }
 
-    public var isCancelled: Bool { @Sendable get { cancellable.isCancelled } }
-    public var isCompleting: Bool {
-        @Sendable get async { await cancellable.isCompleting }
-    }
-//    private var canDeinit: Bool { @Sendable get { cancellable.isCompleting || cancellable.isCancelled } }
-
     public var value: State {
         get async throws { try await cancellable.value }
     }
@@ -157,7 +151,11 @@ extension AsyncFold {
             line: line,
             channel: channel,
             cancellable: .init(function: function, file: file, line: line) {
-                try await Self.cancellationHandler(onStartup: onStartup, channel: channel, reducer: reducer)
+                try await Self.cancellationHandler(
+                    onStartup: onStartup,
+                    channel: channel,
+                    reducer: reducer
+                )
             }
         )
     }

@@ -12,7 +12,7 @@ public final class Cancellable<Output: Sendable>: Sendable {
         case internalError
     }
     private let task: Task<Output, Swift.Error>
-    private let deallocGuard: ManagedAtomic<Bool>
+    private let deallocGuard = ManagedAtomic<Bool>(false)
 
     public let function: StaticString
     public let file: StaticString
@@ -27,8 +27,7 @@ public final class Cancellable<Output: Sendable>: Sendable {
         self.function = function
         self.file = file
         self.line = line
-        let atomic = ManagedAtomic<Bool>(false)
-        self.deallocGuard = atomic
+        let atomic = deallocGuard
         self.task = .init {
             do {
                 let retValue = try await operation()
@@ -51,8 +50,7 @@ public final class Cancellable<Output: Sendable>: Sendable {
         self.function = function
         self.file = file
         self.line = line
-        let atomic = ManagedAtomic<Bool>(false)
-        self.deallocGuard = atomic
+        let atomic = deallocGuard
         self.task = .init {
             do {
                 let retValue = try await operation()
