@@ -97,8 +97,8 @@ public final class AsyncFold<State, Action: Sendable> {
         channel.finish()
     }
 
-    @Sendable func cancel() {
-        cancellable.cancel()
+    @Sendable func cancel() throws {
+        try cancellable.cancel()
     }
 }
 
@@ -143,28 +143,13 @@ extension AsyncFold {
             line: line,
             channel: channel,
             cancellable: .init(function: function, file: file, line: line) {
-                try await Self.cancellationHandler(
-                    onStartup: onStartup,
-                    channel: channel,
-                    reducer: reducer
+                try await withTaskCancellationHandler(
+                    operation: {
+                        try await Self.runloop(onStartup: onStartup, channel: channel, reducer: reducer)
+                    },
+                    onCancel: channel.finish
                 )
             }
-        )
-    }
-
-    private static func cancellationHandler(
-        function: StaticString = #function,
-        file: StaticString = #file,
-        line: UInt = #line,
-        onStartup: Resumption<Void>,
-        channel: Channel<Action>,
-        reducer: Reducer<State, Action>
-    ) async throws -> State {
-        return try await withTaskCancellationHandler(
-            operation: {
-                try await runloop(onStartup: onStartup, channel: channel, reducer: reducer)
-            },
-            onCancel: channel.finish
         )
     }
 

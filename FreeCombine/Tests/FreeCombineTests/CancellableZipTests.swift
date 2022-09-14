@@ -73,14 +73,14 @@ final class CancellableZipTests: XCTestCase {
                 case .success:
                     XCTFail("Should not have received value")
                 case let .failure(error):
-                    guard error is Cancellable<(Int, String)>.Error else {
+                    guard error is Cancellables.Error else {
                         XCTFail("received incorrect error: \(error)")
                         return
                     }
             }
         }
 
-        zipped.cancel()
+        try zipped.cancel()
         _ = await zipped.result
         _ = await c.result
         try? leftPromise.cancel()

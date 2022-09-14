@@ -29,7 +29,7 @@ extension Future {
     ) -> Cancellable<Void> {
         call(onStartup, { result in
             guard !Task.isCancelled else {
-                return await downstream(.failure(Cancellable<Output>.Error.cancelled))
+                return await downstream(.failure(Cancellables.Error.cancelled))
             }
             return await downstream(result)
         } )

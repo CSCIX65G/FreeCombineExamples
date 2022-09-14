@@ -129,6 +129,6 @@ extension Reducer {
     }
 
     func finalize(_ state: inout State, _ completion: Completion) async -> Void {
-        await finalizer(&state, completion)
+        await self(&state, completion)
     }
 }

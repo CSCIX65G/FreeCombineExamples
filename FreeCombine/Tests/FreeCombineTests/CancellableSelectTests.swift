@@ -69,16 +69,18 @@ final class CancellableSelectTests: XCTestCase {
         let selected = select(promise1.cancellable, promise2.cancellable)
         let cancellable: Cancellable<Void> = .init {
             let result = await selected.result
-            try? expectation.succeed()
+            try! expectation.succeed()
             guard case let .failure(error) = result else {
                 XCTFail("Failed by succeeding")
                 return
             }
-            let cancelError = error as? Cancellable<Either<Int, String>>.Error
-            XCTAssertNotNil(cancelError, "Wrong error type")
-            XCTAssert(.some(cancelError) == .some(Cancellable<Either<Int, String>>.Error.cancelled), "Incorrect failure")
+            guard let cancelError = error as? Cancellables.Error else {
+                XCTFail("Wrong error type in error: \(error)")
+                return
+            }
+            XCTAssert(.some(cancelError) == .some(Cancellables.Error.cancelled), "Incorrect failure: \(cancelError)")
         }
-        selected.cancel()
+        try selected.cancel()
         _ = await expectation.result
         _ = await cancellable.result
 

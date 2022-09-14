@@ -22,12 +22,12 @@ func zip<Left, Right>(
                 _ = await z.result
                 let result = await p.result
                 if Task.isCancelled {
-                    throw Cancellable<(Left, Right)>.Error.cancelled
+                    throw Cancellables.Error.cancelled
                 }
                 return try result.get()
             },
             onCancel: {
-                z.cancel()
+                try? z.cancel()
             }
         )
     }

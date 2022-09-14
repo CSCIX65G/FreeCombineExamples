@@ -18,12 +18,12 @@ func select<Left, Right>(
                 _ = await s.result
                 let result = await p.result
                 if Task.isCancelled {
-                    throw Cancellable<Either<Left, Right>>.Error.cancelled
+                    throw Cancellables.Error.cancelled
                 }
                 return try result.get()
             },
             onCancel: {
-                s.cancel()
+                try? s.cancel()
             }
         )
     }

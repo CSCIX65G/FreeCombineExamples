@@ -81,7 +81,7 @@ public extension Promise {
     }
 
     func cancel() throws {
-        try set(status: .cancelled).resume(throwing: Cancellable<Arg>.Error.cancelled)
+        try set(status: .cancelled).resume(throwing: Cancellables.Error.cancelled)
     }
 
     var isCancelled: Bool {

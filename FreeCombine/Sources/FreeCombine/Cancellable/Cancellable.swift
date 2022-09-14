@@ -6,13 +6,57 @@
 //
 @preconcurrency import Atomics
 
-public final class Cancellable<Output: Sendable>: Sendable {
+public enum Cancellables {
     public enum Error: Swift.Error, Sendable {
         case cancelled
-        case internalError
+        case alreadyCompleted
+        case alreadyCancelled
+        case alreadyFailed
+        case internalInconsistency
     }
+
+    public enum Status: UInt8, Sendable, RawRepresentable, Equatable {
+        case running
+        case finished
+        case cancelled
+        case failed
+
+        static func get(
+            atomic: ManagedAtomic<UInt8>
+        ) -> Status {
+            let value = atomic.load(ordering: .sequentiallyConsistent)
+            return .init(rawValue: value)!
+        }
+
+        @discardableResult
+        static func set(
+            atomic: ManagedAtomic<UInt8>,
+            to newStatus: Status
+        ) throws -> Status {
+            let (success, original) = atomic.compareExchange(
+                expected: Status.running.rawValue,
+                desired: newStatus.rawValue,
+                ordering: .sequentiallyConsistent
+            )
+            guard success else {
+                switch original {
+                    case Status.finished.rawValue: throw Error.alreadyCompleted
+                    case Status.cancelled.rawValue: throw Error.alreadyCancelled
+                    case Status.failed.rawValue: throw Error.alreadyFailed
+                    default: throw Error.internalInconsistency
+                }
+            }
+            return newStatus
+        }
+    }
+}
+
+public final class Cancellable<Output: Sendable>: Sendable {
+    public typealias Error = Cancellables.Error
+    public typealias Status = Cancellables.Status
+
     private let task: Task<Output, Swift.Error>
-    private let deallocGuard = ManagedAtomic<Bool>(false)
+    private let atomicStatus = ManagedAtomic<UInt8>(Status.running.rawValue)
 
     public let function: StaticString
     public let file: StaticString
@@ -27,17 +71,25 @@ public final class Cancellable<Output: Sendable>: Sendable {
         self.function = function
         self.file = file
         self.line = line
-        let atomic = deallocGuard
+        let atomic = atomicStatus
         self.task = .init {
+            var retValue: Output!
             do {
-                let retValue = try await operation()
-                guard !Task.isCancelled else { throw Error.cancelled }
-                atomic.store(true, ordering: .sequentiallyConsistent)
-                return retValue
+                retValue = try await operation()
             } catch {
-                atomic.store(true, ordering: .sequentiallyConsistent)
+                do {
+                    try Status.set(atomic: atomic, to: .failed)
+                } catch {
+                    throw Error.cancelled
+                }
                 throw error
             }
+            do {
+                try Status.set(atomic: atomic, to: .finished)
+            } catch {
+                throw Error.cancelled
+            }
+            return retValue
         }
     }
 
@@ -50,28 +102,37 @@ public final class Cancellable<Output: Sendable>: Sendable {
         self.function = function
         self.file = file
         self.line = line
-        let atomic = deallocGuard
+        let atomic = atomicStatus
         self.task = .init {
+            var retValue: Output!
             do {
-                let retValue = try await operation()
-                atomic.store(true, ordering: .sequentiallyConsistent)
-                guard !Task.isCancelled else {
-                    retValue.cancel()
+                retValue = try await operation()
+                guard Status.get(atomic: atomic) != .cancelled else {
+                    try retValue.cancel()
                     throw Error.cancelled
                 }
-                return retValue
             } catch {
-                atomic.store(true, ordering: .sequentiallyConsistent)
+                do {
+                    try Status.set(atomic: atomic, to: .failed)
+                } catch {
+                    throw Error.cancelled
+                }
                 throw error
             }
+            do {
+                try Status.set(atomic: atomic, to: .finished)
+            } catch {
+                throw Error.cancelled
+            }
+            return retValue
         }
     }
 
     public var isCancelled: Bool { task.isCancelled }
-    public var isCompleting: Bool { deallocGuard.load(ordering: .sequentiallyConsistent) }
+    public var status: Status { Status.get(atomic: atomicStatus) }
 
-    @Sendable public func cancel() {
-        guard !isCompleting else { return }
+    @Sendable public func cancel() throws {
+        try Status.set(atomic: atomicStatus, to: .cancelled)
         task.cancel()
     }
 
@@ -82,10 +143,8 @@ public final class Cancellable<Output: Sendable>: Sendable {
         get async { await task.result }
     }
 
-    public var canDeallocate: Bool { isCompleting || isCancelled }
-
     deinit {
-        guard canDeallocate else {
+        guard status != .running else {
             assertionFailure(
                 "ABORTING DUE TO LEAKED \(type(of: Self.self)) CREATED in \(function) @ \(file): \(line)"
             )
@@ -101,33 +160,26 @@ extension Cancellable {
             try await withTaskCancellationHandler(
                 operation: {
                     let value = try await self.value
-                    guard !Task.isCancelled else { throw Error.cancelled }
+                    guard self.status != .cancelled else { throw Error.cancelled }
                     let transformed = await transform(value)
-                    guard !Task.isCancelled else { throw Error.cancelled }
+                    try Status.set(atomic: self.atomicStatus, to: .finished)
                     return transformed
                 },
-                onCancel: { self.cancel() }
+                onCancel: { try? self.cancel() }
             )
         }
     }
 
     public func join<T>() -> Cancellable<T> where Output == Cancellable<T> {
         .init {
-            try await withTaskCancellationHandler(
-                operation: {
-                    let inner = try await self.value
-                    guard !Task.isCancelled else {
-                        inner.cancel()
-                        throw Error.cancelled
-                    }
-                    let value = try await inner.value
-                    guard !Task.isCancelled else {
-                        throw Error.cancelled
-                    }
-                    return value
-                },
-                onCancel: { self.cancel() }
-            )
+            let inner = try await self.value
+            guard self.status != .cancelled else {
+                try? inner.cancel()
+                throw Error.cancelled
+            }
+            let value = try await inner.value
+            try Status.set(atomic: self.atomicStatus, to: .finished)
+            return value
         }
     }
 

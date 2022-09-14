@@ -44,7 +44,7 @@ func selectReduce<Left: Sendable, Right: Sendable>(
     _ action: SelectState<Left, Right>.Action
 ) async -> Reducer<SelectState<Left, Right>, SelectState<Left, Right>.Action>.Effect  {
     do {
-        guard !Task.isCancelled else { throw Cancellable<(Left, Right)>.Error.cancelled }
+        guard !Task.isCancelled else { throw Cancellables.Error.cancelled }
         switch (action, state.current) {
             case let (.left(leftResult), .nothing):
                 state.current = try .complete(.left(leftResult.get()))
@@ -72,16 +72,16 @@ func selectFinalize<Left: Sendable, Right: Sendable>(
     state: inout SelectState<Left, Right>,
     completion: Reducer<SelectState<Left, Right>, SelectState<Left, Right>.Action>.Completion
 ) async -> Void {
-    state.rightCancellable?.cancel()
+    try? state.rightCancellable?.cancel()
     state.rightCancellable = .none
-    state.leftCancellable?.cancel()
+    try? state.leftCancellable?.cancel()
     state.leftCancellable = .none
 }
 
 func extractSelectState<Left: Sendable, Right: Sendable>(_ state: SelectState<Left, Right>) throws -> Either<Left, Right> {
     switch state.current {
         case .nothing:
-            throw Cancellable<Either<Left, Right>>.Error.cancelled
+            throw Cancellables.Error.cancelled
         case let .complete(value):
             return value
         case let .errored(error):
