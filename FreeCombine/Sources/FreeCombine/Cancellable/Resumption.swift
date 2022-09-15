@@ -35,6 +35,9 @@ public final class Resumption<Output: Sendable>: Sendable {
         deallocGuard.load(ordering: .sequentiallyConsistent)
     }
 
+    /*:
+     [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
+     */
     deinit {
         guard canDeallocate else {
             assertionFailure(

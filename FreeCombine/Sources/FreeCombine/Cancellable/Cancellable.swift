@@ -129,6 +129,9 @@ public final class Cancellable<Output: Sendable>: Sendable {
         get async { await task.result }
     }
 
+    /*:
+     [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
+     */
     deinit {
         guard status != .running else {
             assertionFailure(
