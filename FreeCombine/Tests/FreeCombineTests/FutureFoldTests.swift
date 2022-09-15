@@ -20,9 +20,7 @@ final class FutureFoldTests: XCTestCase {
         let folded = this.fold(futures: others) { str, num in
             Succeeded(str + "\(num)")
         }
-        let cancellable = await folded.sink {
-            print($0)
-        }
+        let cancellable = await folded.sink { _ in }
         _ = await cancellable.result
     }
 }
