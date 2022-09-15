@@ -75,18 +75,12 @@ public final class Cancellable<Output: Sendable>: Sendable {
             do {
                 retValue = try await operation()
             } catch {
-                do {
-                    try Status.set(atomic: atomic, to: .finished)
-                } catch {
-                    throw Error.cancelled
-                }
+                do { try Status.set(atomic: atomic, to: .finished) }
+                catch { throw Error.cancelled }
                 throw error
             }
-            do {
-                try Status.set(atomic: atomic, to: .finished)
-            } catch {
-                throw Error.cancelled
-            }
+            do { try Status.set(atomic: atomic, to: .finished) }
+            catch {  throw Error.cancelled }
             return retValue
         }
     }
@@ -110,18 +104,12 @@ public final class Cancellable<Output: Sendable>: Sendable {
                     throw Error.cancelled
                 }
             } catch {
-                do {
-                    try Status.set(atomic: atomic, to: .finished)
-                } catch {
-                    throw Error.cancelled
-                }
+                do { try Status.set(atomic: atomic, to: .finished) }
+                catch {  throw Error.cancelled }
                 throw error
             }
-            do {
-                try Status.set(atomic: atomic, to: .finished)
-            } catch {
-                throw Error.cancelled
-            }
+            do { try Status.set(atomic: atomic, to: .finished) }
+            catch { throw Error.cancelled }
             return retValue
         }
     }
