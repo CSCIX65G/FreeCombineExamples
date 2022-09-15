@@ -19,7 +19,6 @@ public enum Cancellables {
         case running
         case finished
         case cancelled
-        case failed
 
         static func get(
             atomic: ManagedAtomic<UInt8>
@@ -42,7 +41,6 @@ public enum Cancellables {
                 switch original {
                     case Status.finished.rawValue: throw Error.alreadyCompleted
                     case Status.cancelled.rawValue: throw Error.alreadyCancelled
-                    case Status.failed.rawValue: throw Error.alreadyFailed
                     default: throw Error.internalInconsistency
                 }
             }
@@ -78,7 +76,7 @@ public final class Cancellable<Output: Sendable>: Sendable {
                 retValue = try await operation()
             } catch {
                 do {
-                    try Status.set(atomic: atomic, to: .failed)
+                    try Status.set(atomic: atomic, to: .finished)
                 } catch {
                     throw Error.cancelled
                 }
@@ -113,7 +111,7 @@ public final class Cancellable<Output: Sendable>: Sendable {
                 }
             } catch {
                 do {
-                    try Status.set(atomic: atomic, to: .failed)
+                    try Status.set(atomic: atomic, to: .finished)
                 } catch {
                     throw Error.cancelled
                 }
