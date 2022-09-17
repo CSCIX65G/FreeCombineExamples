@@ -6,6 +6,35 @@
 //
 @preconcurrency import Atomics
 
+extension Result where Failure == Swift.Error {
+    typealias Error = Cancellables.Error
+    func set(
+        atomic: ManagedAtomic<UInt8>,
+        to newStatus: Cancellables.Status
+    ) -> Self {
+        .init {
+            let (success, original) = atomic.compareExchange(
+                expected: Cancellables.Status.running.rawValue,
+                desired: newStatus.rawValue,
+                ordering: .sequentiallyConsistent
+            )
+            guard success else {
+                switch original {
+                    case Cancellables.Status.cancelled.rawValue:
+                        if case let .failure(error) = self { throw error }
+                        throw Error.alreadyCancelled
+                    default:
+                        throw Error.internalInconsistency
+                }
+            }
+            switch self {
+                case let .success(value): return value
+                case let .failure(error): throw error
+            }
+        }
+    }
+}
+
 public enum Cancellables {
     public enum Error: Swift.Error, Sendable {
         case cancelled
@@ -25,26 +54,6 @@ public enum Cancellables {
         ) -> Status {
             let value = atomic.load(ordering: .sequentiallyConsistent)
             return .init(rawValue: value)!
-        }
-
-        @discardableResult
-        static func set(
-            atomic: ManagedAtomic<UInt8>,
-            to newStatus: Status
-        ) throws -> Status {
-            let (success, original) = atomic.compareExchange(
-                expected: Status.running.rawValue,
-                desired: newStatus.rawValue,
-                ordering: .sequentiallyConsistent
-            )
-            guard success else {
-                switch original {
-                    case Status.finished.rawValue: throw Error.alreadyCompleted
-                    case Status.cancelled.rawValue: throw Error.alreadyCancelled
-                    default: throw Error.internalInconsistency
-                }
-            }
-            return newStatus
         }
     }
 }
@@ -71,46 +80,9 @@ public final class Cancellable<Output: Sendable>: Sendable {
         self.line = line
         let atomic = atomicStatus
         self.task = .init {
-            var retValue: Output!
-            do {
-                retValue = try await operation()
-            } catch {
-                do { try Status.set(atomic: atomic, to: .finished) }
-                catch { throw Error.cancelled }
-                throw error
-            }
-            do { try Status.set(atomic: atomic, to: .finished) }
-            catch {  throw Error.cancelled }
-            return retValue
-        }
-    }
-
-    public init<Inner>(
-        function: StaticString = #function,
-        file: StaticString = #file,
-        line: UInt = #line,
-        operation: @escaping @Sendable () async throws -> Output
-    ) where Output == Cancellable<Inner> {
-        self.function = function
-        self.file = file
-        self.line = line
-        let atomic = atomicStatus
-        self.task = .init {
-            var retValue: Output!
-            do {
-                retValue = try await operation()
-                guard Status.get(atomic: atomic) != .cancelled else {
-                    try retValue.cancel()
-                    throw Error.cancelled
-                }
-            } catch {
-                do { try Status.set(atomic: atomic, to: .finished) }
-                catch {  throw Error.cancelled }
-                throw error
-            }
-            do { try Status.set(atomic: atomic, to: .finished) }
-            catch { throw Error.cancelled }
-            return retValue
+            try await Result(catching: operation)
+                .set(atomic: atomic, to: .finished)
+                .get()
         }
     }
 
@@ -118,7 +90,9 @@ public final class Cancellable<Output: Sendable>: Sendable {
     public var status: Status { Status.get(atomic: atomicStatus) }
 
     @Sendable public func cancel() throws {
-        try Status.set(atomic: atomicStatus, to: .cancelled)
+        try Result<Void, Swift.Error>.success(())
+            .set(atomic: atomicStatus, to: .cancelled)
+            .get()
         task.cancel()
     }
 
@@ -131,6 +105,7 @@ public final class Cancellable<Output: Sendable>: Sendable {
 
     /*:
      [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
+     are dealt with in the same way
      */
     deinit {
         guard status != .running else {
@@ -151,7 +126,6 @@ extension Cancellable {
                     let value = try await self.value
                     guard self.status != .cancelled else { throw Error.cancelled }
                     let transformed = await transform(value)
-                    try Status.set(atomic: self.atomicStatus, to: .finished)
                     return transformed
                 },
                 onCancel: { try? self.cancel() }
@@ -167,7 +141,6 @@ extension Cancellable {
                 throw Error.cancelled
             }
             let value = try await inner.value
-            try Status.set(atomic: self.atomicStatus, to: .finished)
             return value
         }
     }
