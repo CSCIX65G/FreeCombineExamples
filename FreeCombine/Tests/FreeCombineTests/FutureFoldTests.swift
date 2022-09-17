@@ -23,4 +23,61 @@ final class FutureFoldTests: XCTestCase {
         let cancellable = await folded.sink { _ in }
         _ = await cancellable.result
     }
+
+    func testAsyncFoldOrdering() async throws {
+        var others = [Promise<Int>]()
+        for _ in (0 ..< 10) {
+            let p = await Promise<Int>()
+            others.append(p)
+        }
+        let this = Succeeded(0)
+        let folded = this.fold(futures: others.map(\.future)) { accum, num in
+            Succeeded(num - accum)
+        }
+
+        (1 ..< 11)
+            .map { (i: Int) -> () -> Void in {
+                do { try others[i - 1].succeed(i) }
+                catch { XCTFail("Failed with error: \(error)") }
+            } }
+            .shuffled()
+            .forEach { $0() }
+
+        let cancellable = await folded.sink { value in
+            guard case let .success(value) = value else {
+                XCTFail("Received failure: \(value)")
+                return
+            }
+            XCTAssert(value == 5, "Received wrong value: \(value)")
+        }
+        _ = await cancellable.result
+    }
+
+    func testAsyncFoldFailure() async throws {
+        enum Error: Swift.Error, Equatable {
+            case iFailed
+        }
+        var others = [Promise<Int>]()
+        for _ in (0 ..< 10) {
+            let p = await Promise<Int>()
+            others.append(p)
+        }
+        let this = Succeeded(0)
+        let folded = this.fold(futures: others.map(\.future)) { accum, num in
+            Succeeded(num - accum)
+        }
+
+        do { try others.randomElement()!.fail(Error.iFailed) }
+        catch { XCTFail("failed to fail") }
+
+        let cancellable = await folded.sink { value in
+            guard case let .failure(rawError) = value else {
+                XCTFail("Received success: \(value)")
+                return
+            }
+            let error = rawError as? Error
+            XCTAssert(error != .none, "Wrong error type for error: \(rawError)")
+        }
+        _ = await cancellable.result
+    }
 }

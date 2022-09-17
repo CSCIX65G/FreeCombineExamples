@@ -4,7 +4,7 @@
 //
 //  Created by Van Simmons on 9/5/22.
 //
-@preconcurrency import Atomics
+@_implementationOnly import Atomics
 
 extension Result where Failure == Swift.Error {
     typealias Error = Cancellables.Error
@@ -58,7 +58,7 @@ public enum Cancellables {
     }
 }
 
-public final class Cancellable<Output: Sendable>: Sendable {
+public final class Cancellable<Output: Sendable> {
     public typealias Error = Cancellables.Error
     public typealias Status = Cancellables.Status
 

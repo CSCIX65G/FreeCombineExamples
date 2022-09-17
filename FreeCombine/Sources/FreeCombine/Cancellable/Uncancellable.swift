@@ -4,9 +4,9 @@
 //
 //  Created by Van Simmons on 9/7/22.
 //
-@preconcurrency import Atomics
+@_implementationOnly import Atomics
 
-public final class Uncancellable<Output: Sendable>: Sendable {
+public final class Uncancellable<Output: Sendable> {
     private let task: Task<Output, Never>
     private let atomicStatus = ManagedAtomic<Bool>(false)
 

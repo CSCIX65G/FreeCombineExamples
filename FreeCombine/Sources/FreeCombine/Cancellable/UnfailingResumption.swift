@@ -1,19 +1,14 @@
 //
-//  Resumption.swift
-//  UsingFreeCombine
+//  UnfailingResumption.swift
+//  
 //
-//  Created by Van Simmons on 9/5/22.
+//  Created by Van Simmons on 9/17/22.
 //
 @_implementationOnly import Atomics
 
-public final class Resumption<Output: Sendable>: @unchecked Sendable {
-    public enum Error: Swift.Error {
-        case leaked
-        case alreadyResumed
-    }
-
+public final class UnfailingResumption<Output: Sendable>: @unchecked Sendable {
     private let atomicHasResumed = ManagedAtomic<Bool>(false)
-    private let continuation: UnsafeContinuation<Output, Swift.Error>
+    private let continuation: UnsafeContinuation<Output, Never>
 
     public let function: StaticString
     public let file: StaticString
@@ -23,7 +18,7 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        continuation: UnsafeContinuation<Output, Swift.Error>
+        continuation: UnsafeContinuation<Output, Never>
     ) {
         self.function = function
         self.file = file
@@ -40,11 +35,9 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
      */
     deinit {
         guard hasResumed else {
-            assertionFailure(
+            preconditionFailure(
                 "ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
             )
-            continuation.resume(throwing: Error.leaked)
-            return
         }
     }
 
@@ -66,30 +59,21 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
         }
         continuation.resume(returning: output)
     }
-
-    public func resume(throwing error: Swift.Error) {
-        guard canResume else {
-            preconditionFailure(
-                "\(type(of: Self.self)) FAILED. ALREADY RESUMED \(type(of: Self.self)):\(self)"
-            )
-        }
-        continuation.resume(throwing: error)
-    }
 }
 
-extension Resumption where Output == Void {
+extension UnfailingResumption where Output == Void {
     public func resume() {
         resume(returning: ())
     }
 }
 
-public func withResumption<Output>(
+public func withUnfailingResumption<Output>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
-    _ resumingWith: (Resumption<Output>) -> Void
-) async throws -> Output {
-    try await withUnsafeThrowingContinuation { continuation in
+    _ resumingWith: (UnfailingResumption<Output>) -> Void
+) async -> Output {
+    await withUnsafeContinuation { continuation in
         resumingWith(
             .init(
                 function: function,

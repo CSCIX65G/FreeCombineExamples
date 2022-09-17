@@ -4,12 +4,11 @@
 //
 //  Created by Van Simmons on 9/5/22.
 //
-import Atomics
+@_implementationOnly import Atomics
 
 public final class Promise<Output> {
     public enum Error: Swift.Error, Equatable {
-        case alreadyCancelled
-        case alreadyCompleted
+        case alreadySucceeded
         case alreadyFailed
         case internalInconsistency
     }
@@ -18,7 +17,6 @@ public final class Promise<Output> {
         case waiting
         case succeeded
         case failed
-//        case cancelled
     }
 
     private let atomicStatus = ManagedAtomic<UInt8>(Status.waiting.rawValue)
@@ -26,26 +24,22 @@ public final class Promise<Output> {
     public let cancellable: Cancellable<Output>
 
     public init() async {
-        var localCancellable: Cancellable<Output>!
+        var lc: Cancellable<Output>!
         self.resumption = try! await withResumption { outer in
-            localCancellable = .init {
-                try await withResumption(outer.resume)
-            }
+            lc = .init { try await withResumption(outer.resume) }
         }
-        self.cancellable = localCancellable
+        self.cancellable = lc
     }
 
     var status: Status {
         .init(rawValue: atomicStatus.load(ordering: .sequentiallyConsistent))!
     }
 
-    public var canDeallocate: Bool { status != .waiting }
-
     /*:
      [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
      */
     deinit {
-        guard canDeallocate else {
+        guard status != .waiting else {
             assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self))")
             try? cancel()
             return
@@ -53,6 +47,7 @@ public final class Promise<Output> {
     }
 
     private func set(status newStatus: Status) throws -> Resumption<Output> {
+        guard newStatus != .waiting else { throw Error.internalInconsistency }
         let (success, original) = atomicStatus.compareExchange(
             expected: Status.waiting.rawValue,
             desired: newStatus.rawValue,
@@ -60,7 +55,7 @@ public final class Promise<Output> {
         )
         guard success else {
             switch original {
-                case Status.succeeded.rawValue: throw Error.alreadyCompleted
+                case Status.succeeded.rawValue: throw Error.alreadySucceeded
                 case Status.failed.rawValue: throw Error.alreadyFailed
                 default: throw Error.internalInconsistency
             }
@@ -69,7 +64,6 @@ public final class Promise<Output> {
     }
 }
 
-// async variables
 public extension Promise {
     var result: Result<Output, Swift.Error> {
         get async { await cancellable.result }
@@ -80,14 +74,9 @@ public extension Promise {
     }
 }
 
-// sync variables
 public extension Promise {
     func cancel() throws {
-        try set(status: .failed).resume(throwing: Cancellables.Error.cancelled)
-    }
-
-    var isCancelled: Bool {
-        cancellable.isCancelled
+        try fail(Cancellables.Error.cancelled)
     }
 
     func resolve(_ result: Result<Output, Swift.Error>) throws {
@@ -120,5 +109,3 @@ public extension Promise {
         } }
     }
 }
-
-
