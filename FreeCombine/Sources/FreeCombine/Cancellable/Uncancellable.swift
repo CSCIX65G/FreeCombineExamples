@@ -8,12 +8,12 @@
 
 public final class Uncancellable<Output: Sendable>: Sendable {
     private let task: Task<Output, Never>
-    private let deallocGuard = ManagedAtomic<Bool>(false)
+    private let atomicStatus = ManagedAtomic<Bool>(false)
 
     public init(
         operation: @escaping @Sendable () async -> Output
     ) {
-        let atomic = deallocGuard
+        let atomic = atomicStatus
         self.task = .init {
             let retValue = await operation()
             atomic.store(true, ordering: .sequentiallyConsistent)
@@ -25,14 +25,14 @@ public final class Uncancellable<Output: Sendable>: Sendable {
      [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
      */
     deinit {
-        guard isCompleting else {
+        guard hasFinished else {
             assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self))")
             return
         }
     }
 
-    public var isCompleting: Bool {
-        deallocGuard.load(ordering: .sequentiallyConsistent)
+    public var hasFinished: Bool {
+        atomicStatus.load(ordering: .sequentiallyConsistent)
     }
 
     public var value: Output {

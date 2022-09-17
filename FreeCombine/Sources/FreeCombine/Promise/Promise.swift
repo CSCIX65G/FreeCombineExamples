@@ -18,10 +18,10 @@ public final class Promise<Output> {
         case waiting
         case succeeded
         case failed
-        case cancelled
+//        case cancelled
     }
 
-    private let atomic = ManagedAtomic<UInt8>(Status.waiting.rawValue)
+    private let atomicStatus = ManagedAtomic<UInt8>(Status.waiting.rawValue)
     private let resumption: Resumption<Output>
     public let cancellable: Cancellable<Output>
 
@@ -33,6 +33,10 @@ public final class Promise<Output> {
             }
         }
         self.cancellable = localCancellable
+    }
+
+    var status: Status {
+        .init(rawValue: atomicStatus.load(ordering: .sequentiallyConsistent))!
     }
 
     public var canDeallocate: Bool { status != .waiting }
@@ -49,7 +53,7 @@ public final class Promise<Output> {
     }
 
     private func set(status newStatus: Status) throws -> Resumption<Output> {
-        let (success, original) = atomic.compareExchange(
+        let (success, original) = atomicStatus.compareExchange(
             expected: Status.waiting.rawValue,
             desired: newStatus.rawValue,
             ordering: .sequentiallyConsistent
@@ -57,7 +61,6 @@ public final class Promise<Output> {
         guard success else {
             switch original {
                 case Status.succeeded.rawValue: throw Error.alreadyCompleted
-                case Status.cancelled.rawValue: throw Error.alreadyCancelled
                 case Status.failed.rawValue: throw Error.alreadyFailed
                 default: throw Error.internalInconsistency
             }
@@ -79,12 +82,8 @@ public extension Promise {
 
 // sync variables
 public extension Promise {
-    var status: Status {
-        .init(rawValue: atomic.load(ordering: .sequentiallyConsistent))!
-    }
-
     func cancel() throws {
-        try set(status: .cancelled).resume(throwing: Cancellables.Error.cancelled)
+        try set(status: .failed).resume(throwing: Cancellables.Error.cancelled)
     }
 
     var isCancelled: Bool {
