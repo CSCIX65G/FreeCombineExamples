@@ -1,5 +1,5 @@
 //
-//  FutureSelectTests.swift
+//  FutureOrTests.swift
 //
 //
 //  Created by Van Simmons on 9/12/22.
@@ -9,13 +9,13 @@ import XCTest
 
 @testable import FreeCombine
 
-final class FutureSelectTests: XCTestCase {
+final class FutureOrTests: XCTestCase {
 
     override func setUpWithError() throws {}
 
     override func tearDownWithError() throws {}
 
-    func testSelectStateInit() async throws {
+    func testOrStateInit() async throws {
         typealias S = Or<Int, String>
         let left = Succeeded(13)
         let right = Succeeded("hello, world!")
@@ -28,7 +28,7 @@ final class FutureSelectTests: XCTestCase {
         XCTAssertNotNil(state.rightCancellable, "Right was wrong")
     }
 
-    func testSimpleSelect() async throws {
+    func testSimpleOr() async throws {
         let lVal = 13
         let rVal = "hello, world!"
         let expectation: Promise<Void> = await .init()
@@ -73,7 +73,7 @@ final class FutureSelectTests: XCTestCase {
         _ = await expectation.result
     }
 
-    func testCancelSelect() async throws {
+    func testCancelOr() async throws {
         let lVal = 13
         let rVal = "hello, world!"
         let expectation: Promise<Void> = await .init()
@@ -101,7 +101,7 @@ final class FutureSelectTests: XCTestCase {
         try? promise1.succeed(lVal)
     }
 
-    func testSimpleSelectRightFailure() async throws {
+    func testSimpleOrRightFailure() async throws {
         enum Error: Swift.Error, Equatable {
             case rightFailure
         }
@@ -129,7 +129,7 @@ final class FutureSelectTests: XCTestCase {
         try? promise1.succeed(lVal)
     }
 
-    func testSimpleSelectLeftFailure() async throws {
+    func testSimpleOrLeftFailure() async throws {
         enum Error: Swift.Error, Equatable {
             case leftFailure
         }
@@ -163,8 +163,8 @@ final class FutureSelectTests: XCTestCase {
         let toDo = await Promise<Int>()
         let timeout = Failed(Never.self, error: Error.iFailed).delay(.milliseconds(10))
         let toDoFuture = toDo.future
-        let selectFuture = or(toDoFuture, timeout)
-        let cancellable = await selectFuture.sink({ resultEitherIntVoid in
+        let orFuture = or(toDoFuture, timeout)
+        let cancellable = await orFuture.sink({ resultEitherIntVoid in
             guard case .success(let eitherIntVoid) = resultEitherIntVoid else {
                 XCTFail("should have succeeded. got: \(resultEitherIntVoid)")
                 return
@@ -187,8 +187,8 @@ final class FutureSelectTests: XCTestCase {
 
         let toDo = Succeeded(13).delay(.milliseconds(100))
         let timeout = Failed(Never.self, error: Error.iFailed).delay(.milliseconds(5))
-        let selectFuture = or(toDo, timeout)
-        let cancellable = await selectFuture.sink({ resultEitherIntVoid in
+        let orFuture = or(toDo, timeout)
+        let cancellable = await orFuture.sink({ resultEitherIntVoid in
             guard case .failure(let error) = resultEitherIntVoid else {
                 XCTFail("should have failed. got: \(resultEitherIntVoid)")
                 return

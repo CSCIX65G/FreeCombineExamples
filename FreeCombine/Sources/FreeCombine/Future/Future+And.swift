@@ -1,5 +1,5 @@
 //
-//  Future+Zip.swift
+//  Future+And.swift
 //
 //
 //  Created by Van Simmons on 9/6/22.

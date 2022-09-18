@@ -1,5 +1,5 @@
 //
-//  Cancellable+Zip.swift
+//  Cancellable+And.swift
 //
 //
 //  Created by Van Simmons on 9/6/22.
@@ -8,7 +8,7 @@
 /*:
  Bad implementation.
  */
-func zip<Left, Right>(
+func and<Left, Right>(
     _ left: Cancellable<Left>,
     _ right: Cancellable<Right>
 ) -> Cancellable<(Left, Right)> {

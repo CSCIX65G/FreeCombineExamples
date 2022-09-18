@@ -60,7 +60,7 @@ extension Uncancellable {
     }
 }
 
-func zip<Left, Right>(
+func and<Left, Right>(
     _ left: Uncancellable<Left>,
     _ right: Uncancellable<Right>
 ) -> Uncancellable<(Left, Right)> {

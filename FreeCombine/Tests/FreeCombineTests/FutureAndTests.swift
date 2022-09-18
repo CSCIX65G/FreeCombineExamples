@@ -1,5 +1,5 @@
 //
-//  ZipTests.swift
+//  FutureAndTests.swift
 //
 //
 //  Created by Van Simmons on 9/8/22.
@@ -9,12 +9,12 @@ import XCTest
 
 @testable import FreeCombine
 
-final class FutureZipTests: XCTestCase {
+final class FutureAndTests: XCTestCase {
     override func setUpWithError() throws { }
 
     override func tearDownWithError() throws { }
 
-    func testZipStateInit() async throws {
+    func testAndStateInit() async throws {
         typealias Z2 = And<Int, String>
         let left = Succeeded(13)
         let right = Succeeded("hello, world!")
@@ -27,7 +27,7 @@ final class FutureZipTests: XCTestCase {
         XCTAssertNotNil(state.rightCancellable, "Right was wrong")
     }
 
-    func testSimpleZip() async throws {
+    func testSimpleAnd() async throws {
         let lVal = 13
         let rVal = "hello, world!"
         let expectation: Promise<Void> = await .init()
@@ -57,7 +57,7 @@ final class FutureZipTests: XCTestCase {
         _ = await cancellable.result
     }
 
-    func testCancelZip() async throws {
+    func testCancelAnd() async throws {
         let lVal = 13
         let rVal = "hello, world!"
         let expectation: Promise<Void> = await .init()
@@ -84,7 +84,7 @@ final class FutureZipTests: XCTestCase {
         try? promise1.succeed(lVal)
     }
 
-    func testSimpleZipRightFailure() async throws {
+    func testSimpleAndRightFailure() async throws {
         enum Error: Swift.Error, Equatable {
             case rightFailure
         }
@@ -112,7 +112,7 @@ final class FutureZipTests: XCTestCase {
         try? promise1.succeed(lVal)
     }
 
-    func testSimpleZipLeftFailure() async throws {
+    func testSimpleAndLeftFailure() async throws {
         enum Error: Swift.Error, Equatable {
             case leftFailure
         }

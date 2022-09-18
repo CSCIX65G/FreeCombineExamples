@@ -1,10 +1,10 @@
 //
-//  Cancellable+Select.swift
+//  Cancellable+Or.swift
 //  
 //
 //  Created by Van Simmons on 9/13/22.
 //
-func select<Left, Right>(
+func or<Left, Right>(
     _ left: Cancellable<Left>,
     _ right: Cancellable<Right>
 ) -> Cancellable<Either<Left, Right>> {

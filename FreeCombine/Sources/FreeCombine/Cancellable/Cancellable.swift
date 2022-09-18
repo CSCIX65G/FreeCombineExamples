@@ -133,6 +133,7 @@ public extension Cancellable {
         }
     }
 
+    // Cancellable<Cancellable<T>> -> Cancellable<T>
     func join<T>() -> Cancellable<T> where Output == Cancellable<T> {
         .init {
             let inner = try await self.value

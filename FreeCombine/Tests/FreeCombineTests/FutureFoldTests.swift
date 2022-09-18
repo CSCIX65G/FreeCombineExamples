@@ -4,7 +4,6 @@
 //
 //  Created by Van Simmons on 9/13/22.
 //
-
 import XCTest
 @testable import FreeCombine
 
@@ -39,7 +38,7 @@ final class FutureFoldTests: XCTestCase {
         }
 
         (1 ..< 11)
-            .map { (i: Int) -> () -> Void in {
+            .map { i in {
                 do { try others[i - 1].succeed(i) }
                 catch { XCTFail("Failed with error: \(error)") }
             } }
@@ -68,7 +67,7 @@ final class FutureFoldTests: XCTestCase {
         }
 
         (1 ..< 11)
-            .map { (i: Int) -> () -> Void in {
+            .map { i in {
                 do { try others[i - 1].succeed(11 - i) }
                 catch { XCTFail("Failed with error: \(error)") }
             } }

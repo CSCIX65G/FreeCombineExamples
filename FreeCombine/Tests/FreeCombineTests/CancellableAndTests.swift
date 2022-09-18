@@ -2,19 +2,19 @@ import XCTest
 
 @testable import FreeCombine
 
-final class CancellableZipTests: XCTestCase {
+final class CancellableAndTests: XCTestCase {
     override func setUpWithError() throws { }
 
     override func tearDownWithError() throws { }
 
-    func testSimpleZip() async throws {
+    func testSimpleAnd() async throws {
         let leftPromise: Promise<Int> = await .init()
         let rightPromise: Promise<String> = await .init()
 
-        let zipped = zip(leftPromise.cancellable, rightPromise.cancellable)
+        let anded = and(leftPromise.cancellable, rightPromise.cancellable)
 
         let c: Cancellable<Void> = .init {
-            let zValue = await zipped.result
+            let zValue = await anded.result
             switch zValue {
                 case let .success(pair):
                     XCTAssert(pair.0 == 13, "Wrong left hand side")
@@ -29,7 +29,7 @@ final class CancellableZipTests: XCTestCase {
         _ = await c.result
     }
 
-    func testSimpleZipFailure() async throws {
+    func testSimpleAndFailure() async throws {
         enum Error: Swift.Error, Equatable {
             case left
             case right
@@ -37,10 +37,10 @@ final class CancellableZipTests: XCTestCase {
         let leftPromise: Promise<Int> = await .init()
         let rightPromise: Promise<String> = await .init()
 
-        let zipped = zip(leftPromise.cancellable, rightPromise.cancellable)
+        let anded = and(leftPromise.cancellable, rightPromise.cancellable)
 
         let c: Cancellable<Void> = .init {
-            let zValue = await zipped.result
+            let zValue = await anded.result
             switch zValue {
                 case .success:
                     XCTFail("Should not have received value")
@@ -57,7 +57,7 @@ final class CancellableZipTests: XCTestCase {
         try leftPromise.fail(Error.left)
     }
 
-    func testSimpleZipCancellation() async throws {
+    func testSimpleAndCancellation() async throws {
         enum Error: Swift.Error, Equatable {
             case left
             case right
@@ -65,10 +65,10 @@ final class CancellableZipTests: XCTestCase {
         let leftPromise: Promise<Int> = await .init()
         let rightPromise: Promise<String> = await .init()
 
-        let zipped = zip(leftPromise.cancellable, rightPromise.cancellable)
+        let anded = and(leftPromise.cancellable, rightPromise.cancellable)
 
         let c: Cancellable<Void> = .init {
-            let zValue = await zipped.result
+            let zValue = await anded.result
             switch zValue {
                 case .success:
                     XCTFail("Should not have received value")
@@ -80,8 +80,8 @@ final class CancellableZipTests: XCTestCase {
             }
         }
 
-        try zipped.cancel()
-        _ = await zipped.result
+        try anded.cancel()
+        _ = await anded.result
         _ = await c.result
         try? leftPromise.cancel()
         try? rightPromise.cancel()

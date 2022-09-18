@@ -1,5 +1,5 @@
 //
-//  CancellableSelectTests.swift
+//  CancellableOrTests.swift
 //  
 //
 //  Created by Van Simmons on 9/13/22.
@@ -9,13 +9,13 @@ import XCTest
 
 @testable import FreeCombine
 
-final class CancellableSelectTests: XCTestCase {
+final class CancellableOrTests: XCTestCase {
 
     override func setUpWithError() throws {}
 
     override func tearDownWithError() throws {}
 
-    func testSimpleSelect() async throws {
+    func testSimpleOr() async throws {
         let lVal = 13
         let rVal = "hello, world!"
         let expectation: Promise<Void> = await .init()
@@ -23,9 +23,9 @@ final class CancellableSelectTests: XCTestCase {
         let promise2: Promise<String> = await .init()
         let isLeft = Bool.random()
 
-        let selected = select(promise1.cancellable, promise2.cancellable)
+        let ored = or(promise1.cancellable, promise2.cancellable)
         let cancellable: Cancellable<Void> = .init {
-            let result = await selected.result
+            let result = await ored.result
             try? expectation.succeed()
             guard case let .success(either) = result else {
                 XCTFail("Failed")
@@ -59,16 +59,16 @@ final class CancellableSelectTests: XCTestCase {
         _ = await expectation.result
     }
 
-    func testCancelSelect() async throws {
+    func testCancelOr() async throws {
         let lVal = 13
         let rVal = "hello, world!"
         let expectation: Promise<Void> = await .init()
         let promise1: Promise<Int> = await .init()
         let promise2: Promise<String> = await .init()
 
-        let selected = select(promise1.cancellable, promise2.cancellable)
+        let ored = or(promise1.cancellable, promise2.cancellable)
         let cancellable: Cancellable<Void> = .init {
-            let result = await selected.result
+            let result = await ored.result
             try! expectation.succeed()
             guard case let .failure(error) = result else {
                 XCTFail("Failed by succeeding")
@@ -80,7 +80,7 @@ final class CancellableSelectTests: XCTestCase {
             }
             XCTAssert(.some(cancelError) == .some(Cancellables.Error.cancelled), "Incorrect failure: \(cancelError)")
         }
-        try selected.cancel()
+        try ored.cancel()
         _ = await expectation.result
         _ = await cancellable.result
 
@@ -88,7 +88,7 @@ final class CancellableSelectTests: XCTestCase {
         try? promise1.succeed(lVal)
     }
 
-    func testSimpleSelectRightFailure() async throws {
+    func testSimpleOrRightFailure() async throws {
         enum Error: Swift.Error, Equatable {
             case rightFailure
         }
@@ -116,7 +116,7 @@ final class CancellableSelectTests: XCTestCase {
         try? promise1.succeed(lVal)
     }
 
-    func testSimpleSelectLeftFailure() async throws {
+    func testSimpleOrLeftFailure() async throws {
         enum Error: Swift.Error, Equatable {
             case leftFailure
         }
