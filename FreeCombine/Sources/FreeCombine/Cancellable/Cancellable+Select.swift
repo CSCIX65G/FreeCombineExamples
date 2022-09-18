@@ -10,7 +10,7 @@ func select<Left, Right>(
 ) -> Cancellable<Either<Left, Right>> {
     .init {
         let p: Promise<Either<Left, Right>> = await .init()
-        let s: Cancellable<Void> = await select(left.future, right.future).sink {
+        let s: Cancellable<Void> = await or(left.future, right.future).sink {
             try? p.resolve($0)
         }
         return try await withTaskCancellationHandler(

@@ -34,7 +34,7 @@ public final class UnbreakablePromise<Output> {
     }
 
     /*:
-     [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
+     This is similar to how [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431) are treated
      */
     deinit {
         guard status != .waiting else {

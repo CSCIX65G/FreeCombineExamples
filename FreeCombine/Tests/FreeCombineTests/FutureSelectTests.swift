@@ -16,10 +16,11 @@ final class FutureSelectTests: XCTestCase {
     override func tearDownWithError() throws {}
 
     func testSelectStateInit() async throws {
+        typealias S = Or<Int, String>
         let left = Succeeded(13)
         let right = Succeeded("hello, world!")
-        let channel: Channel<SelectState<Int, String>.Action> = .init(buffering: .bufferingOldest(2))
-        let f = selectInitialize(left: left, right: right)
+        let channel: Channel<S.Action> = .init(buffering: .bufferingOldest(2))
+        let f = S.initialize(left: left, right: right)
         let state = await f(channel)
         _ = await state.leftCancellable?.result
         _ = await state.rightCancellable?.result
@@ -37,7 +38,7 @@ final class FutureSelectTests: XCTestCase {
         let future2 = promise2.future
         let isLeft = Bool.random()
 
-        let cancellable = await select(future1, future2)
+        let cancellable = await or(future1, future2)
             .sink { result in
                 try? expectation.succeed()
                 guard case let .success(either) = result else {
@@ -81,7 +82,7 @@ final class FutureSelectTests: XCTestCase {
         let promise2: Promise<String> = await .init()
         let future2 = promise2.future
 
-        let cancellable = await select(future1, future2)
+        let cancellable = await or(future1, future2)
             .sink { result in
                 try? expectation.succeed()
                 guard case let .failure(error) = result else {
@@ -107,11 +108,11 @@ final class FutureSelectTests: XCTestCase {
         let lVal = 13
         let expectation: Promise<Void> = await .init()
         let promise1: Promise<Int> = await .init()
-        let future1 = promise1.future.delay(1_000_000_000)
+        let future1 = promise1.future.delay(.seconds(1))
         let promise2: Promise<String> = await .init()
         let future2 = promise2.future
 
-        let cancellable = await select(future1, future2).sink { result in
+        let cancellable = await or(future1, future2).sink { result in
             try? expectation.succeed()
             guard case let .failure(error) = result else {
                 XCTFail("Failed by succeeding")
@@ -137,9 +138,9 @@ final class FutureSelectTests: XCTestCase {
         let promise1: Promise<Int> = await .init()
         let future1 = promise1.future
         let promise2: Promise<String> = await .init()
-        let future2 = promise2.future.delay(1_000_000_000)
+        let future2 = promise2.future.delay(.seconds(1))
 
-        let cancellable = await select(future1, future2).sink { result in
+        let cancellable = await or(future1, future2).sink { result in
             try? expectation.succeed()
             guard case let .failure(error) = result else {
                 XCTFail("Failed by succeeding")
@@ -154,5 +155,49 @@ final class FutureSelectTests: XCTestCase {
         _ = await expectation.result
         _ = await cancellable.result
         try? promise2.succeed(rVal)
+    }
+
+    func testSucceedBeforeTimeout() async throws {
+        enum Error: Swift.Error { case iFailed }
+
+        let toDo = await Promise<Int>()
+        let timeout = Failed(Never.self, error: Error.iFailed).delay(.milliseconds(10))
+        let toDoFuture = toDo.future
+        let selectFuture = or(toDoFuture, timeout)
+        let cancellable = await selectFuture.sink({ resultEitherIntVoid in
+            guard case .success(let eitherIntVoid) = resultEitherIntVoid else {
+                XCTFail("should have succeeded. got: \(resultEitherIntVoid)")
+                return
+            }
+            guard case .left(let anInt) = eitherIntVoid else {
+                XCTFail("should have gotten left. got: \(eitherIntVoid)")
+                return
+            }
+            guard anInt == 13 else {
+                XCTFail("wrong value.  got: \(anInt)")
+                return
+            }
+        })
+        try toDo.succeed(13)
+        _ = await cancellable.result
+    }
+
+    func testFailAfterTimeout() async throws {
+        enum Error: Swift.Error { case iFailed }
+
+        let toDo = Succeeded(13).delay(.milliseconds(100))
+        let timeout = Failed(Never.self, error: Error.iFailed).delay(.milliseconds(5))
+        let selectFuture = or(toDo, timeout)
+        let cancellable = await selectFuture.sink({ resultEitherIntVoid in
+            guard case .failure(let error) = resultEitherIntVoid else {
+                XCTFail("should have failed. got: \(resultEitherIntVoid)")
+                return
+            }
+            guard error is Error else {
+                XCTFail("wrong error type.  got: \(error)")
+                return
+            }
+        })
+        _ = await cancellable.result
     }
 }

@@ -24,6 +24,9 @@ final class FutureFoldTests: XCTestCase {
         _ = await cancellable.result
     }
 
+    // The following two test verify that the ordering of the fold
+    // is correct regardless of the order of promise completion
+    // and that all promises are running in parallel
     func testAsyncFoldOrdering() async throws {
         var others = [Promise<Int>]()
         for _ in (0 ..< 10) {
@@ -49,6 +52,35 @@ final class FutureFoldTests: XCTestCase {
                 return
             }
             XCTAssert(value == 5, "Received wrong value: \(value)")
+        }
+        _ = await cancellable.result
+    }
+
+    func testAsyncFoldOrderingReversed() async throws {
+        var others = [Promise<Int>]()
+        for _ in (0 ..< 10) {
+            let p = await Promise<Int>()
+            others.append(p)
+        }
+        let this = Succeeded(0)
+        let folded = this.fold(futures: others.map(\.future)) { accum, num in
+            Succeeded(num - accum)
+        }
+
+        (1 ..< 11)
+            .map { (i: Int) -> () -> Void in {
+                do { try others[i - 1].succeed(11 - i) }
+                catch { XCTFail("Failed with error: \(error)") }
+            } }
+            .shuffled()
+            .forEach { $0() }
+
+        let cancellable = await folded.sink { value in
+            guard case let .success(value) = value else {
+                XCTFail("Received failure: \(value)")
+                return
+            }
+            XCTAssert(value == -5, "Received wrong value: \(value)")
         }
         _ = await cancellable.result
     }

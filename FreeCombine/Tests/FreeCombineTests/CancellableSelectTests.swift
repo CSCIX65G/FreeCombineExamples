@@ -95,11 +95,11 @@ final class CancellableSelectTests: XCTestCase {
         let lVal = 13
         let expectation: Promise<Void> = await .init()
         let promise1: Promise<Int> = await .init()
-        let future1 = promise1.future.delay(1_000_000_000)
+        let future1 = promise1.future.delay(.seconds(1))
         let promise2: Promise<String> = await .init()
         let future2 = promise2.future
 
-        let cancellable = await select(future1, future2).sink { result in
+        let cancellable = await or(future1, future2).sink { result in
             try? expectation.succeed()
             guard case let .failure(error) = result else {
                 XCTFail("Failed by succeeding")
@@ -125,9 +125,9 @@ final class CancellableSelectTests: XCTestCase {
         let promise1: Promise<Int> = await .init()
         let future1 = promise1.future
         let promise2: Promise<String> = await .init()
-        let future2 = promise2.future.delay(1_000_000_000)
+        let future2 = promise2.future.delay(.seconds(1))
 
-        let cancellable = await select(future1, future2).sink { result in
+        let cancellable = await or(future1, future2).sink { result in
             try? expectation.succeed()
             guard case let .failure(error) = result else {
                 XCTFail("Failed by succeeding")

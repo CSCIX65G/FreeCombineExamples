@@ -62,44 +62,7 @@ extension Future {
     }
 }
 
-public extension Future {
-    func map<T>(
-        _ transform: @escaping (Output) async -> T
-    ) -> Future<T> {
-        .init { resumption, downstream in
-            self(onStartup: resumption) { r in switch r {
-                case .success(let a):
-                    return await downstream(.success(transform(a)))
-                case let .failure(error):
-                    return await downstream(.failure(error))
-            } }
-        }
-    }
-
-    func delay(
-        _ nanoseconds: UInt64
-    ) -> Self {
-        .init { resumption, downstream in
-            self(onStartup: resumption) { r in
-                try? await Task.sleep(nanoseconds: nanoseconds)
-                return await downstream(r)
-            }
-        }
-    }
-    func tryMap<T>(
-        _ transform: @escaping (Output) async throws -> T
-    ) -> Future<T> {
-        .init { resumption, downstream in
-            self(onStartup: resumption) { r in switch r {
-                case .success(let a):
-                    do { return try await downstream(.success(transform(a))) }
-                    catch { return await downstream(.failure(error)) }
-                case let .failure(error):
-                    return await downstream(.failure(error))
-            } }
-        }
-    }
-
+extension Future {
     func flatMap<T>(
         _ transform: @escaping (Output) async -> Future<T>
     ) -> Future<T> {

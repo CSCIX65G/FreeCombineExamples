@@ -15,10 +15,11 @@ final class FutureZipTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testZipStateInit() async throws {
+        typealias Z2 = And<Int, String>
         let left = Succeeded(13)
         let right = Succeeded("hello, world!")
-        let channel: Channel<ZipState<Int, String>.Action> = .init(buffering: .bufferingOldest(2))
-        let f = zipInitialize(left: left, right: right)
+        let channel: Channel<Z2.Action> = .init(buffering: .bufferingOldest(2))
+        let f = Z2.initialize(left: left, right: right)
         let state = await f(channel)
         _ = await state.leftCancellable?.result
         _ = await state.rightCancellable?.result
@@ -35,7 +36,7 @@ final class FutureZipTests: XCTestCase {
         let promise2: Promise<String> = await .init()
         let future2 = promise2.future
 
-        let cancellable = await zip(future1, future2).sink { result in
+        let cancellable = await and(future1, future2).sink { result in
             try? expectation.succeed()
             guard case let .success((left, right)) = result else {
                 XCTFail("Failed")
@@ -65,7 +66,7 @@ final class FutureZipTests: XCTestCase {
         let promise2: Promise<String> = await .init()
         let future2 = promise2.future
 
-        let cancellable = await zip(future1, future2).sink { result in
+        let cancellable = await and(future1, future2).sink { result in
             try? expectation.succeed()
             guard case let .failure(error) = result else {
                 XCTFail("Failed by succeeding")
@@ -90,11 +91,11 @@ final class FutureZipTests: XCTestCase {
         let lVal = 13
         let expectation: Promise<Void> = await .init()
         let promise1: Promise<Int> = await .init()
-        let future1 = promise1.future.delay(1_000_000_000)
+        let future1 = promise1.future.delay(.seconds(1))
         let promise2: Promise<String> = await .init()
         let future2 = promise2.future
 
-        let cancellable = await zip(future1, future2).sink { result in
+        let cancellable = await and(future1, future2).sink { result in
             try? expectation.succeed()
             guard case let .failure(error) = result else {
                 XCTFail("Failed by succeeding")
@@ -120,9 +121,9 @@ final class FutureZipTests: XCTestCase {
         let promise1: Promise<Int> = await .init()
         let future1 = promise1.future
         let promise2: Promise<String> = await .init()
-        let future2 = promise2.future.delay(1_000_000_000)
+        let future2 = promise2.future.delay(.seconds(1))
 
-        let cancellable = await zip(future1, future2).sink { result in
+        let cancellable = await and(future1, future2).sink { result in
             try? expectation.succeed()
             guard case let .failure(error) = result else {
                 XCTFail("Failed by succeeding")

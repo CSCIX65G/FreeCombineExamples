@@ -118,8 +118,8 @@ public final class Cancellable<Output: Sendable> {
     }
 }
 
-extension Cancellable {
-    public func map<T>(_ transform: @escaping (Output) async -> T) -> Cancellable<T> {
+public extension Cancellable {
+    func map<T>(_ transform: @escaping (Output) async -> T) -> Cancellable<T> {
         .init {
             try await withTaskCancellationHandler(
                 operation: {
@@ -133,7 +133,7 @@ extension Cancellable {
         }
     }
 
-    public func join<T>() -> Cancellable<T> where Output == Cancellable<T> {
+    func join<T>() -> Cancellable<T> where Output == Cancellable<T> {
         .init {
             let inner = try await self.value
             guard self.status != .cancelled else {
@@ -145,15 +145,24 @@ extension Cancellable {
         }
     }
 
-    public func flatMap<T>(
+    func flatMap<T>(
         _ transform: @escaping (Output) async -> Cancellable<T>
     ) -> Cancellable<T> {
         map(transform).join()
     }
 }
 
-extension Cancellable {
-    public var future: Future<Output> {
+extension Cancellable: Hashable {
+    public static func == (lhs: Cancellable<Output>, rhs: Cancellable<Output>) -> Bool {
+        lhs.task == rhs.task
+    }
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self)
+    }
+}
+
+public extension Cancellable {
+    var future: Future<Output> {
         .init { resumption, downstream in
             .init {
                 resumption.resume()
