@@ -47,7 +47,7 @@ public extension Publisher {
     @discardableResult
     func callAsFunction(onStartup: Resumption<Void>, _ downstream: @escaping Downstream) -> Cancellable<Demand> {
         call(onStartup, { result in
-            guard !Task.isCancelled else {
+            guard !Cancellables.isCancelled else {
                 return try await handleCancellation(of: downstream)
             }
             switch result {

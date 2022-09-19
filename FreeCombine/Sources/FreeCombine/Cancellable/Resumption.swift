@@ -4,7 +4,7 @@
 //
 //  Created by Van Simmons on 9/5/22.
 //
-@_implementationOnly import Atomics
+import Atomics
 
 public final class Resumption<Output: Sendable>: @unchecked Sendable {
     public enum Error: Swift.Error {

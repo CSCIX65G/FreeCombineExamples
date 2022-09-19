@@ -4,7 +4,7 @@
 //
 //  Created by Van Simmons on 9/17/22.
 //
-@_implementationOnly import Atomics
+import Atomics
 
 public final class UnfailingResumption<Output: Sendable>: @unchecked Sendable {
     private let atomicHasResumed = ManagedAtomic<Bool>(false)

@@ -17,7 +17,7 @@ func or<Left, Right>(
             operation: {
                 _ = await s.result
                 let result = await p.result
-                if Task.isCancelled {
+                if Cancellables.isCancelled {
                     throw Cancellables.Error.cancelled
                 }
                 return try result.get()

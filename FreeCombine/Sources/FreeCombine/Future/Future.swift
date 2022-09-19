@@ -40,7 +40,7 @@ extension Future {
         _ downstream: @escaping @Sendable (Result<Output, Swift.Error>) async -> Void
     ) -> Cancellable<Void> {
         call(onStartup, { result in
-            guard !Task.isCancelled else {
+            guard !Cancellables.isCancelled else {
                 return await downstream(.failure(Cancellables.Error.cancelled))
             }
             return await downstream(result)

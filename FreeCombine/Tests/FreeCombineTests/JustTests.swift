@@ -33,7 +33,7 @@ class JustTests: XCTestCase {
 
         let just = Just(7)
 
-        let c1 = await just.sink({ (result: Publisher<Int>.Result) in
+        let c1 = await just.sink { (result: Publisher<Int>.Result) in
             switch result {
                 case let .value(value):
                     XCTAssert(value == 7, "wrong value sent: \(value)")
@@ -46,9 +46,9 @@ class JustTests: XCTestCase {
                     catch { XCTFail("Failed to complete with error: \(error)") }
                     return .done
             }
-        })
+        }
 
-        let c2 = await just.sink({ (result: Publisher<Int>.Result) in
+        let c2 = await just.sink { (result: Publisher<Int>.Result) in
             switch result {
                 case let .value(value):
                     XCTAssert(value == 7, "wrong value sent: \(value)")
@@ -61,7 +61,7 @@ class JustTests: XCTestCase {
                     catch { XCTFail("Failed to complete with error: \(error)") }
                     return .done
             }
-        })
+        }
 
         do {
             _ = try await expectation1.value

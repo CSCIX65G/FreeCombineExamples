@@ -11,7 +11,7 @@ public enum Publishers {
     }
 
     public enum Completion: Sendable {
-        case failure(Error)
+        case failure(Swift.Error)
         case finished
     }
 

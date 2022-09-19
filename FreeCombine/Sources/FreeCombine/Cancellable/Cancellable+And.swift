@@ -22,7 +22,7 @@ func and<Left, Right>(
             operation: {
                 _ = await z.result
                 let result = await p.result
-                if Task.isCancelled { throw Error.cancelled }
+                if Cancellables.isCancelled { throw Error.cancelled }
                 return try result.get()
             },
             onCancel: {

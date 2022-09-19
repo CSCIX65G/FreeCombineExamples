@@ -31,7 +31,7 @@ extension AsyncContinuation {
         _ downstream: @escaping @Sendable (Output) async throws -> Return
     ) -> Cancellable<Return> {
         call(onStartup, { result in
-            guard !Task.isCancelled else {
+            guard !Cancellables.isCancelled else {
                 throw Cancellables.Error.cancelled
             }
             return try await downstream(result)

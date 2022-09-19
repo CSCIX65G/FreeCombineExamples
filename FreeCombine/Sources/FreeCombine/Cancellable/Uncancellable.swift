@@ -4,7 +4,7 @@
 //
 //  Created by Van Simmons on 9/7/22.
 //
-@_implementationOnly import Atomics
+import Atomics
 
 public final class Uncancellable<Output: Sendable> {
     private let task: Task<Output, Never>

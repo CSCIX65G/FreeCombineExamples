@@ -4,7 +4,7 @@
 //
 //  Created by Van Simmons on 9/18/22.
 //
-@_implementationOnly import Atomics
+import Atomics
 
 public enum Cancellables {
     @TaskLocal static var status = ManagedAtomic<UInt8>(Status.running.rawValue)

@@ -4,7 +4,7 @@
 //
 //  Created by Van Simmons on 9/5/22.
 //
-@_implementationOnly import Atomics
+import Atomics
 
 extension Result where Failure == Swift.Error {
     typealias Error = Cancellables.Error
@@ -91,7 +91,7 @@ public final class Cancellable<Output: Sendable> {
      */
     deinit {
         guard status != .running else {
-            assertionFailure(
+            Assertion.assertionFailure(
                 "ABORTING DUE TO LEAKED \(type(of: Self.self)) CREATED in \(function) @ \(file): \(line)"
             )
             task.cancel()

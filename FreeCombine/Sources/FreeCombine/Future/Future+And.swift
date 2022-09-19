@@ -42,7 +42,7 @@ public struct And<Left, Right> {
         _ action: Action
     ) async -> Reducer<State, Action>.Effect {
         do {
-            guard !Task.isCancelled else { throw Cancellables.Error.cancelled }
+            guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
             switch (action, state.current) {
                 case let (.left(leftResult), .nothing):
                     state.current = .hasLeft(try leftResult.get())

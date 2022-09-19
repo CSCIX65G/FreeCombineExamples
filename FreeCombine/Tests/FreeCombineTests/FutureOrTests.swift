@@ -164,7 +164,7 @@ final class FutureOrTests: XCTestCase {
         let timeout = Failed(Never.self, error: Error.iFailed).delay(.milliseconds(10))
         let toDoFuture = toDo.future
         let orFuture = or(toDoFuture, timeout)
-        let cancellable = await orFuture.sink({ resultEitherIntVoid in
+        let cancellable = await orFuture.sink { resultEitherIntVoid in
             guard case .success(let eitherIntVoid) = resultEitherIntVoid else {
                 XCTFail("should have succeeded. got: \(resultEitherIntVoid)")
                 return
@@ -177,7 +177,7 @@ final class FutureOrTests: XCTestCase {
                 XCTFail("wrong value.  got: \(anInt)")
                 return
             }
-        })
+        }
         try toDo.succeed(13)
         _ = await cancellable.result
     }
@@ -188,7 +188,7 @@ final class FutureOrTests: XCTestCase {
         let toDo = Succeeded(13).delay(.milliseconds(100))
         let timeout = Failed(Never.self, error: Error.iFailed).delay(.milliseconds(5))
         let orFuture = or(toDo, timeout)
-        let cancellable = await orFuture.sink({ resultEitherIntVoid in
+        let cancellable = await orFuture.sink { resultEitherIntVoid in
             guard case .failure(let error) = resultEitherIntVoid else {
                 XCTFail("should have failed. got: \(resultEitherIntVoid)")
                 return
@@ -197,7 +197,7 @@ final class FutureOrTests: XCTestCase {
                 XCTFail("wrong error type.  got: \(error)")
                 return
             }
-        })
+        }
         _ = await cancellable.result
     }
 
