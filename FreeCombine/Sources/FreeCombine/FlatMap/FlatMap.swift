@@ -31,3 +31,10 @@ public extension AsyncContinuation {
     }
 }
 
+extension AsyncFunc {
+    public func flatMap<C>(
+        _ transform: @escaping (B) async throws -> AsyncFunc<A, C>
+    ) -> AsyncFunc<A, C> {
+        .init { a in try await transform(call(a))(a) }
+    }
+}
