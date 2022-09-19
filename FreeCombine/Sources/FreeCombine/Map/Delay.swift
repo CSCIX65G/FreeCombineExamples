@@ -16,3 +16,18 @@ extension Future {
         }
     }
 }
+
+public extension AsyncContinuation {
+    func delay(
+        _ nanoseconds: UInt64
+    ) -> Self {
+        .init { resumption, downstream in
+            self(onStartup: resumption) { r in
+                try? await Task.sleep(nanoseconds: nanoseconds)
+                return try await downstream(r)
+            }
+        }
+    }
+}
+
+

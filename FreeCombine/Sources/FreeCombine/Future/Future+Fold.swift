@@ -12,7 +12,7 @@ public extension Future {
     ) -> Self {
         var this = self
         for future in futures {
-            this = and(this, future).flatMap(combiningFunction)
+            this = this.and(future).flatMap(combiningFunction)
         }
         return this
     }

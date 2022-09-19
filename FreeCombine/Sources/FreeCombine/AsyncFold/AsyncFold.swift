@@ -55,6 +55,10 @@
  [Child Tasks](https://github.com/apple/swift-evolution/blob/main/proposals/0304-structured-concurrency.md#child-tasks)
  > An asynchronous function can create a child task. Child tasks inherit some of the structure of their parent task, including its priority, but can run concurrently with it. However, this concurrency is bounded: a function that creates a child task must wait for it to end before returning. This structure means that functions can locally reason about all the work currently being done for the current task, anticipate the effects of cancelling the current task, and so on. It also makes creating the child task substantially more efficient.
 
+ [Task Groups and Child Tasks](https://github.com/apple/swift-evolution/blob/main/proposals/0304-structured-concurrency.md#task-groups-and-child-tasks)
+ 
+ > By contrast with future-based task APIs, there is no way in which a reference to the child task can escape the scope in which the child task is created. This ensures that the structure of structured concurrency is maintained.
+
  This definition of structured concurrency is extremely limiting and precludes the monadic use of Task.
  */
 public final class AsyncFold<State, Action: Sendable> {

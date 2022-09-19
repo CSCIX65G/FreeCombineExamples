@@ -32,3 +32,25 @@ public func and<Left, Right>(
         }
     }
 }
+
+public func Anded<Left, Right>(
+    _ left: Future<Left>,
+    _ right: Future<Right>
+) -> Future<(Left, Right)> {
+    and(left, right)
+}
+
+public extension Future {
+    func and<Other>(
+        _ other: Future<Other>
+    ) -> Future<(Output, Other)> {
+        Anded(self, other)
+    }
+}
+
+public func &&<Left, Right>(
+    _ left: Future<Left>,
+    _ right: Future<Right>
+) -> Future<(Left, Right)> {
+    Anded(left, right)
+}

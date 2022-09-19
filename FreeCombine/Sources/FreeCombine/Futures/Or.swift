@@ -30,3 +30,26 @@ public func or<Left, Right>(
         }
     } }
 }
+
+public func Ored<Left, Right>(
+    _ left: Future<Left>,
+    _ right: Future<Right>
+) -> Future<Either<Left, Right>> {
+    or(left, right)
+}
+
+public extension Future {
+    func or<Other>(
+        _ other: Future<Other>
+    ) -> Future<Either<Output, Other>> {
+        Ored(self, other)
+    }
+}
+
+public func ||<Left, Right>(
+    _ left: Future<Left>,
+    _ right: Future<Right>
+) -> Future<Either<Left, Right>> {
+    Ored(left, right)
+}
+

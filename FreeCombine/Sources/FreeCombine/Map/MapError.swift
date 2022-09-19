@@ -11,8 +11,8 @@ extension Future {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in
                 switch r {
-                    case .success(let a):
-                        await downstream(.success(a))
+                    case .success:
+                        await downstream(r)
                     case let .failure(error):
                         await downstream(.failure(transform(error)))
                 }

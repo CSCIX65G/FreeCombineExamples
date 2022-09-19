@@ -200,4 +200,49 @@ final class FutureOrTests: XCTestCase {
         })
         _ = await cancellable.result
     }
+
+    func testSimpleOrOperator() async throws {
+        let lVal = 13
+        let rVal = "hello, world!"
+        let expectation: Promise<Void> = await .init()
+        let promise1: Promise<Int> = await .init()
+        let future1 = promise1.future
+        let promise2: Promise<String> = await .init()
+        let future2 = promise2.future
+        let isLeft = Bool.random()
+
+        let cancellable = await (future1 || future2)
+            .sink { result in
+                try? expectation.succeed()
+                guard case let .success(either) = result else {
+                    XCTFail("Failed")
+                    return
+                }
+
+                if isLeft {
+                    guard case let .left(receivedLVal) = either else {
+                        XCTFail("Bad left chirality: \(either)")
+                        return
+                    }
+                    XCTAssert(receivedLVal == lVal, "Bad left value")
+                } else {
+                    guard case let .right(receivedRVal) = either else {
+                        XCTFail("Bad right chirality: \(either)")
+                        return
+                    }
+                    XCTAssert(receivedRVal == rVal, "Bad right value")
+                }
+            }
+
+        if isLeft {
+            try? promise1.succeed(lVal)
+            _ = await cancellable.result
+            try? promise2.succeed(rVal)
+        } else {
+            try? promise2.succeed(rVal)
+            _ = await cancellable.result
+            try? promise1.succeed(lVal)
+        }
+        _ = await expectation.result
+    }
 }
