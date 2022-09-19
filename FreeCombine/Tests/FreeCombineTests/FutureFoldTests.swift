@@ -23,7 +23,7 @@ final class FutureFoldTests: XCTestCase {
         _ = await cancellable.result
     }
 
-    // The following two test verify that the ordering of the fold
+    // The following two tests verify that the ordering of the fold
     // is correct regardless of the order of promise completion
     // and that all promises are running in parallel
     func testAsyncFoldOrdering() async throws {

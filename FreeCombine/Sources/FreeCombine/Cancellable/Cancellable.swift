@@ -35,29 +35,6 @@ extension Result where Failure == Swift.Error {
     }
 }
 
-public enum Cancellables {
-    public enum Error: Swift.Error, Sendable {
-        case cancelled
-        case alreadyCompleted
-        case alreadyCancelled
-        case alreadyFailed
-        case internalInconsistency
-    }
-
-    public enum Status: UInt8, Sendable, RawRepresentable, Equatable {
-        case running
-        case finished
-        case cancelled
-
-        static func get(
-            atomic: ManagedAtomic<UInt8>
-        ) -> Status {
-            let value = atomic.load(ordering: .sequentiallyConsistent)
-            return .init(rawValue: value)!
-        }
-    }
-}
-
 public final class Cancellable<Output: Sendable> {
     public typealias Error = Cancellables.Error
     public typealias Status = Cancellables.Status
@@ -80,19 +57,24 @@ public final class Cancellable<Output: Sendable> {
         self.line = line
         let atomic = atomicStatus
         self.task = .init {
-            try await Result(catching: operation)
-                .set(atomic: atomic, to: .finished)
-                .get()
+            try await Cancellables.$status.withValue(atomic) {
+                try await Result(catching: operation)
+                    .set(atomic: atomic, to: .finished)
+                    .get()
+            }
         }
     }
 
-    public var isCancelled: Bool { task.isCancelled }
+    public var isCancelled: Bool {
+        atomicStatus.load(ordering: .sequentiallyConsistent) == Status.cancelled.rawValue
+    }
     public var status: Status { Status.get(atomic: atomicStatus) }
 
     @Sendable public func cancel() throws {
         try Result<Void, Swift.Error>.success(())
             .set(atomic: atomicStatus, to: .cancelled)
             .get()
+        // As a courtesy to older code...
         task.cancel()
     }
 
