@@ -49,6 +49,7 @@ class ConcatTests: XCTestCase {
                         XCTAssert(n == 42, "wrong number of values sent: \(n)")
                         do {
                             try expectation.succeed()
+                            _ = await expectation.result
                         } catch {
                             XCTFail("Could not complete: \(error)")
                         }
@@ -85,6 +86,7 @@ class ConcatTests: XCTestCase {
                         XCTAssert(count == 42, "wrong number of values sent: \(count)")
                         do {
                             try expectation1.succeed()
+                            _ = await expectation1.result
                         } catch {
                             XCTFail("Failed to complete branch 1: \(error)")
                         }
@@ -107,9 +109,9 @@ class ConcatTests: XCTestCase {
                         XCTAssert(count == 42, "wrong number of values sent: \(count)")
                         do {
                             try expectation2.succeed()
-                        } catch {
-                            XCTFail("Failed to complete branch 2: \(error)")
+                            _ = await expectation2.result
                         }
+                        catch { XCTFail("Failed to complete branch 2: \(error)") }
                         return .done
                 }
             }

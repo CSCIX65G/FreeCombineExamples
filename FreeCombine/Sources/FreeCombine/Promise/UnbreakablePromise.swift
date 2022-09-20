@@ -21,10 +21,21 @@ public final class UnbreakablePromise<Output> {
     private let resumption: UnfailingResumption<Output>
     public let uncancellable: Uncancellable<Output>
 
-    public init() async {
+    public let function: StaticString
+    public let file: StaticString
+    public let line: UInt
+
+    public init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) async {
+        self.function = function
+        self.file = file
+        self.line = line
         var uc: Uncancellable<Output>!
         self.resumption = await withUnfailingResumption { outer in
-            uc = .init { await withUnfailingResumption(outer.resume) }
+            uc = .init(function: function, file: file, line: line) { await withUnfailingResumption(outer.resume) }
         }
         self.uncancellable = uc
     }

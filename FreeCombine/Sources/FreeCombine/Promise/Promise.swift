@@ -23,10 +23,21 @@ public final class Promise<Output> {
     private let resumption: Resumption<Output>
     public let cancellable: Cancellable<Output>
 
-    public init() async {
+    public let function: StaticString
+    public let file: StaticString
+    public let line: UInt
+
+    public init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) async {
+        self.function = function
+        self.file = file
+        self.line = line
         var lc: Cancellable<Output>!
         self.resumption = try! await withResumption { outer in
-            lc = .init { try await withResumption(outer.resume) }
+            lc = .init(function: function, file: file, line: line) { try await withResumption(outer.resume) }
         }
         self.cancellable = lc
     }
@@ -40,7 +51,7 @@ public final class Promise<Output> {
      */
     deinit {
         guard status != .waiting else {
-            assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self))")
+            assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self)) CREATED in \(function) @ \(file): \(line)")
             try? cancel()
             return
         }

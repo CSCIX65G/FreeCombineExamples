@@ -10,9 +10,20 @@ public final class Uncancellable<Output: Sendable> {
     private let task: Task<Output, Never>
     private let atomicStatus = ManagedAtomic<Bool>(false)
 
+    public let function: StaticString
+    public let file: StaticString
+    public let line: UInt
+
     public init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         operation: @escaping @Sendable () async -> Output
     ) {
+        self.function = function
+        self.file = file
+        self.line = line
+
         let atomic = atomicStatus
         self.task = .init {
             let retValue = await operation()

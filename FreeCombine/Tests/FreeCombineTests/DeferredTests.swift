@@ -48,6 +48,7 @@ class DeferTests: XCTestCase {
                     XCTAssert(count == 3, "wrong number of values sent: \(count)")
                     do {
                         try expectation1.succeed()
+                        _ = await expectation1.result
                     } catch {
                         XCTFail("Failed to complete")
                     }
@@ -68,6 +69,7 @@ class DeferTests: XCTestCase {
                     XCTAssert(count == 3, "wrong number of values sent: \(count)")
                     do {
                         try expectation2.succeed()
+                        _ = await expectation2.result
                     } catch {
                         XCTFail("Failed to complete")
                     }
@@ -105,7 +107,10 @@ class DeferTests: XCTestCase {
                 case .completion(.finished):
                     let count = count1.count
                     XCTAssert(count == 3, "wrong number of values sent: \(count)")
-                    do { try expectation1.succeed() }
+                    do {
+                        try expectation1.succeed()
+                        _ = await expectation1.result
+                    }
                     catch { XCTFail("Failed to complete") }
                     return .done
             }
@@ -123,7 +128,10 @@ class DeferTests: XCTestCase {
                 case .completion(.finished):
                     let count = count2.count
                     XCTAssert(count == 3, "wrong number of values sent: \(count)")
-                    do { try expectation2.succeed() }
+                    do {
+                        try expectation2.succeed()
+                        _ = await expectation2.result
+                    }
                     catch { XCTFail("Failed to complete") }
                     return .done
             }
