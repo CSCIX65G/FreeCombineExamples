@@ -49,7 +49,7 @@ public final class UnbreakablePromise<Output> {
      */
     deinit {
         guard status != .waiting else {
-            assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self))")
+            Assertion.assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)")
             return
         }
     }

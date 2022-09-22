@@ -19,22 +19,24 @@
 //  limitations under the License.
 //
 public struct Publisher<Output: Sendable>: Sendable {
-    public typealias Demand = Publishers.Demand
-    public typealias Error = Publishers.Error
-    public typealias Completion = Publishers.Completion
-    public typealias Downstream = @Sendable (Publisher<Output>.Result) async throws -> Demand
-
-    public enum Result: Sendable {
-        case value(Output)
-        case completion(Publishers.Completion)
-    }
-
     private let call: @Sendable (Resumption<Void>, @escaping Downstream) -> Cancellable<Demand>
 
     internal init(
         _ call: @escaping @Sendable (Resumption<Void>, @escaping Downstream) -> Cancellable<Demand>
     ) {
         self.call = call
+    }
+}
+
+public extension Publisher {
+    typealias Demand = Publishers.Demand
+    typealias Error = Publishers.Error
+    typealias Completion = Publishers.Completion
+    typealias Downstream = @Sendable (Publisher<Output>.Result) async throws -> Demand
+
+    enum Result: Sendable {
+        case value(Output)
+        case completion(Publishers.Completion)
     }
 }
 

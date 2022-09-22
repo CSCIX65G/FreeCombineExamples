@@ -54,7 +54,7 @@ public final class UnfailingResumption<Output: Sendable>: @unchecked Sendable {
     public func resume(returning output: Output) {
         guard canResume else {
             preconditionFailure(
-                "\(type(of: Self.self)) FAILED. ALREADY RESUMED \(type(of: Self.self)):\(self)"
+                "ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
             )
         }
         continuation.resume(returning: output)

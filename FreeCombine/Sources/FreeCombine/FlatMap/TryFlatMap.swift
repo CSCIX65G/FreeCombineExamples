@@ -22,3 +22,22 @@ extension Future {
         }
     }
 }
+
+public extension Publisher {
+    func tryFlatMap<B>(
+        _ transform: @escaping (Output) async throws -> Publisher<B>
+    ) -> Publisher<B> {
+        .init { resumption, downstream in
+            self(onStartup: resumption) { r in
+                switch r {
+                case .value(let a):
+                    var c: Publisher<B>!
+                    do { c = try await transform(a) }
+                    catch { return try await downstream(.completion(.failure(error))) }
+                    return try await c(flattener(downstream)).value
+                case let .completion(value):
+                    return try await downstream(.completion(value))
+            } }
+        }
+    }
+}

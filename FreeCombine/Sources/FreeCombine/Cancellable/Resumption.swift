@@ -61,7 +61,7 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
     public func resume(returning output: Output) {
         guard canResume else {
             preconditionFailure(
-                "\(type(of: Self.self)) FAILED. ALREADY RESUMED \(type(of: Self.self)):\(self)"
+                "ABORTING DUE TO PREVIOUS RESUMPTION: \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
             )
         }
         continuation.resume(returning: output)
@@ -70,7 +70,7 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
     public func resume(throwing error: Swift.Error) {
         guard canResume else {
             preconditionFailure(
-                "\(type(of: Self.self)) FAILED. ALREADY RESUMED \(type(of: Self.self)):\(self)"
+                "ABORTING DUE TO PREVIOUS RESUMPTION: \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
             )
         }
         continuation.resume(throwing: error)

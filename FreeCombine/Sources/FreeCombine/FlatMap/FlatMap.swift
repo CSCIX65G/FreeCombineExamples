@@ -8,14 +8,25 @@ extension Future {
     func flatMap<T>(
         _ transform: @escaping (Output) async -> Future<T>
     ) -> Future<T> {
-        .init { resumption, downstream in
-            self(onStartup: resumption) { r in switch r {
-                case .success(let a):
-                    _ = await transform(a)(downstream).result
-                case let .failure(error):
-                    await downstream(.failure(error))
-            } }
-        }
+        .init { resumption, downstream in self(onStartup: resumption) { r in switch r {
+            case .success(let a):
+                _ = await transform(a)(downstream).result
+            case let .failure(error):
+                await downstream(.failure(error))
+        } } }
+    }
+}
+
+public extension Publisher {
+    func flatMap<B>(
+        _ transform: @escaping (Output) async -> Publisher<B>
+    ) -> Publisher<B> {
+        .init { resumption, downstream in self(onStartup: resumption) { r in switch r {
+            case .value(let a):
+                return try await transform(a)(flattener(downstream)).value
+            case let .completion(value):
+                return try await downstream(.completion(value))
+        } } }
     }
 }
 
@@ -36,18 +47,5 @@ extension AsyncFunc {
         _ transform: @escaping (B) async throws -> AsyncFunc<A, C>
     ) -> AsyncFunc<A, C> {
         .init { a in try await transform(call(a))(a) }
-    }
-}
-
-public extension Publisher {
-    func flatMap<B>(
-        _ transform: @escaping (Output) async -> Publisher<B>
-    ) -> Publisher<B> {
-        .init { resumption, downstream in self(onStartup: resumption) { r in switch r {
-            case .value(let a):
-                return try await transform(a)(flattener(downstream)).value
-            case let .completion(value):
-                return try await downstream(.completion(value))
-        } } }
     }
 }

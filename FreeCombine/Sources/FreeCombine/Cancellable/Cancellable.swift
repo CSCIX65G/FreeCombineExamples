@@ -6,35 +6,6 @@
 //
 import Atomics
 
-extension Result where Failure == Swift.Error {
-    typealias Error = Cancellables.Error
-    func set(
-        atomic: ManagedAtomic<UInt8>,
-        to newStatus: Cancellables.Status
-    ) -> Self {
-        .init {
-            let (success, original) = atomic.compareExchange(
-                expected: Cancellables.Status.running.rawValue,
-                desired: newStatus.rawValue,
-                ordering: .sequentiallyConsistent
-            )
-            guard success else {
-                switch original {
-                    case Cancellables.Status.cancelled.rawValue:
-                        if case let .failure(error) = self { throw error }
-                        throw Error.alreadyCancelled
-                    default:
-                        throw Error.internalInconsistency
-                }
-            }
-            switch self {
-                case let .success(value): return value
-                case let .failure(error): throw error
-            }
-        }
-    }
-}
-
 public final class Cancellable<Output: Sendable> {
     public typealias Error = Cancellables.Error
     public typealias Status = Cancellables.Status
@@ -59,7 +30,7 @@ public final class Cancellable<Output: Sendable> {
         self.task = .init {
             try await Cancellables.$status.withValue(atomic) {
                 try await Result(catching: operation)
-                    .set(atomic: atomic, to: .finished)
+                    .set(atomic: atomic, from: Status.running, to: Status.finished)
                     .get()
             }
         }
@@ -68,11 +39,19 @@ public final class Cancellable<Output: Sendable> {
     public var isCancelled: Bool {
         atomicStatus.load(ordering: .sequentiallyConsistent) == Status.cancelled.rawValue
     }
+    public var isFinished: Bool {
+        atomicStatus.load(ordering: .sequentiallyConsistent) == Status.finished.rawValue
+    }
+    
     public var status: Status { Status.get(atomic: atomicStatus) }
 
     @Sendable public func cancel() throws {
         try Result<Void, Swift.Error>.success(())
-            .set(atomic: atomicStatus, to: .cancelled)
+            .set(
+                atomic: atomicStatus,
+                from: Cancellables.Status.running,
+                to: Cancellables.Status.cancelled
+            )
             .get()
         // As a courtesy to older code...
         task.cancel()
@@ -94,7 +73,7 @@ public final class Cancellable<Output: Sendable> {
             Assertion.assertionFailure(
                 "ABORTING DUE TO LEAKED \(type(of: Self.self)) CREATED in \(function) @ \(file): \(line)"
             )
-            task.cancel()
+            try? cancel()
             return
         }
     }
@@ -114,8 +93,9 @@ public extension Cancellable {
             )
         }
     }
+}
 
-    // Cancellable<Cancellable<T>> -> Cancellable<T>
+public extension Cancellable {
     func join<T>() -> Cancellable<T> where Output == Cancellable<T> {
         .init {
             let inner = try await self.value
@@ -127,7 +107,9 @@ public extension Cancellable {
             return value
         }
     }
+}
 
+public extension Cancellable {
     func flatMap<T>(
         _ transform: @escaping (Output) async -> Cancellable<T>
     ) -> Cancellable<T> {

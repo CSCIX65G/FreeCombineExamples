@@ -36,13 +36,13 @@ public final class Uncancellable<Output: Sendable> {
      [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
      */
     deinit {
-        guard hasFinished else {
-            assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self))")
+        guard isFinished else {
+            Assertion.assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)")
             return
         }
     }
 
-    public var hasFinished: Bool {
+    public var isFinished: Bool {
         atomicStatus.load(ordering: .sequentiallyConsistent)
     }
 
