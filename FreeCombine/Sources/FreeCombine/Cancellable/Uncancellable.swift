@@ -7,12 +7,12 @@
 import Atomics
 
 public final class Uncancellable<Output: Sendable> {
+    private let function: StaticString
+    private let file: StaticString
+    private let line: UInt
+
     private let task: Task<Output, Never>
     private let atomicStatus = ManagedAtomic<Bool>(false)
-
-    public let function: StaticString
-    public let file: StaticString
-    public let line: UInt
 
     public init(
         function: StaticString = #function,
@@ -36,48 +36,13 @@ public final class Uncancellable<Output: Sendable> {
      [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
      */
     deinit {
-        guard isFinished else {
+        guard atomicStatus.load(ordering: .sequentiallyConsistent) else {
             Assertion.assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)")
             return
         }
     }
 
-    public var isFinished: Bool {
-        atomicStatus.load(ordering: .sequentiallyConsistent)
-    }
-
     public var value: Output {
-        get async {
-            await task.value
-        }
-    }
-}
-
-extension Uncancellable {
-    public func map<T>(
-        _ transform: @escaping (Output) async -> T
-    ) -> Uncancellable<T> {
-        .init { await transform(self.value) }
-    }
-
-    public func join<T>() -> Uncancellable<T> where Output == Uncancellable<T> {
-        .init { await self.value.value }
-    }
-
-    public func flatMap<T>(
-        _ transform: @escaping (Output) async -> Uncancellable<T>
-    ) -> Uncancellable<T> {
-        map(transform).join()
-    }
-}
-
-func and<Left, Right>(
-    _ left: Uncancellable<Left>,
-    _ right: Uncancellable<Right>
-) -> Uncancellable<(Left, Right)> {
-    .init {
-        async let l = await left.value
-        async let r = await right.value
-        return await (l, r)
+        get async { await task.value }
     }
 }

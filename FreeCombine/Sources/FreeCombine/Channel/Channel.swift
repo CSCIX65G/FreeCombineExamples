@@ -46,8 +46,8 @@ extension Channel where Element == Void {
 extension Channel {
     public func fold<State>(
         onStartup: Resumption<Void>,
-        into reducer: Reducer<State, Element>
+        into reducer: Folder<State, Element>
     ) -> AsyncFold<State, Element> {
-        .init(onStartup: onStartup, channel: self, reducer: reducer)
+        .init(onStartup: onStartup, channel: self, folder: reducer)
     }
 }

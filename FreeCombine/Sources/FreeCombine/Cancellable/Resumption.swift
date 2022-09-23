@@ -12,12 +12,12 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
         case alreadyResumed
     }
 
+    private let function: StaticString
+    private let file: StaticString
+    private let line: UInt
+
     private let atomicHasResumed = ManagedAtomic<Bool>(false)
     private let continuation: UnsafeContinuation<Output, Swift.Error>
-
-    public let function: StaticString
-    public let file: StaticString
-    public let line: UInt
 
     init(
         function: StaticString = #function,

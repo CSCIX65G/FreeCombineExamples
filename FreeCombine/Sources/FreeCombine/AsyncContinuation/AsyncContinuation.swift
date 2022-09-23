@@ -5,16 +5,13 @@
 //  Created by Van Simmons on 9/13/22.
 //
 
-public struct AsyncContinuation<
-    Output: Sendable,
-    Return: Sendable
->: Sendable {
+public struct AsyncContinuation<Output: Sendable, Return>: Sendable {
     private let call: @Sendable (
         Resumption<Void>,
         @escaping @Sendable (Output) async throws -> Return
     ) -> Cancellable<Return>
 
-    internal init(
+    init(
         _ call: @escaping @Sendable (
             Resumption<Void>,
             @escaping @Sendable (Output) async throws -> Return
@@ -30,12 +27,10 @@ extension AsyncContinuation {
         onStartup: Resumption<Void>,
         _ downstream: @escaping @Sendable (Output) async throws -> Return
     ) -> Cancellable<Return> {
-        call(onStartup, { result in
-            guard !Cancellables.isCancelled else {
-                throw Cancellables.Error.cancelled
-            }
+        call(onStartup) { result in
+            guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
             return try await downstream(result)
-        } )
+        }
     }
 
     @discardableResult

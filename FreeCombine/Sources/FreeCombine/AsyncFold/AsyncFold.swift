@@ -62,12 +62,13 @@
  This definition of structured concurrency is extremely limiting and precludes the monadic use of Task.
  */
 public final class AsyncFold<State, Action: Sendable> {
-    let channel: Channel<Action>
-    let cancellable: Cancellable<State>
+    private let function: StaticString
+    private let file: StaticString
+    private let line: UInt
 
-    public let function: StaticString
-    public let file: StaticString
-    public let line: UInt
+    let channel: Channel<Action>
+
+    public let cancellable: Cancellable<State>
 
     fileprivate init(
         function: StaticString = #function,
@@ -120,14 +121,14 @@ extension AsyncFold {
         file: StaticString = #file,
         line: UInt = #line,
         channel: Channel<Action>,
-        reducer: Reducer<State, Action>
+        folder: Folder<State, Action>
     ) async -> Self {
         var fold: Self!
         try! await withResumption(function: function, file: file, line: line) { startup in
             fold = .init(
                 onStartup: startup,
                 channel: channel,
-                reducer: reducer
+                folder: folder
             )
         }
         return fold
@@ -139,7 +140,7 @@ extension AsyncFold {
         line: UInt = #line,
         onStartup: Resumption<Void>,
         channel: Channel<Action>,
-        reducer: Reducer<State, Action>
+        folder: Folder<State, Action>
     ) {
         self.init(
             function: function,
@@ -149,7 +150,7 @@ extension AsyncFold {
             cancellable: .init(function: function, file: file, line: line) {
                 try await withTaskCancellationHandler(
                     operation: {
-                        try await Self.runloop(onStartup: onStartup, channel: channel, reducer: reducer)
+                        try await Self.runloop(onStartup: onStartup, channel: channel, folder: folder)
                     },
                     onCancel: channel.finish
                 )
@@ -163,18 +164,18 @@ extension AsyncFold {
         line: UInt = #line,
         onStartup: Resumption<Void>,
         channel: Channel<Action>,
-        reducer: Reducer<State, Action>
+        folder: Folder<State, Action>
     ) async throws -> State {
-        var state = await reducer.initialize(channel: channel)
+        var state = await folder.initialize(channel: channel)
         do {
             onStartup.resume()
             for await action in channel.stream {
-                try await reducer.reduce(state: &state, action: action)
+                try await folder.reduce(state: &state, action: action)
             }
-            await reducer.finalize(&state, .finished)
+            await folder.finalize(&state, .finished)
         } catch {
-            await reducer.dispose(channel: channel, error: error)
-            try await reducer.finalize(state: &state, error: error)
+            await folder.dispose(channel: channel, error: error)
+            try await folder.finalize(state: &state, error: error)
         }
         return state
     }

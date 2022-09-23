@@ -54,3 +54,72 @@ public func &&<Left, Right>(
 ) -> Future<(Left, Right)> {
     Anded(left, right)
 }
+
+public func and<A, B, C>(
+    _ one: Future<A>,
+    _ two: Future<B>,
+    _ three: Future<C>
+) -> Future<(A, B, C)> {
+    and(and(one, two), three)
+        .map { ($0.0.0, $0.0.1, $0.1) }
+}
+
+public func and<A, B, C, D>(
+    _ one: Future<A>,
+    _ two: Future<B>,
+    _ three: Future<C>,
+    _ four: Future<D>
+) -> Future<(A, B, C, D)> {
+    and(and(one, two), and(three, four))
+        .map { ($0.0.0, $0.0.1, $0.1.0, $0.1.1) }
+}
+
+public func and<A, B, C, D, E>(
+    _ one: Future<A>,
+    _ two: Future<B>,
+    _ three: Future<C>,
+    _ four: Future<D>,
+    _ five: Future<E>
+) -> Future<(A, B, C, D, E)> {
+    and(and(and(one, two), and(three, four)), five)
+        .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1) }
+}
+
+public func and<A, B, C, D, E, F>(
+    _ one: Future<A>,
+    _ two: Future<B>,
+    _ three: Future<C>,
+    _ four: Future<D>,
+    _ five: Future<E>,
+    _ six: Future<F>
+) -> Future<(A, B, C, D, E, F)> {
+    and(and(and(one, two), and(three, four)), and(five, six))
+        .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0, $0.1.1) }
+}
+
+public func and<A, B, C, D, E, F, G>(
+    _ one: Future<A>,
+    _ two: Future<B>,
+    _ three: Future<C>,
+    _ four: Future<D>,
+    _ five: Future<E>,
+    _ six: Future<F>,
+    _ seven: Future<G>
+) -> Future<(A, B, C, D, E, F, G)> {
+    and(and(and(one, two), and(three, four)), and(and(five, six), seven))
+        .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0.0, $0.1.0.1, $0.1.1) }
+}
+
+public func and<A, B, C, D, E, F, G, H>(
+    _ one: Future<A>,
+    _ two: Future<B>,
+    _ three: Future<C>,
+    _ four: Future<D>,
+    _ five: Future<E>,
+    _ six: Future<F>,
+    _ seven: Future<G>,
+    _ eight: Future<H>
+) -> Future<(A, B, C, D, E, F, G, H)> {
+    and(and(and(one, two), and(three, four)), and(and(five, six), and(seven, eight)))
+        .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0.0, $0.1.0.1, $0.1.1.0, $0.1.1.1) }
+}

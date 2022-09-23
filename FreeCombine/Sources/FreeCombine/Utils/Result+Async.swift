@@ -13,6 +13,9 @@ extension Result {
     }
 }
 
+public enum AtomicError<R: RawRepresentable>: Error {
+    case failedTransition(from: R, to: R, current: R?)
+}
 extension Result where Failure == Swift.Error {
     func set<R: RawRepresentable>(
         atomic: ManagedAtomic<UInt8>,
@@ -26,13 +29,11 @@ extension Result where Failure == Swift.Error {
                 ordering: .sequentiallyConsistent
             )
             guard success else {
-                switch original {
-                    case Cancellables.Status.cancelled.rawValue:
-                        if case let .failure(error) = self { throw error }
-                        throw Cancellables.Error.alreadyCancelled
-                    default:
-                        throw Cancellables.Error.internalInconsistency
-                }
+                throw AtomicError.failedTransition(
+                    from: oldStatus,
+                    to: newStatus,
+                    current: R(rawValue: original)
+                )
             }
             return try get()
         }

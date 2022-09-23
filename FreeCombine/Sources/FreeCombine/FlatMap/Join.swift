@@ -32,3 +32,22 @@ public extension Publisher {
     }
 }
 
+public extension Cancellable {
+    func join<T>() -> Cancellable<T> where Output == Cancellable<T> {
+        .init {
+            let inner = try await self.value
+            guard !Cancellables.isCancelled else {
+                try? inner.cancel()
+                throw Error.cancelled
+            }
+            let value = try await inner.value
+            return value
+        }
+    }
+}
+
+extension Uncancellable {
+    public func join<T>() -> Uncancellable<T> where Output == Uncancellable<T> {
+        .init { await self.value.value }
+    }
+}

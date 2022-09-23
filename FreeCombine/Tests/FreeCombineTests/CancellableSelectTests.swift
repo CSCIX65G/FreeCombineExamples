@@ -74,11 +74,10 @@ final class CancellableOrTests: XCTestCase {
                 XCTFail("Failed by succeeding")
                 return
             }
-            guard let cancelError = error as? Cancellables.Error else {
+            guard nil != error as? AtomicError<Cancellables.Status> else {
                 XCTFail("Wrong error type in error: \(error)")
                 return
             }
-            XCTAssert(.some(cancelError) == .some(Cancellables.Error.cancelled), "Incorrect failure: \(cancelError)")
         }
         try ored.cancel()
         _ = await expectation.result

@@ -23,7 +23,7 @@ public extension Publisher {
         return .init { resumption, downstream in
             let currentValue: ValueRef<[Output]> = ValueRef(value: [])
             return self(onStartup: resumption) { r in
-                guard !Task.isCancelled else {
+                guard !Cancellables.isCancelled else {
                     return try await handleCancellation(of: downstream)
                 }
                 switch r {

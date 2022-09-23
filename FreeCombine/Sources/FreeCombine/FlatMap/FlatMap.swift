@@ -30,6 +30,30 @@ public extension Publisher {
     }
 }
 
+public extension Cancellable {
+    func flatMap<T>(
+        _ transform: @escaping (Output) async -> Cancellable<T>
+    ) -> Cancellable<T> {
+        map(transform).join()
+    }
+}
+
+extension Uncancellable {
+    public func flatMap<T>(
+        _ transform: @escaping (Output) async -> Uncancellable<T>
+    ) -> Uncancellable<T> {
+        map(transform).join()
+    }
+}
+
+extension AsyncFunc {
+    public func flatMap<C>(
+        _ transform: @escaping (B) async throws -> AsyncFunc<A, C>
+    ) -> AsyncFunc<A, C> {
+        .init { a in try await transform(call(a))(a) }
+    }
+}
+
 public extension AsyncContinuation {
     func flatMap<T>(
         _ transform: @escaping (Output) async -> AsyncContinuation<T, Return>
@@ -39,13 +63,5 @@ public extension AsyncContinuation {
                 try await transform(a)(downstream).value
             }
         }
-    }
-}
-
-extension AsyncFunc {
-    public func flatMap<C>(
-        _ transform: @escaping (B) async throws -> AsyncFunc<A, C>
-    ) -> AsyncFunc<A, C> {
-        .init { a in try await transform(call(a))(a) }
     }
 }

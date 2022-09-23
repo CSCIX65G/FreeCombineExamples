@@ -17,13 +17,14 @@ public final class UnbreakablePromise<Output> {
         case succeeded
     }
 
+    private let function: StaticString
+    private let file: StaticString
+    private let line: UInt
+
     private let atomicStatus = ManagedAtomic<UInt8>(Status.waiting.rawValue)
     private let resumption: UnfailingResumption<Output>
-    public let uncancellable: Uncancellable<Output>
 
-    public let function: StaticString
-    public let file: StaticString
-    public let line: UInt
+    public let uncancellable: Uncancellable<Output>
 
     public init(
         function: StaticString = #function,

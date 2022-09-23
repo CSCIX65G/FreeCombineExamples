@@ -33,14 +33,6 @@ public extension AsyncContinuation {
     }
 }
 
-extension AsyncFunc {
-    public func map<C>(
-        _ transform: @escaping (B) async throws -> C
-    ) -> AsyncFunc<A, C> {
-        .init { a in try await transform(call(a)) }
-    }
-}
-
 public extension Publisher {
     func map<B>(
         _ transform: @escaping (Output) async -> B
@@ -56,3 +48,34 @@ public extension Publisher {
     }
 }
 
+public extension Cancellable {
+    func map<T>(_ transform: @escaping (Output) async -> T) -> Cancellable<T> {
+        .init {
+            try await withTaskCancellationHandler(
+                operation: {
+                    let value = try await self.value
+                    guard !Cancellables.isCancelled else { throw Error.cancelled }
+                    let transformed = await transform(value)
+                    return transformed
+                },
+                onCancel: { try? self.cancel() }
+            )
+        }
+    }
+}
+
+extension Uncancellable {
+    public func map<T>(
+        _ transform: @escaping (Output) async -> T
+    ) -> Uncancellable<T> {
+        .init { await transform(self.value) }
+    }
+}
+
+extension AsyncFunc {
+    public func map<C>(
+        _ transform: @escaping (B) async throws -> C
+    ) -> AsyncFunc<A, C> {
+        .init { a in try await transform(call(a)) }
+    }
+}

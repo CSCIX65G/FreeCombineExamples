@@ -18,7 +18,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-public struct Reducer<State, Action> {
+public struct Folder<State, Action> {
     public enum Effect {
         case none
         case completion(Completion)
@@ -71,7 +71,7 @@ public struct Reducer<State, Action> {
     }
 }
 
-extension Reducer {
+extension Folder {
     func initialize(
         channel: Channel<Action>
     ) async -> State {

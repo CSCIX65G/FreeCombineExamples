@@ -40,7 +40,7 @@ public struct And<Left, Right> {
     static func reduce(
         _ state: inout State,
         _ action: Action
-    ) async -> Reducer<State, Action>.Effect {
+    ) async -> Folder<State, Action>.Effect {
         do {
             guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
             switch (action, state.current) {
@@ -69,14 +69,14 @@ public struct And<Left, Right> {
 
     static func dispose(
         _ action: Action,
-        _ completion: Reducer<State, Action>.Completion
+        _ completion: Folder<State, Action>.Completion
     ) async {
 
     }
 
     static func finalize(
         state: inout State,
-        completion: Reducer<State, Action>.Completion
+        completion: Folder<State, Action>.Completion
     ) async {
         try? state.rightCancellable?.cancel()
         state.rightCancellable = .none
@@ -98,7 +98,7 @@ public struct And<Left, Right> {
     static func reducer(
         left: Future<Left>,
         right: Future<Right>
-    ) -> Reducer<State, Action> {
+    ) -> Folder<State, Action> {
         .init(
             initializer: initialize(left: left, right: right),
             reducer: reduce,

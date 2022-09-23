@@ -7,12 +7,12 @@
 import Atomics
 
 public final class UnfailingResumption<Output: Sendable>: @unchecked Sendable {
+    private let function: StaticString
+    private let file: StaticString
+    private let line: UInt
+
     private let atomicHasResumed = ManagedAtomic<Bool>(false)
     private let continuation: UnsafeContinuation<Output, Never>
-
-    public let function: StaticString
-    public let file: StaticString
-    public let line: UInt
 
     init(
         function: StaticString = #function,
@@ -26,15 +26,11 @@ public final class UnfailingResumption<Output: Sendable>: @unchecked Sendable {
         self.continuation = continuation
     }
 
-    public var hasResumed: Bool {
-        atomicHasResumed.load(ordering: .sequentiallyConsistent)
-    }
-
     /*:
      [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
      */
     deinit {
-        guard hasResumed else {
+        guard atomicHasResumed.load(ordering: .sequentiallyConsistent) else {
             preconditionFailure(
                 "ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
             )

@@ -19,13 +19,14 @@ public final class Promise<Output> {
         case failed
     }
 
+    private let function: StaticString
+    private let file: StaticString
+    private let line: UInt
+
     private let atomicStatus = ManagedAtomic<UInt8>(Status.waiting.rawValue)
     private let resumption: Resumption<Output>
-    public let cancellable: Cancellable<Output>
 
-    public let function: StaticString
-    public let file: StaticString
-    public let line: UInt
+    public let cancellable: Cancellable<Output>
 
     public init(
         function: StaticString = #function,
@@ -42,15 +43,11 @@ public final class Promise<Output> {
         self.cancellable = lc
     }
 
-    var status: Status {
-        .init(rawValue: atomicStatus.load(ordering: .sequentiallyConsistent))!
-    }
-
     /*:
      [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
      */
     deinit {
-        guard status != .waiting else {
+        guard atomicStatus.load(ordering: .sequentiallyConsistent) != Status.waiting.rawValue else {
             assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self)) CREATED in \(function) @ \(file): \(line)")
             try? cancel()
             return
