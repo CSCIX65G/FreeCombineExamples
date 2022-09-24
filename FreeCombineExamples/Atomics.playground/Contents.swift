@@ -1,6 +1,7 @@
-import FreeCombine
 import PlaygroundSupport
 PlaygroundPage.current.needsIndefiniteExecution = true
+
+import FreeCombine
 
 let promise: Promise<Int> = await .init()
 let c: Cancellable<Void> = .init(operation: {
@@ -16,4 +17,5 @@ switch promiseResult {
 }
 print(promiseResult)
 _ = await c.result
+
 PlaygroundPage.current.finishExecution()

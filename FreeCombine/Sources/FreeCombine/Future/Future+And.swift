@@ -95,7 +95,7 @@ public struct And<Left, Right> {
         }
     }
 
-    static func reducer(
+    static func folder(
         left: Future<Left>,
         right: Future<Right>
     ) -> Folder<State, Action> {

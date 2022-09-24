@@ -27,7 +27,9 @@ public extension AsyncContinuation {
     ) -> AsyncContinuation<T, Return> {
         .init { resumption, downstream in
             self(onStartup: resumption) { a in
-                try await downstream(transform(a))
+                let t = await transform(a)
+                guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
+                return try await downstream(t)
             }
         }
     }
@@ -40,7 +42,9 @@ public extension Publisher {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in switch r {
                 case .value(let a):
-                    return try await downstream(.value(transform(a)))
+                    let b = await transform(a)
+                    guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
+                    return try await downstream(.value(b))
                 case let .completion(value):
                     return try await downstream(.completion(value))
             } }
@@ -49,17 +53,13 @@ public extension Publisher {
 }
 
 public extension Cancellable {
-    func map<T>(_ transform: @escaping (Output) async -> T) -> Cancellable<T> {
+    func map<T>(
+        _ transform: @escaping (Output) async -> T
+    ) -> Cancellable<T> {
         .init {
-            try await withTaskCancellationHandler(
-                operation: {
-                    let value = try await self.value
-                    guard !Cancellables.isCancelled else { throw Error.cancelled }
-                    let transformed = await transform(value)
-                    return transformed
-                },
-                onCancel: { try? self.cancel() }
-            )
+            let value = try await self.value
+            guard !Cancellables.isCancelled else { throw Error.cancelled }
+            return await transform(value)
         }
     }
 }
@@ -76,6 +76,10 @@ extension AsyncFunc {
     public func map<C>(
         _ transform: @escaping (B) async throws -> C
     ) -> AsyncFunc<A, C> {
-        .init { a in try await transform(call(a)) }
+        .init { a in
+            let b = try await call(a)
+            guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
+            return try await transform(b)
+        }
     }
 }

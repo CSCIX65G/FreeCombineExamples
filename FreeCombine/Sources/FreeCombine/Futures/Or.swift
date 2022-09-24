@@ -8,26 +8,18 @@ public func or<Left, Right>(
     _ left: Future<Left>,
     _ right: Future<Right>
 ) -> Future<Either<Left, Right>> {
-    .init { resumption, downstream in .init {
-        do {
-            typealias S = Or<Left, Right>
-            let channel = Channel<S.Action>(buffering: .bufferingOldest(2))
-            try await withTaskCancellationHandler(
-                operation: {
-                    try await downstream(.success(S.extract(state:
-                        await channel.fold(
-                            onStartup: resumption,
-                            into: S.reducer(left: left, right: right)
-                        ).value
-                    )))
-                },
-                onCancel: {
-                    channel.finish()
-                }
-            )
-        } catch {
-            return await downstream(.failure(error))
-        }
+    typealias S = Or<Left, Right>
+    return .init { resumption, downstream in .init {
+        let channel = Channel<S.Action>(buffering: .bufferingOldest(2))
+        let folder = S.folder(left: left, right: right)
+        let fold = channel.fold(onStartup: resumption, into: folder)
+        await withTaskCancellationHandler(
+            operation: {
+                do { try await downstream(.success(S.extract(state: fold.value))) }
+                catch { await downstream(.failure(error)) }
+            },
+            onCancel: channel.finish
+        )
     } }
 }
 

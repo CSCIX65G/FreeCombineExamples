@@ -70,7 +70,7 @@ public final class AsyncFold<State, Action: Sendable> {
 
     public let cancellable: Cancellable<State>
 
-    fileprivate init(
+    init(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
