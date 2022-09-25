@@ -8,11 +8,6 @@
 public enum AsyncFolders { }
 
 public extension AsyncFolders {
-    enum Effect {
-        case completion(Completion)
-        case none
-    }
-
     enum Completion {
         case exited
         case failure(Swift.Error)
