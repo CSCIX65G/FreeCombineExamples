@@ -1,38 +1,39 @@
 //
-//  Future+And.swift
+//  Publisher+Zip.swift
 //
 //
 //  Created by Van Simmons on 9/6/22.
 //
 
-public struct And<Left, Right> {
+public struct Zip<Left, Right> {
+    public typealias Demand = Publishers.Demand
     enum Current {
         case nothing
-        case hasLeft(Left)
-        case hasRight(Right)
-        case complete(Left, Right)
+        case hasLeft(Left, Resumption<Demand>)
+        case hasRight(Right, Resumption<Demand>)
+        case hasBoth(Left, Resumption<Demand>, Right, Resumption<Demand>)
         case errored(Swift.Error)
     }
 
     public struct State {
-        var leftCancellable: Cancellable<Void>?
-        var rightCancellable: Cancellable<Void>?
+        var leftCancellable: Cancellable<Demand>?
+        var rightCancellable: Cancellable<Demand>?
         var current: Current = .nothing
     }
 
     public enum Action {
-        case left(Result<Left, Swift.Error>)
-        case right(Result<Right, Swift.Error>)
+        case left(Publisher<Left>.Result, Resumption<Demand>)
+        case right(Publisher<Right>.Result, Resumption<Demand>)
     }
 
     static func initialize(
-        left: Future<Left>,
-        right: Future<Right>
+        left: Publisher<Left>,
+        right: Publisher<Right>
     ) -> (Channel<Action>) async -> State {
         { channel in
             await .init(
-                leftCancellable: channel.consume(future: left, using: Action.left),
-                rightCancellable: channel.consume(future: right, using: Action.right)
+                leftCancellable:  channel.consume(publisher: left, using: Action.left),
+                rightCancellable: channel.consume(publisher: right, using: Action.right)
             )
         }
     }
@@ -44,19 +45,19 @@ public struct And<Left, Right> {
         do {
             guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
             switch (action, state.current) {
-                case let (.left(leftResult), .nothing):
-                    state.current = .hasLeft(try leftResult.get())
+                case let (.left(leftResult, leftResumption), .nothing):
+                    state.current = .hasLeft(try leftResult.get(), leftResumption)
                     return .none
-                case let (.right(rightResult), .nothing):
-                    state.current = .hasRight(try rightResult.get())
+                case let (.right(rightResult, rightResumption), .nothing):
+                    state.current = .hasRight(try rightResult.get(), rightResumption)
                     return .none
-                case let (.right(rightResult), .hasLeft(leftValue)):
+                case let (.right(rightResult, rightResumption), .hasLeft(leftValue, leftResumption)):
                     let rightValue = try rightResult.get()
-                    state.current = .complete(leftValue, rightValue)
+                    state.current = .hasBoth(leftValue, leftResumption, rightValue, rightResumption)
                     return .completion(.exited)
-                case let (.left(leftResult), .hasRight(rightValue)):
+                case let (.left(leftResult, leftResumption), .hasRight(rightValue, rightResumption)):
                     let leftValue = try leftResult.get()
-                    state.current = .complete(leftValue, rightValue)
+                    state.current = .hasBoth(leftValue, leftResumption, rightValue, rightResumption)
                     return .completion(.exited)
                 default:
                     fatalError("Illegal state")
@@ -65,6 +66,13 @@ public struct And<Left, Right> {
             state.current = .errored(error)
             return .completion(.exited)
         }
+    }
+
+    static func dispose(
+        _ action: Action,
+        _ completion: AsyncFolder<State, Action>.Completion
+    ) async {
+
     }
 
     static func finalize(
@@ -81,7 +89,7 @@ public struct And<Left, Right> {
         switch state.current {
             case .nothing, .hasLeft, .hasRight:
                 throw Cancellables.Error.cancelled
-            case let .complete(leftValue, rightValue):
+            case let .hasBoth(leftValue, leftResumption, rightValue, rightResumption):
                 return (leftValue, rightValue)
             case let .errored(error):
                 throw error
@@ -89,12 +97,13 @@ public struct And<Left, Right> {
     }
 
     static func folder(
-        left: Future<Left>,
-        right: Future<Right>
+        left: Publisher<Left>,
+        right: Publisher<Right>
     ) -> AsyncFolder<State, Action> {
         .init(
             initializer: initialize(left: left, right: right),
             reducer: reduce,
+            disposer: dispose,
             finalizer: finalize
         )
     }

@@ -41,7 +41,7 @@ public final class Cancellable<Output: Sendable> {
             .set(atomic: atomicStatus, from: Status.running, to: Status.cancelled)
             .get()
         // Allow the task cancellation handlers to run
-        // These are opaque so we can replace them
+        // These are opaque so we can't replace them with wrappers
         task.cancel()
     }
 

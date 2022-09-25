@@ -1,5 +1,5 @@
 //
-//  Reducer.swift
+//  AsyncFolder.swift
 //
 //
 //  Created by Van Simmons on 5/25/22.
@@ -18,40 +18,29 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-public struct Folder<State, Action> {
-    public enum Effect {
-        case none
-        case completion(Completion)
-    }
-
-    public enum Completion {
-        case finished
-        case exit
-        case failure(Swift.Error)
-        case cancel
-    }
-
-    public enum Error: Swift.Error {
-        case completed
-        case internalError
-        case cancelled
-    }
-
+public struct AsyncFolder<State, Action> {
+    public typealias Effect = AsyncFolders.Effect
+    public typealias Completion = AsyncFolders.Completion
+    public typealias Error = AsyncFolders.Error
+    
     let initializer: (Channel<Action>) async -> State
     let reducer: (inout State, Action) async throws -> Effect
+    let emitter: (State) async throws -> Void
     let disposer: (Action, Completion) async -> Void
     let finalizer: (inout State, Completion) async -> Void
 
     public init(
         initializer: @escaping (Channel<Action>) async -> State,
         reducer: @escaping (inout State, Action) async throws -> Effect,
+        emitter: @escaping (State) async throws -> Void = { _ in },
         disposer: @escaping (Action, Completion) async -> Void = { _, _ in },
         finalizer: @escaping (inout State, Completion) async -> Void = { _, _ in }
     ) {
         self.initializer = initializer
-        self.finalizer = finalizer
-        self.disposer = disposer
         self.reducer = reducer
+        self.emitter = emitter
+        self.disposer = disposer
+        self.finalizer = finalizer
     }
 
     public func callAsFunction(_ channel: Channel<Action>) async -> State {
@@ -60,6 +49,10 @@ public struct Folder<State, Action> {
 
     public func callAsFunction(_ state: inout State, _ action: Action) async throws -> Effect {
         try await reducer(&state, action)
+    }
+
+    public func callAsFunction(_ state: State) async throws -> Void {
+        try await emitter(state)
     }
 
     public func callAsFunction(_ action: Action, _ completion: Completion) async -> Void {
@@ -71,7 +64,7 @@ public struct Folder<State, Action> {
     }
 }
 
-extension Folder {
+extension AsyncFolder {
     func initialize(
         channel: Channel<Action>
     ) async -> State {
@@ -84,10 +77,9 @@ extension Folder {
     ) async throws -> Void {
         switch try await reducer(&state, action) {
             case .none: ()
-            case .completion(.exit): throw Error.completed
+            case .completion(.exited): throw Error.completed
             case .completion(let .failure(error)): throw error
-            case .completion(.finished): throw Error.internalError
-            case .completion(.cancel): throw Error.cancelled
+            case .completion(.finished): throw Error.finished
         }
     }
 
@@ -101,7 +93,7 @@ extension Folder {
                 case Error.completed:
                     await self(action, .finished); continue
                 case Error.cancelled:
-                    await self(action, .cancel); continue
+                    await self(action, .failure(Error.cancelled)); continue
                 default:
                     await self(action, .failure(error)); continue
             }
@@ -118,13 +110,12 @@ extension Folder {
         }
         switch completion {
             case .cancelled:
-                await self(&state, .cancel)
+                await self(&state, .failure(Error.cancelled))
                 throw completion
-            case .internalError:
-                await self(&state, .failure(Error.internalError))
-                throw completion
+            case .finished:
+                await self(&state, .finished)
             case .completed:
-                await self(&state, .exit)
+                await self(&state, .exited)
         }
     }
 

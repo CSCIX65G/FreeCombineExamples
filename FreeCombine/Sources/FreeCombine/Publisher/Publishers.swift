@@ -15,7 +15,7 @@ public enum Publishers {
         case finished
     }
 
-    public enum Error: Swift.Error {
+    public enum Error: Swift.Error, Equatable {
         case cancelled
         case completed
         case internalError

@@ -37,6 +37,13 @@ public extension Publisher {
     enum Result: Sendable {
         case value(Output)
         case completion(Publishers.Completion)
+
+        func get() throws -> Output {
+            guard case let .value(value) = self else {
+                throw Error.completed
+            }
+            return value
+        }
     }
 }
 

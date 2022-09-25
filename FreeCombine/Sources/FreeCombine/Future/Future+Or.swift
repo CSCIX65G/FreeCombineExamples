@@ -27,45 +27,45 @@ public struct Or<Left, Right> {
         right: Future<Right>
     ) -> (Channel<Action>) async -> State {
         { channel in
-                .init(
-                    leftCancellable: await left { r in channel.send(.left(r)) },
-                    rightCancellable: await right { r in channel.send(.right(r)) }
-                )
+            await .init(
+                leftCancellable: channel.consume(future: left, using: Action.left),
+                rightCancellable: channel.consume(future: right, using: Action.right)
+            )
         }
     }
 
     static func reduce(
         _ state: inout State,
         _ action: Action
-    ) async -> Folder<State, Action>.Effect  {
+    ) async -> AsyncFolder<State, Action>.Effect  {
         do {
             guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
             switch (action, state.current) {
                 case let (.left(leftResult), .nothing):
                     state.current = try .complete(.left(leftResult.get()))
-                    return .completion(.exit)
+                    return .completion(.exited)
                 case let (.right(rightResult), .nothing):
                     state.current = try .complete(.right(rightResult.get()))
-                    return .completion(.exit)
+                    return .completion(.exited)
                 default:
                     fatalError("Illegal state")
             }
         } catch {
             state.current = .errored(error)
-            return .completion(.exit)
+            return .completion(.exited)
         }
     }
 
     static func dispose(
         _ action: Action,
-        _ completion: Folder<State, Action>.Completion
+        _ completion: AsyncFolder<State, Action>.Completion
     ) async -> Void {
 
     }
 
     static func finalize(
         state: inout State,
-        completion: Folder<State, Action>.Completion
+        completion: AsyncFolder<State, Action>.Completion
     ) async -> Void {
         try? state.rightCancellable?.cancel()
         state.rightCancellable = .none
@@ -87,7 +87,7 @@ public struct Or<Left, Right> {
     static func folder(
         left: Future<Left>,
         right: Future<Right>
-    ) -> Folder<State, Action> {
+    ) -> AsyncFolder<State, Action> {
         .init(
             initializer: initialize(left: left, right: right),
             reducer: reduce,

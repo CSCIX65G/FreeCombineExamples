@@ -24,26 +24,11 @@ public extension Channel {
         file: StaticString = #file,
         line: UInt = #line,
         future: Future<Upstream>,
-        using action: @escaping (Result<Upstream, Swift.Error>, Resumption<Void>) -> Element
+        using action: @escaping (Result<Upstream, Swift.Error>) -> Element
     ) async -> Cancellable<Void>  {
-        await future { upstreamValue in
-            let _: Void = (try? await withResumption(function: function, file: file, line: line) { resumption in
-                guard !Task.isCancelled else {
-                    resumption.resume(throwing: Error.cancelled)
-                    return
-                }
-                switch self.yield(action(upstreamValue, resumption)) {
-                    case .enqueued:
-                        ()
-                    case .dropped:
-                        resumption.resume(throwing: Error.enqueueError)
-                    case .terminated:
-                        resumption.resume(throwing: Error.cancelled)
-                    @unknown default:
-                        fatalError("Unhandled resumption value")
-                }
-            }) ?? ()
-            return
+        await future {
+            guard !Cancellables.isCancelled else { return }
+            self.yield(action($0))
         }
     }
 }
