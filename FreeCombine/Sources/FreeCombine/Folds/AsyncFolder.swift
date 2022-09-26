@@ -19,56 +19,26 @@
 //  limitations under the License.
 //
 
-public func +<State, Action>(
-    _ left: AsyncFolder<State, Action>.Effect,
-    _ right: AsyncFolder<State, Action>.Effect
-) -> AsyncFolder<State, Action>.Effect {
-    left.append(right)
-}
-
 public struct AsyncFolder<State, Action> {
-    public enum Effect {
-        case none  // Multiply by 1
-        case completion(Completion) // Multiply by 0
-        indirect case effects(Effect, Effect)
-        case emit((State) async throws -> Void)
-        case publish((Channel<Action>) -> Void)
-
-        public func append(_ other: Effect) -> Effect {
-            switch (self, other) {
-                case (.completion, _), (_, .none):
-                    return self
-                case (.none, _), (_, .completion):
-                    return other
-                case let (.effects(left, right), _):
-                    return .effects(left, .effects(right, other))
-                default:
-                    return .effects(self, other)
-            }
-        }
-    }
     public typealias Completion = AsyncFolders.Completion
     public typealias Error = AsyncFolders.Error
     
     let initializer: (Channel<Action>) async -> State
     let reducer: (inout State, Action) async throws -> Effect
-    let emitter: (State) async throws -> Void
-    let publisher: (Channel<Action>, Action) -> Void
+    let effectHandler: (Channel<Action>, State, Action) async throws -> Void
     let disposer: (Action, Completion) async -> Void
     let finalizer: (inout State, Completion) async -> Void
 
     public init(
         initializer: @escaping (Channel<Action>) async -> State,
         reducer: @escaping (inout State, Action) async throws -> Effect,
-        emitter: @escaping (State) async throws -> Void = { _ in },
-        publisher: @escaping (Channel<Action>, Action) -> Void = { _, _ in },
+        effectHandler: @escaping (Channel<Action>, State, Action) async throws -> Void = { _, _, _ in },
         disposer: @escaping (Action, Completion) async -> Void = { _, _ in },
         finalizer: @escaping (inout State, Completion) async -> Void = { _, _ in }
     ) {
         self.initializer = initializer
         self.reducer = reducer
-        self.emitter = emitter
-        self.publisher = publisher
+        self.effectHandler = effectHandler
         self.disposer = disposer
         self.finalizer = finalizer
     }
@@ -79,14 +49,6 @@ public struct AsyncFolder<State, Action> {
 
     public func callAsFunction(_ state: inout State, _ action: Action) async throws -> Effect {
         try await reducer(&state, action)
-    }
-
-    public func callAsFunction(_ state: State) async throws -> Void {
-        try await emitter(state)
-    }
-
-    public func callAsFunction(_ channel: Channel<Action>, _ action: Action) -> Void {
-        publisher(channel, action)
     }
 
     public func callAsFunction(_ action: Action, _ completion: Completion) async -> Void {
@@ -108,15 +70,26 @@ extension AsyncFolder {
     func reduce(
         state: inout State,
         action: Action
+    ) async throws -> Effect {
+        try await reducer(&state, action)
+    }
+
+    func handle(
+        effects: Effect,
+        channel: Channel<Action>,
+        state: State,
+        action: Action
     ) async throws -> Void {
-        switch try await reducer(&state, action) {
-            case .none: ()
-            case .emit: try await emitter(state)
-            case .publish: ()
-            case .effects: ()
-            case .completion(.exited): throw Error.completed
-            case .completion(let .failure(error)): throw error
-            case .completion(.finished): throw Error.finished
+        for effect in effects {
+            switch effect {
+                case .none: ()
+                case .emit(let emitter): try await emitter(state)
+                case .publish(let publisher): publisher(channel)
+                case .effects: ()
+                case .completion(.exited): throw Error.completed
+                case .completion(let .failure(error)): throw error
+                case .completion(.finished): throw Error.finished
+            }
         }
     }
 

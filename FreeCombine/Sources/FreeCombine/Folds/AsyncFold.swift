@@ -18,6 +18,8 @@
 //  limitations under the License.
 //
 public final class AsyncFold<State, Action: Sendable> {
+    public typealias Error = AsyncFolders.Error
+
     private let function: StaticString
     private let file: StaticString
     private let line: UInt
@@ -126,7 +128,13 @@ extension AsyncFold {
         do {
             onStartup.resume()
             for await action in channel.stream {
-                try await folder.reduce(state: &state, action: action)
+                let effects = try await folder.reduce(state: &state, action: action)
+                try await folder.handle(
+                    effects: effects,
+                    channel: channel,
+                    state: state,
+                    action: action
+                )
             }
             await folder.finalize(&state, .finished)
         } catch {
