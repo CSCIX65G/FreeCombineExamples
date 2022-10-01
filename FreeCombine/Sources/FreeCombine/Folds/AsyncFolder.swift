@@ -24,14 +24,14 @@ public struct AsyncFolder<State, Action> {
     public typealias Error = AsyncFolders.Error
     
     let initializer: (Channel<Action>) async -> State
-    let reducer: (inout State, Action) async throws -> Effect
+    let reducer: (inout State, Action) async throws -> [Effect]
     let effectHandler: (Channel<Action>, State, Action) async throws -> Void
     let disposer: (Action, Completion) async -> Void
     let finalizer: (inout State, Completion) async -> Void
 
     public init(
         initializer: @escaping (Channel<Action>) async -> State,
-        reducer: @escaping (inout State, Action) async throws -> Effect,
+        reducer: @escaping (inout State, Action) async throws -> [Effect],
         effectHandler: @escaping (Channel<Action>, State, Action) async throws -> Void = { _, _, _ in },
         disposer: @escaping (Action, Completion) async -> Void = { _, _ in },
         finalizer: @escaping (inout State, Completion) async -> Void = { _, _ in }
@@ -47,7 +47,7 @@ public struct AsyncFolder<State, Action> {
         await initializer(channel)
     }
 
-    public func callAsFunction(_ state: inout State, _ action: Action) async throws -> Effect {
+    public func callAsFunction(_ state: inout State, _ action: Action) async throws -> [Effect] {
         try await reducer(&state, action)
     }
 
@@ -70,12 +70,12 @@ extension AsyncFolder {
     func reduce(
         state: inout State,
         action: Action
-    ) async throws -> Effect {
+    ) async throws -> [Effect] {
         try await reducer(&state, action)
     }
 
     func handle(
-        effects: Effect,
+        effects: [Effect],
         channel: Channel<Action>,
         state: State,
         action: Action
@@ -85,7 +85,6 @@ extension AsyncFolder {
                 case .none: ()
                 case .emit(let emitter): try await emitter(state)
                 case .publish(let publisher): publisher(channel)
-                case .effects: ()
                 case .completion(.exited): throw Error.completed
                 case .completion(let .failure(error)): throw error
                 case .completion(.finished): throw Error.finished

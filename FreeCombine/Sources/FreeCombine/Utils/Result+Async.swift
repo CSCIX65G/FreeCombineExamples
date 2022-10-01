@@ -18,10 +18,10 @@ public enum AtomicError<R: RawRepresentable>: Error {
 }
 extension Result where Failure == Swift.Error {
     func set<R: RawRepresentable>(
-        atomic: ManagedAtomic<UInt8>,
+        atomic: ManagedAtomic<R.RawValue>,
         from oldStatus: R,
         to newStatus: R
-    ) throws -> Self where R.RawValue == UInt8 {
+    ) throws -> Self where R.RawValue: AtomicValue {
         .init {
             let (success, original) = atomic.compareExchange(
                 expected: oldStatus.rawValue,

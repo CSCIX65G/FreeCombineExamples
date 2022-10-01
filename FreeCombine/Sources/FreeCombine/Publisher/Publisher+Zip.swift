@@ -41,30 +41,30 @@ public struct Zip<Left, Right> {
     static func reduce(
         _ state: inout State,
         _ action: Action
-    ) async -> AsyncFolder<State, Action>.Effect {
+    ) async -> [AsyncFolder<State, Action>.Effect] {
         do {
             guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
             switch (action, state.current) {
                 case let (.left(leftResult, leftResumption), .nothing):
                     state.current = .hasLeft(try leftResult.get(), leftResumption)
-                    return .none
+                    return [.none]
                 case let (.right(rightResult, rightResumption), .nothing):
                     state.current = .hasRight(try rightResult.get(), rightResumption)
-                    return .none
+                    return [.none]
                 case let (.right(rightResult, rightResumption), .hasLeft(leftValue, leftResumption)):
                     let rightValue = try rightResult.get()
                     state.current = .hasBoth(leftValue, leftResumption, rightValue, rightResumption)
-                    return .completion(.exited)
+                    return [.completion(.exited)]
                 case let (.left(leftResult, leftResumption), .hasRight(rightValue, rightResumption)):
                     let leftValue = try leftResult.get()
                     state.current = .hasBoth(leftValue, leftResumption, rightValue, rightResumption)
-                    return .completion(.exited)
+                    return [.completion(.exited)]
                 default:
                     fatalError("Illegal state")
             }
         } catch {
             state.current = .errored(error)
-            return .completion(.exited)
+            return [.completion(.exited)]
         }
     }
 
@@ -89,7 +89,7 @@ public struct Zip<Left, Right> {
         switch state.current {
             case .nothing, .hasLeft, .hasRight:
                 throw Cancellables.Error.cancelled
-            case let .hasBoth(leftValue, leftResumption, rightValue, rightResumption):
+            case let .hasBoth(leftValue, _, rightValue, _):
                 return (leftValue, rightValue)
             case let .errored(error):
                 throw error

@@ -40,30 +40,30 @@ public struct And<Left, Right> {
     static func reduce(
         _ state: inout State,
         _ action: Action
-    ) async -> AsyncFolder<State, Action>.Effect {
+    ) async -> [AsyncFolder<State, Action>.Effect] {
         do {
             guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
             switch (action, state.current) {
                 case let (.left(leftResult), .nothing):
                     state.current = .hasLeft(try leftResult.get())
-                    return .none
+                    return [.none]
                 case let (.right(rightResult), .nothing):
                     state.current = .hasRight(try rightResult.get())
-                    return .none
+                    return [.none]
                 case let (.right(rightResult), .hasLeft(leftValue)):
                     let rightValue = try rightResult.get()
                     state.current = .complete(leftValue, rightValue)
-                    return .completion(.exited)
+                    return [.completion(.exited)]
                 case let (.left(leftResult), .hasRight(rightValue)):
                     let leftValue = try leftResult.get()
                     state.current = .complete(leftValue, rightValue)
-                    return .completion(.exited)
+                    return [.completion(.exited)]
                 default:
                     fatalError("Illegal state")
             }
         } catch {
             state.current = .errored(error)
-            return .completion(.exited)
+            return [.completion(.exited)]
         }
     }
 
