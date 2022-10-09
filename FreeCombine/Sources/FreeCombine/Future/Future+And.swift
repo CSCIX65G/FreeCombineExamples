@@ -42,7 +42,7 @@ public struct And<Left, Right> {
         _ action: Action
     ) async -> [AsyncFolder<State, Action>.Effect] {
         do {
-            guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
+            guard !Cancellables.isCancelled else { throw CancellationError() }
             switch (action, state.current) {
                 case let (.left(leftResult), .nothing):
                     state.current = .hasLeft(try leftResult.get())
@@ -80,7 +80,7 @@ public struct And<Left, Right> {
     static func extract(state: State) throws -> (Left, Right) {
         switch state.current {
             case .nothing, .hasLeft, .hasRight:
-                throw Cancellables.Error.cancelled
+                throw CancellationError()
             case let .complete(leftValue, rightValue):
                 return (leftValue, rightValue)
             case let .errored(error):

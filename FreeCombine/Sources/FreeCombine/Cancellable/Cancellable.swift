@@ -6,9 +6,22 @@
 //
 import Atomics
 
+public enum Cancellables {
+    @TaskLocal static var status = ManagedAtomic<UInt8>(Status.running.rawValue)
+
+    static var isCancelled: Bool {
+        status.load(ordering: .sequentiallyConsistent) == Status.cancelled.rawValue
+    }
+
+    enum Status: UInt8, Sendable, RawRepresentable, Equatable {
+        case running
+        case finished
+        case cancelled
+    }
+}
+
 public final class Cancellable<Output: Sendable> {
-    public typealias Error = Cancellables.Error
-    public typealias Status = Cancellables.Status
+    typealias Status = Cancellables.Status
 
     private let function: StaticString
     private let file: StaticString
@@ -63,26 +76,6 @@ public final class Cancellable<Output: Sendable> {
             )
             try? cancel()
             return
-        }
-    }
-}
-
-extension Cancellable: Hashable {
-    public static func == (lhs: Cancellable<Output>, rhs: Cancellable<Output>) -> Bool {
-        lhs.task == rhs.task
-    }
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(self)
-    }
-}
-
-public extension Cancellable {
-    var future: Future<Output> {
-        .init { resumption, downstream in
-            .init {
-                resumption.resume()
-                await downstream(self.result)
-            }
         }
     }
 }

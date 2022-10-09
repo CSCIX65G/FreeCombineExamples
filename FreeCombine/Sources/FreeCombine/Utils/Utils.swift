@@ -20,3 +20,49 @@
 //
 @Sendable public func void<T>(_ t: T) -> Void { }
 @Sendable public func identity<T>(_ t: T) -> T { return t }
+
+precedencegroup CompositionPrecedence {
+  associativity: right
+  higherThan: AssignmentPrecedence
+  lowerThan: MultiplicationPrecedence, AdditionPrecedence
+}
+
+infix operator |>: CompositionPrecedence  // Application
+infix operator >>>: CompositionPrecedence // Composition aka map
+infix operator >>=: CompositionPrecedence // Chaining aka flatMap
+infix operator <*>: CompositionPrecedence // Parallel aka zip
+
+public func |> <A, B>(
+    a: A,
+    f: @escaping (A) async -> B
+) async -> B {
+    await f(a)
+}
+
+public func >>> <A, B, C>(
+    f: @escaping (A) async -> B,
+    g: @escaping (B) async -> C
+) -> (A) async -> C {
+    { await g(f($0)) }
+}
+
+public func >>=<A, B, C>(
+    _ f: @escaping (A) async -> B,
+    _ g: @escaping (B) async -> (A) async -> C
+) -> (A) async -> C {
+    { a in await a |> a |> f >>> g }
+}
+
+public func >>=<A, B, C>(
+    _ f: @escaping (A) async throws -> B,
+    _ g: @escaping (B, A) async -> C
+) -> (A) async -> C {
+    { a in try! await g(f(a), a) }
+}
+
+func <*><A, B, C>(
+    _ z1: @escaping (A) -> B,
+    _ z2: @escaping (A) -> C
+) -> (A) -> (B, C) {
+    { a in (z1(a), z2(a)) }
+}

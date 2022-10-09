@@ -39,7 +39,7 @@ public struct Or<Left, Right> {
         _ action: Action
     ) async -> [AsyncFolder<State, Action>.Effect]  {
         do {
-            guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
+            guard !Cancellables.isCancelled else { throw CancellationError() }
             switch (action, state.current) {
                 case let (.left(leftResult), .nothing):
                     state.current = try .complete(.left(leftResult.get()))
@@ -76,7 +76,7 @@ public struct Or<Left, Right> {
     static func extract(state: State) throws -> Either<Left, Right> {
         switch state.current {
             case .nothing:
-                throw Cancellables.Error.cancelled
+                throw CancellationError()
             case let .complete(value):
                 return value
             case let .errored(error):

@@ -84,7 +84,7 @@ public extension Promise {
 
 public extension Promise {
     func cancel() throws {
-        try fail(Cancellables.Error.cancelled)
+        try fail(CancellationError())
     }
 
     func resolve(_ result: Result<Output, Swift.Error>) throws {

@@ -5,7 +5,6 @@
 //  Created by Van Simmons on 9/5/22.
 //
 public struct Channel<Element: Sendable> {
-    typealias Error = Channels.Error
     let continuation: AsyncStream<Element>.Continuation
     let stream: AsyncStream<Element>
 
@@ -16,15 +15,6 @@ public struct Channel<Element: Sendable> {
         var localContinuation: AsyncStream<Element>.Continuation!
         stream = .init(bufferingPolicy: buffering) { localContinuation = $0 }
         continuation = localContinuation
-    }
-}
-
-public enum Channels {
-    public enum Error: Swift.Error, Sendable, CaseIterable {
-        case cancelled
-        case completed
-        case internalError
-        case enqueueError
     }
 }
 

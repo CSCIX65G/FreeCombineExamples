@@ -15,6 +15,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		FB205B6428F25D090033EC1E /* Timeout.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; path = Timeout.playground; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 		FB6322E328CE4D9100890F7C /* FreeCombineExamples.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FreeCombineExamples.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FB6322E628CE4D9100890F7C /* FreeCombineExamplesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeCombineExamplesApp.swift; sourceTree = "<group>"; };
 		FB6322E828CE4D9100890F7C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -40,6 +41,7 @@
 		FB6322DA28CE4D9100890F7C = {
 			isa = PBXGroup;
 			children = (
+				FB205B6428F25D090033EC1E /* Timeout.playground */,
 				FB7DD4C428E25F2000D6B554 /* Map.playground */,
 				FB6322FC28CFEEDD00890F7C /* Atomics.playground */,
 				FB6322E528CE4D9100890F7C /* FreeCombineExamples */,

@@ -13,7 +13,6 @@ func and<Left, Right>(
     _ right: Cancellable<Right>
 ) -> Cancellable<(Left, Right)> {
     .init {
-        typealias Error = Cancellables.Error
         let p: Promise<(Left, Right)> = await .init()
         let z: Cancellable<Void> = await and(left.future, right.future).sink {
             try? p.resolve($0)
@@ -22,7 +21,7 @@ func and<Left, Right>(
             operation: {
                 _ = await z.result
                 let result = await p.result
-                if Cancellables.isCancelled { throw Error.cancelled }
+                if Cancellables.isCancelled { throw CancellationError() }
                 return try result.get()
             },
             onCancel: {

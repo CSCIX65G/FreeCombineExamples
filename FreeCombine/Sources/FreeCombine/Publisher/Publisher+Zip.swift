@@ -43,7 +43,7 @@ public struct Zip<Left, Right> {
         _ action: Action
     ) async -> [AsyncFolder<State, Action>.Effect] {
         do {
-            guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
+            guard !Cancellables.isCancelled else { throw CancellationError() }
             switch (action, state.current) {
                 case let (.left(leftResult, leftResumption), .nothing):
                     state.current = .hasLeft(try leftResult.get(), leftResumption)
@@ -88,7 +88,7 @@ public struct Zip<Left, Right> {
     static func extract(state: State) throws -> (Left, Right) {
         switch state.current {
             case .nothing, .hasLeft, .hasRight:
-                throw Cancellables.Error.cancelled
+                throw CancellationError()
             case let .hasBoth(leftValue, _, rightValue, _):
                 return (leftValue, rightValue)
             case let .errored(error):

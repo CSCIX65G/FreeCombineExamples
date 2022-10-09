@@ -41,7 +41,7 @@ extension Future {
     ) -> Cancellable<Void> {
         call(onStartup, { result in
             guard !Cancellables.isCancelled else {
-                return await downstream(.failure(Cancellables.Error.cancelled))
+                return await downstream(.failure(CancellationError()))
             }
             return await downstream(result)
         } )

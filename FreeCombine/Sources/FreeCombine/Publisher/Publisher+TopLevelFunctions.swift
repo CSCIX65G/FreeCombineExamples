@@ -20,6 +20,6 @@ func flattener<B>(
 func handleCancellation<Output>(
     of downstream: @escaping Publisher<Output>.Downstream
 ) async throws -> Publishers.Demand {
-    _ = try await downstream(.completion(.failure(Publishers.Error.cancelled)))
+    _ = try await downstream(.completion(.failure(CancellationError())))
     return .done
 }

@@ -18,7 +18,7 @@ func or<Left, Right>(
                 _ = await s.result
                 let result = await p.result
                 if Cancellables.isCancelled {
-                    throw Cancellables.Error.cancelled
+                    throw CancellationError()
                 }
                 return try result.get()
             },

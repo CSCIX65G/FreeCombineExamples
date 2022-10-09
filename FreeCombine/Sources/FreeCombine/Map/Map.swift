@@ -28,7 +28,7 @@ public extension AsyncContinuation {
         .init { resumption, downstream in
             self(onStartup: resumption) { a in
                 let t = await transform(a)
-                guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
+                guard !Cancellables.isCancelled else { throw CancellationError() }
                 return try await downstream(t)
             }
         }
@@ -43,7 +43,7 @@ public extension Publisher {
             self(onStartup: resumption) { r in switch r {
                 case .value(let a):
                     let b = await transform(a)
-                    guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
+                    guard !Cancellables.isCancelled else { throw CancellationError() }
                     return try await downstream(.value(b))
                 case let .completion(value):
                     return try await downstream(.completion(value))
@@ -58,7 +58,7 @@ public extension Cancellable {
     ) -> Cancellable<T> {
         .init {
             let value = try await self.value
-            guard !Cancellables.isCancelled else { throw Error.cancelled }
+            guard !Cancellables.isCancelled else { throw CancellationError() }
             return await transform(value)
         }
     }
@@ -78,7 +78,7 @@ extension AsyncFunc {
     ) -> AsyncFunc<A, C> {
         .init { a in
             let b = try await call(a)
-            guard !Cancellables.isCancelled else { throw Cancellables.Error.cancelled }
+            guard !Cancellables.isCancelled else { throw CancellationError() }
             return try await transform(b)
         }
     }

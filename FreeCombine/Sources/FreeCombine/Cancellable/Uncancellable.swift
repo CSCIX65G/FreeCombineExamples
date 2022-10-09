@@ -6,6 +6,10 @@
 //
 import Atomics
 
+public enum Uncancellables {
+    @TaskLocal static var status = ManagedAtomic<Bool>(false)
+}
+
 public final class Uncancellable<Output: Sendable> {
     private let function: StaticString
     private let file: StaticString
@@ -32,17 +36,18 @@ public final class Uncancellable<Output: Sendable> {
         }
     }
 
+    public var value: Output {
+        get async { await task.value }
+    }
+
     /*:
      [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
      */
     deinit {
-        guard atomicStatus.load(ordering: .sequentiallyConsistent) else {
+        let isEffectfulType = Output.self == Void.self || Output.self == Never.self
+        guard !isEffectfulType, atomicStatus.load(ordering: .sequentiallyConsistent) else {
             Assertion.assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)")
             return
         }
-    }
-
-    public var value: Output {
-        get async { await task.value }
     }
 }

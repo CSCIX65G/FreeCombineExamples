@@ -30,7 +30,6 @@ public struct Publisher<Output: Sendable>: Sendable {
 
 public extension Publisher {
     typealias Demand = Publishers.Demand
-    typealias Error = Publishers.Error
     typealias Completion = Publishers.Completion
     typealias Downstream = @Sendable (Publisher<Output>.Result) async throws -> Demand
 
@@ -40,7 +39,7 @@ public extension Publisher {
 
         func get() throws -> Output {
             guard case let .value(value) = self else {
-                throw Error.completed
+                throw CompletionError()
             }
             return value
         }

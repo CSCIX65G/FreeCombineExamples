@@ -112,6 +112,14 @@ public func and<A, B, C, D, E, F, G, H>(
     _ seven: Future<G>,
     _ eight: Future<H>
 ) -> Future<(A, B, C, D, E, F, G, H)> {
-    and(and(and(one, two), and(three, four)), and(and(five, six), and(seven, eight)))
-        .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0.0, $0.1.0.1, $0.1.1.0, $0.1.1.1) }
+    and(
+        and(
+            and(one, two),
+            and(three, four)
+        ),
+        and(
+            and(five, six),
+            and(seven, eight)
+        )
+    ).map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0.0, $0.1.0.1, $0.1.1.0, $0.1.1.1) }
 }

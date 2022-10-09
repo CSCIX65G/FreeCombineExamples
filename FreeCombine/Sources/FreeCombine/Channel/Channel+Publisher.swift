@@ -39,16 +39,16 @@ public extension Channel {
         await publisher { upstreamValue in
             try await withResumption(function: function, file: file, line: line) { resumption in
                 if Task.isCancelled {
-                    resumption.resume(throwing: Error.cancelled)
+                    resumption.resume(throwing: CancellationError())
                     return
                 }
                 switch self.yield(action(upstreamValue, resumption)) {
                     case .enqueued:
                         ()
                     case .dropped:
-                        resumption.resume(throwing: Error.enqueueError)
+                        resumption.resume(throwing: EnqueueError())
                     case .terminated:
-                        resumption.resume(throwing: Error.cancelled)
+                        resumption.resume(throwing: CancellationError())
                     @unknown default:
                         fatalError("Unhandled resumption value")
                 }

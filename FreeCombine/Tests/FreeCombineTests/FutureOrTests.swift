@@ -89,9 +89,8 @@ final class FutureOrTests: XCTestCase {
                     XCTFail("Failed by succeeding")
                     return
                 }
-                let cancelError = error as? Cancellables.Error
+                let cancelError = error as? CancellationError
                 XCTAssertNotNil(cancelError, "Wrong error type")
-                XCTAssert(.some(cancelError) == .some(Cancellables.Error.cancelled), "Incorrect failure")
             }
         try cancellable.cancel()
         _ = await expectation.result

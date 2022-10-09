@@ -16,7 +16,8 @@ extension Result {
 public enum AtomicError<R: RawRepresentable>: Error {
     case failedTransition(from: R, to: R, current: R?)
 }
-extension Result where Failure == Swift.Error {
+
+public extension Result where Failure == Swift.Error {
     func set<R: RawRepresentable>(
         atomic: ManagedAtomic<R.RawValue>,
         from oldStatus: R,

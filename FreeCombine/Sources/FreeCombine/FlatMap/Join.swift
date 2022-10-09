@@ -38,7 +38,7 @@ public extension Cancellable {
             let inner = try await self.value
             guard !Cancellables.isCancelled else {
                 try? inner.cancel()
-                throw Error.cancelled
+                throw CancellationError()
             }
             let value = try await inner.value
             return value
