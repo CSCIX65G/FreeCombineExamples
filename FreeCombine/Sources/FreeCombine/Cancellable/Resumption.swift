@@ -19,7 +19,20 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
     private let atomicHasResumed = ManagedAtomic<Bool>(false)
     private let continuation: UnsafeContinuation<Output, Swift.Error>
 
-    init(
+    private var hasResumed: Bool {
+        atomicHasResumed.load(ordering: .sequentiallyConsistent)
+    }
+
+    private var canResume: Bool {
+        let (success, _) = atomicHasResumed.compareExchange(
+            expected: false,
+            desired: true,
+            ordering: .sequentiallyConsistent
+        )
+        return success
+    }
+
+    public init(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
@@ -31,10 +44,6 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
         self.continuation = continuation
     }
 
-    public var hasResumed: Bool {
-        atomicHasResumed.load(ordering: .sequentiallyConsistent)
-    }
-
     /*:
      [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
      */
@@ -43,19 +52,9 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
             assertionFailure(
                 "ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
             )
-            continuation.resume(throwing: Error.leaked)
+            continuation.resume(throwing: LeakError())
             return
         }
-    }
-
-    // Note this has a sideffect on first call and must be private
-    private var canResume: Bool {
-        let (success, _) = atomicHasResumed.compareExchange(
-            expected: false,
-            desired: true,
-            ordering: .sequentiallyConsistent
-        )
-        return success
     }
 
     public func resume(returning output: Output) {

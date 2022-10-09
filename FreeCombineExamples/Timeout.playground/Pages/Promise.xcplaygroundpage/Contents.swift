@@ -1,10 +1,10 @@
-//
-//  Promise.swift
-//  UsingFreeCombine
-//
-//  Created by Van Simmons on 9/5/22.
-//
+//: [Previous](@previous)
+/*:
+
+ */
 import Atomics
+import PlaygroundSupport
+PlaygroundPage.current.needsIndefiniteExecution = true
 
 public enum Promises {
     enum Status: UInt8, Equatable, RawRepresentable {
@@ -16,26 +16,15 @@ public enum Promises {
 
 public final class Promise<Output> {
     typealias Status = Promises.Status
-
-    private let function: StaticString
-    private let file: StaticString
-    private let line: UInt
-
     private let atomicStatus = ManagedAtomic<UInt8>(Status.waiting.rawValue)
     private let resumption: Resumption<Output>
+
     public let cancellable: Cancellable<Output>
 
-    public init(
-        function: StaticString = #function,
-        file: StaticString = #file,
-        line: UInt = #line
-    ) async {
-        self.function = function
-        self.file = file
-        self.line = line
+    public init() async {
         var lc: Cancellable<Output>!
         self.resumption = try! await withResumption { outer in
-            lc = .init(function: function, file: file, line: line) { try await withResumption(outer.resume) }
+            lc = .init { try await withResumption(outer.resume) }
         }
         self.cancellable = lc
     }
@@ -45,7 +34,7 @@ public final class Promise<Output> {
      */
     deinit {
         guard atomicStatus.load(ordering: .sequentiallyConsistent) != Status.waiting.rawValue else {
-            assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self)) CREATED in \(function) @ \(file): \(line)")
+            assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self))")
             try? cancel()
             return
         }
@@ -97,11 +86,22 @@ public extension Promise where Output == Void {
     }
 }
 
-public extension Promise {
-    var future: Future<Output> {
-        .init { resumption, downstream in .init {
-            resumption.resume()
-            await downstream(self.result)
-        } }
+let promise: Promise<Int> = await .init()
+let c: Cancellable<Void> = .init(operation: {
+    do {
+        try await Task.sleep(nanoseconds: 2_000_000_000)
+        print("Succeeding")
+        try promise.succeed(13)
     }
+})
+switch await promise.result {
+    case .success(let value):
+        print("Promise succeeded: \(value)")
+    case .failure(let error):
+        print("Got an error: \(error)")
 }
+_ = await c.result
+
+PlaygroundPage.current.finishExecution()
+
+//: [Next](@next)

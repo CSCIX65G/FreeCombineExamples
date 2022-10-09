@@ -1,12 +1,10 @@
-//
-//  Result+Async.swift
-//  
-//
-//  Created by Van Simmons on 9/14/22.
-//
 import Atomics
 
-extension Result {
+public enum AtomicError<R: RawRepresentable>: Error {
+    case failedTransition(from: R, to: R, current: R?)
+}
+
+public extension Result {
     init(catching: () async throws -> Success) async where Failure == Swift.Error {
         do { self = try await .success(catching()) }
         catch { self = .failure(error) }
