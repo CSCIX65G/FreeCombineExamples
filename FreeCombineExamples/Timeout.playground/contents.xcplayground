@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <playground version='6.0' target-platform='ios' display-mode='raw' buildActiveScheme='true' importAppTypes='true'>
     <pages>
+        <page name='Intro'/>
         <page name='Simple'/>
         <page name='Better'/>
         <page name='Cancellable+Atomic'/>
         <page name='Cancellable+TaskLocal'/>
         <page name='Resumption'/>
         <page name='Promise'/>
-        <page name='Channel'/>
+        <page name='Channel+Fold'/>
+        <page name='Completed'/>
     </pages>
 </playground>

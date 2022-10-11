@@ -24,11 +24,6 @@ public extension Channel {
         continuation.yield(value)
     }
 
-    @discardableResult
-    @Sendable func send(_ value: Element) -> AsyncStream<Element>.Continuation.YieldResult {
-        yield(value)
-    }
-
     @Sendable func finish() {
         continuation.finish()
     }
@@ -37,10 +32,6 @@ public extension Channel {
 public extension Channel where Element == Void {
     @discardableResult
     @Sendable func yield() -> AsyncStream<Element>.Continuation.YieldResult {
-        continuation.yield(())
-    }
-    @discardableResult
-    @Sendable func send() -> AsyncStream<Element>.Continuation.YieldResult {
-        yield(())
+        continuation.yield()
     }
 }

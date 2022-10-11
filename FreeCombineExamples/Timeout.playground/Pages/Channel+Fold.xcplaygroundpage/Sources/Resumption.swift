@@ -59,9 +59,6 @@ extension Resumption where Output == Void {
 }
 
 public func withResumption<Output>(
-    function: StaticString = #function,
-    file: StaticString = #file,
-    line: UInt = #line,
     _ resumingWith: (Resumption<Output>) -> Void
 ) async throws -> Output {
     try await withUnsafeThrowingContinuation { continuation in

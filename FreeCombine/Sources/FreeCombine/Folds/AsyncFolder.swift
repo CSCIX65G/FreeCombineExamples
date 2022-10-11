@@ -18,6 +18,19 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+public enum AsyncFolders {
+    public enum Completion {
+        case exited
+        case failure(Swift.Error)
+        case finished
+    }
+
+    public enum Error: Swift.Error {
+        case cancelled
+        case completed
+        case finished
+    }
+}
 
 public struct AsyncFolder<State, Action> {
     public typealias Completion = AsyncFolders.Completion
@@ -61,16 +74,11 @@ public struct AsyncFolder<State, Action> {
 }
 
 extension AsyncFolder {
-    func initialize(
-        channel: Channel<Action>
-    ) async -> State {
+    func initialize(channel: Channel<Action>) async -> State {
         await self(channel)
     }
 
-    func reduce(
-        state: inout State,
-        action: Action
-    ) async throws -> [Effect] {
+    func reduce(state: inout State, action: Action) async throws -> [Effect] {
         try await reducer(&state, action)
     }
 

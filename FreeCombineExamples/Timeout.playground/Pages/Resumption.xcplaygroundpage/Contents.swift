@@ -1,5 +1,11 @@
 //: [Previous](@previous)
 /*:
+ [Swift Evolution Proposal 300: Continuations](https://github.com/apple/swift-evolution/blob/main/proposals/0300-continuation.md)
+
+     After invoking withUnsafeContinuation, exactly one resume method must be called exactly-once on every execution path through the program. Unsafe*Continuation is an unsafe interface, so it is undefined behavior if a resume method is invoked on the same continuation more than once. The task remains in the suspended state until it is resumed; if the continuation is discarded and never resumed, then the task will be left suspended until the process ends, leaking any resources it holds. Wrappers can provide checking for these misuses of continuations, and the library will provide one such wrapper, discussed below.
+
+ NB There's a data race on resuming Continuations.  Unlike Task, this race produces UB.  Also, if you leak one of these, it's _really_ bad.  Therefore we'd like the following to be true...
+
  # Resumption of a suspended task is _failable_
 
  1. Like `isCancelled`, Resumption status is _not_ publicly visible
@@ -11,6 +17,7 @@
  */
 import Atomics
 
+@available(iOS 13, *)
 public final class Resumption<Output: Sendable>: @unchecked Sendable {
     public enum Error: Swift.Error {
         case leaked
@@ -65,10 +72,8 @@ extension Resumption where Output == Void {
     }
 }
 
+@available(iOS 13, *)
 public func withResumption<Output>(
-    function: StaticString = #function,
-    file: StaticString = #file,
-    line: UInt = #line,
     _ resumingWith: (Resumption<Output>) -> Void
 ) async throws -> Output {
     try await withUnsafeThrowingContinuation { continuation in

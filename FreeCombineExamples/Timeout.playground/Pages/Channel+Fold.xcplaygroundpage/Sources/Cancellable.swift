@@ -33,9 +33,8 @@ public final class Cancellable<Output: Sendable> {
         try Result<Void, Swift.Error>.success(())
             .set(atomic: atomicStatus, from: Status.running, to: Status.cancelled)
             .get()
-        // Allow the task cancellation handlers to run
-        // These are opaque so we can't replace them with wrappers
-        task.cancel()
+
+        task.cancel() // Allow the task cancellation handlers to run
     }
 
     public var value: Output {

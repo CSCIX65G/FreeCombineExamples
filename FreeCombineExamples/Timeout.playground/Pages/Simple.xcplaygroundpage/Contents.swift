@@ -40,4 +40,10 @@ await t4.result
 
 PlaygroundPage.current.finishExecution()
 
+/*:
+ [Swift Evolution Proposal 304: Structured Concurrency / Cancellation](https://github.com/apple/swift-evolution/blob/main/proposals/0304-structured-concurrency.md#cancellation-1)
+
+ > Do note however that checking cancellation while concurrently setting cancellation may be slightly racy, i.e. if the cancel is performed from another thread, the isCancelled may not return true.
+
+ */
 //: [Next](@next)

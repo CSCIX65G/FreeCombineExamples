@@ -1,3 +1,5 @@
+import Atomics
+
 public enum Promises {
     enum Status: UInt8, Equatable, RawRepresentable {
         case waiting

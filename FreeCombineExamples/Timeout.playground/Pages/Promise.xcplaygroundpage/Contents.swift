@@ -94,6 +94,7 @@ let c: Cancellable<Void> = .init(operation: {
         try promise.succeed(13)
     }
 })
+
 switch await promise.result {
     case .success(let value):
         print("Promise succeeded: \(value)")
