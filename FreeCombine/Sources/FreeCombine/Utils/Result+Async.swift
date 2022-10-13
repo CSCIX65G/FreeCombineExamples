@@ -18,7 +18,7 @@ public extension Result where Failure == Swift.Error {
         atomic: ManagedAtomic<R.RawValue>,
         from oldStatus: R,
         to newStatus: R
-    ) throws -> Self where R.RawValue: AtomicValue {
+    ) -> Self where R.RawValue: AtomicValue {
         .init {
             let (success, original) = atomic.compareExchange(
                 expected: oldStatus.rawValue,

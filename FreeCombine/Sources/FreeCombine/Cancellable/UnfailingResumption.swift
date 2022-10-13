@@ -7,14 +7,27 @@
 import Atomics
 
 public final class UnfailingResumption<Output: Sendable>: @unchecked Sendable {
+    typealias Status = Resumptions.Status
     private let function: StaticString
     private let file: StaticString
     private let line: UInt
 
-    private let atomicHasResumed = ManagedAtomic<Bool>(false)
+    private let atomicStatus = ManagedAtomic<UInt8>(Status.waiting.rawValue)
     private let continuation: UnsafeContinuation<Output, Never>
 
-    init(
+    private var status: Status {
+        Status(rawValue: atomicStatus.load(ordering: .sequentiallyConsistent))!
+    }
+
+    private var leakFailureString: String {
+        "ABORTING DUE TO LEAKED RESUMPTION: \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
+    }
+
+    private var multipleResumeFailureString: String {
+        "ABORTING DUE TO PREVIOUS RESUMPTION: \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
+    }
+
+    public init(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
@@ -30,35 +43,34 @@ public final class UnfailingResumption<Output: Sendable>: @unchecked Sendable {
      [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
      */
     deinit {
-        guard atomicHasResumed.load(ordering: .sequentiallyConsistent) else {
-            preconditionFailure(
-                "ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
-            )
+        guard status == .resumed else {
+            assertionFailure(leakFailureString)
+            return
         }
     }
 
-    // Note this has a sideffect on first call and must be private
-    private var canResume: Bool {
-        let (success, _) = atomicHasResumed.compareExchange(
-            expected: false,
-            desired: true,
-            ordering: .sequentiallyConsistent
-        )
-        return success
+    private func set(status newStatus: Status) -> Result<Void, Swift.Error> {
+        Result.success(()).set(atomic: self.atomicStatus, from: .waiting, to: newStatus)
     }
 
-    public func resume(returning output: Output) {
-        guard canResume else {
-            preconditionFailure(
-                "ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
-            )
+    public func tryResume(returning output: Output) throws -> Void {
+        switch set(status: .resumed) {
+            case .success: return continuation.resume(returning: output)
+            case .failure(let error): throw error
         }
-        continuation.resume(returning: output)
+    }
+
+    public func resume(returning output: Output) -> Void {
+        do { try tryResume(returning: output) }
+        catch { preconditionFailure(multipleResumeFailureString) }
     }
 }
 
 extension UnfailingResumption where Output == Void {
-    public func resume() {
+    public func tryResume() throws -> Void {
+        try tryResume(returning: ())
+    }
+    public func resume() -> Void {
         resume(returning: ())
     }
 }
