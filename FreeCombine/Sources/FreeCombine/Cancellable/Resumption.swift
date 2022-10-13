@@ -4,14 +4,9 @@
 //
 //  Created by Van Simmons on 9/5/22.
 //
-import Atomics
+@preconcurrency import Atomics
 
-public final class Resumption<Output: Sendable>: @unchecked Sendable {
-    public enum Error: Swift.Error {
-        case leaked
-        case alreadyResumed
-    }
-
+public final class Resumption<Output: Sendable>: Sendable {
     private let function: StaticString
     private let file: StaticString
     private let line: UInt
@@ -32,6 +27,13 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
         return success
     }
 
+    private var leakFailureString: String {
+        "ABORTING DUE TO PREVIOUS RESUMPTION: \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
+    }
+    private var multipleResumeFailureString: String {
+        "ABORTING DUE TO PREVIOUS RESUMPTION: \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
+    }
+
     public init(
         function: StaticString = #function,
         file: StaticString = #file,
@@ -49,9 +51,7 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
      */
     deinit {
         guard hasResumed else {
-            assertionFailure(
-                "ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
-            )
+            assertionFailure(leakFailureString)
             continuation.resume(throwing: LeakError())
             return
         }
@@ -59,18 +59,14 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
 
     public func resume(returning output: Output) {
         guard canResume else {
-            preconditionFailure(
-                "ABORTING DUE TO PREVIOUS RESUMPTION: \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
-            )
+            preconditionFailure(multipleResumeFailureString)
         }
         continuation.resume(returning: output)
     }
 
     public func resume(throwing error: Swift.Error) {
         guard canResume else {
-            preconditionFailure(
-                "ABORTING DUE TO PREVIOUS RESUMPTION: \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
-            )
+            preconditionFailure(multipleResumeFailureString)
         }
         continuation.resume(throwing: error)
     }

@@ -6,17 +6,15 @@
 //
 import Atomics
 
-public final class UnbreakablePromise<Output> {
-    public enum Error: Swift.Error, Equatable {
-        case alreadySucceeded
-        case internalInconsistency
-    }
-
+public enum UnbreakablePromises {
     public enum Status: UInt8, Equatable, RawRepresentable {
         case waiting
         case succeeded
     }
+}
 
+public final class UnbreakablePromise<Output> {
+    typealias Status = UnbreakablePromises.Status
     private let function: StaticString
     private let file: StaticString
     private let line: UInt
@@ -62,10 +60,11 @@ public final class UnbreakablePromise<Output> {
             ordering: .sequentiallyConsistent
         )
         guard success else {
-            switch original {
-                case Status.succeeded.rawValue: throw Error.alreadySucceeded
-                default: throw Error.internalInconsistency
-            }
+            throw AtomicError.failedTransition(
+                from: .waiting,
+                to: .succeeded,
+                current: Status(rawValue: original)
+            )
         }
         return resumption
     }

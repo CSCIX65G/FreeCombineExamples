@@ -4,8 +4,6 @@
  [Swift Atomics](https://www.swift.org/blog/swift-atomics/)
 
  > The goal of this library is to enable intrepid systems programmers to start building synchronization constructs (such as concurrent data structures) directly in Swift.
-
- # Cancellation is a _failable_ and _atomic_ operation
  */
 import Atomics
 import PlaygroundSupport
