@@ -19,9 +19,17 @@ public struct Channel<Element: Sendable> {
 }
 
 public extension Channel {
-    @discardableResult
-    @Sendable func yield(_ value: Element) -> AsyncStream<Element>.Continuation.YieldResult {
+    func yield(_ value: Element) -> AsyncStream<Element>.Continuation.YieldResult {
         continuation.yield(value)
+    }
+
+    func tryYield(_ value: Element) throws -> Void {
+        switch continuation.yield(value) {
+            case .enqueued: return
+            case .dropped(let element): throw EnqueueError.dropped(element)
+            case .terminated: throw EnqueueError<Element>.terminated
+            @unknown default: fatalError("Unknown error")
+        }
     }
 
     @Sendable func finish() {
@@ -30,8 +38,7 @@ public extension Channel {
 }
 
 public extension Channel where Element == Void {
-    @discardableResult
-    @Sendable func yield() -> AsyncStream<Element>.Continuation.YieldResult {
+    func yield() -> AsyncStream<Element>.Continuation.YieldResult {
         continuation.yield()
     }
 }

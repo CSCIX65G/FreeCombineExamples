@@ -52,8 +52,8 @@ public final class AsyncFold<State, Action: Sendable> {
 
     @Sendable func send(
         _ element: Action
-    ) -> AsyncStream<Action>.Continuation.YieldResult {
-        channel.yield(element)
+    ) throws -> Void {
+        try channel.tryYield(element)
     }
 
     @Sendable func finish() {

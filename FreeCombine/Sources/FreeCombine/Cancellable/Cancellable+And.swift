@@ -12,23 +12,7 @@ func and<Left, Right>(
     _ left: Cancellable<Left>,
     _ right: Cancellable<Right>
 ) -> Cancellable<(Left, Right)> {
-    .init {
-        let p: Promise<(Left, Right)> = await .init()
-        let z: Cancellable<Void> = await and(left.future, right.future).sink {
-            try? p.resolve($0)
-        }
-        return try await withTaskCancellationHandler(
-            operation: {
-                _ = await z.result
-                let result = await p.result
-                if Cancellables.isCancelled { throw CancellationError() }
-                return try result.get()
-            },
-            onCancel: {
-                try? z.cancel()
-            }
-        )
-    }
+    and(left.future, right.future).futureValue
 }
 
 public func Anded<Left, Right>(

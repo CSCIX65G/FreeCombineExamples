@@ -28,7 +28,7 @@ public extension Channel {
     ) async -> Cancellable<Void>  {
         await future {
             guard !Cancellables.isCancelled else { return }
-            self.yield(action($0))
+            try? self.tryYield(action($0))
         }
     }
 }

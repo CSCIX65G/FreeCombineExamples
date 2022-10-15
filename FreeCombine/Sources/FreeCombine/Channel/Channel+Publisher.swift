@@ -45,8 +45,8 @@ public extension Channel {
                 switch self.yield(action(upstreamValue, resumption)) {
                     case .enqueued:
                         ()
-                    case .dropped:
-                        resumption.resume(throwing: EnqueueError())
+                    case .dropped(let value):
+                        resumption.resume(throwing: EnqueueError.dropped(value))
                     case .terminated:
                         resumption.resume(throwing: CancellationError())
                     @unknown default:

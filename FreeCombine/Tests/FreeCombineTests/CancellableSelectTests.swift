@@ -74,7 +74,7 @@ final class CancellableOrTests: XCTestCase {
                 XCTFail("Failed by succeeding")
                 return
             }
-            guard nil != error as? AtomicError<Cancellables.Status> else {
+            guard nil != error as? CancellationError else {
                 XCTFail("Wrong error type in error: \(error)")
                 return
             }

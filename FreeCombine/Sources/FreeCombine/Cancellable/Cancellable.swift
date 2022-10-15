@@ -44,6 +44,12 @@ public final class Cancellable<Output: Sendable> {
             try await Cancellables.$status.withValue(atomic) {
                 try await Result(catching: operation)
                     .set(atomic: atomic, from: Status.running, to: Status.finished)
+                    .mapError {
+                        guard let err = $0 as? AtomicError<Status>, case .failedTransition(_, _, .cancelled) = err else {
+                            return $0
+                        }
+                        return CancellationError()
+                    }
                     .get()
             }
         }
@@ -52,6 +58,7 @@ public final class Cancellable<Output: Sendable> {
     @Sendable public func cancel() throws {
         try Result<Void, Swift.Error>.success(())
             .set(atomic: atomicStatus, from: Status.running, to: Status.cancelled)
+            .mapError {_ in CancellationFailureError() }
             .get()
         // Allow the task cancellation handlers to run
         // These are opaque so we can't replace them with wrappers

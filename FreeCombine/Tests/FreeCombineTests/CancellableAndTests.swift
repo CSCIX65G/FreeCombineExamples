@@ -73,7 +73,7 @@ final class CancellableAndTests: XCTestCase {
                 case .success:
                     XCTFail("Should not have received value")
                 case let .failure(error):
-                    guard error is AtomicError<Cancellables.Status> else {
+                    guard error is CancellationError else {
                         XCTFail("received incorrect error: \(error)")
                         return
                     }

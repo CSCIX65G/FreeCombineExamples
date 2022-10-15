@@ -10,5 +10,6 @@
         <page name='Promise'/>
         <page name='Channel+Fold'/>
         <page name='Completed'/>
+        <page name='Final'/>
     </pages>
 </playground>

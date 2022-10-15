@@ -61,6 +61,11 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
         Result.success(()).set(atomic: self.atomicStatus, from: .waiting, to: newStatus)
     }
 
+    public func resume(returning output: Output) -> Void {
+        do { try tryResume(returning: output) }
+        catch { preconditionFailure(multipleResumeFailureString) }
+    }
+
     public func tryResume(returning output: Output) throws -> Void {
         switch set(status: .resumed) {
             case .success: return continuation.resume(returning: output)
@@ -68,8 +73,8 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
         }
     }
 
-    public func resume(returning output: Output) -> Void {
-        do { try tryResume(returning: output) }
+    public func resume(throwing error: Swift.Error) -> Void {
+        do { try tryResume(throwing: error) }
         catch { preconditionFailure(multipleResumeFailureString) }
     }
 
@@ -79,19 +84,15 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
             case .failure(let error): throw error
         }
     }
-
-    public func resume(throwing error: Swift.Error) -> Void {
-        do { try tryResume(throwing: error) }
-        catch { preconditionFailure(multipleResumeFailureString) }
-    }
 }
 
 extension Resumption where Output == Void {
-    public func tryResume() throws -> Void {
-        try tryResume(returning: ())
-    }
     public func resume() -> Void {
         resume(returning: ())
+    }
+
+    public func tryResume() throws -> Void {
+        try tryResume(returning: ())
     }
 }
 
