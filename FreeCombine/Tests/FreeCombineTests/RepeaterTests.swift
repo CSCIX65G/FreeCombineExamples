@@ -14,14 +14,14 @@ final class RepeaterTests: XCTestCase {
 
     override func tearDownWithError() throws { }
 
-    func testRepeater() async throws {
+    func testSimpleRepeater() async throws {
         let dispatchChannel = Channel<Distributor<Int>.DownstreamDispatch>(buffering: .bufferingOldest(1))
         let returnChannel = Channel<Distributor<Int>.DownstreamReturn>.init(buffering: .bufferingOldest(1))
 
         let repeater = Distributor<Int>.Repeater.init(
             streamId: 0,
-            continuation: dispatchChannel.continuation,
-            resultChannel: returnChannel
+            dispatchChannel: dispatchChannel,
+            returnChannel: returnChannel
         )
 
         var dispatchCancellable: Cancellable<Void>!
@@ -35,27 +35,25 @@ final class RepeaterTests: XCTestCase {
             }
         }
 
+        let numberOfValues = 1_000
         var returnCancellable: Cancellable<Void>!
         let _: Void = try await withResumption { resumption in
             returnCancellable = Cancellable<Void> {
                 var value = 0
                 resumption.resume()
                 for await (_, result, nextResumption) in returnChannel.stream {
-                    guard let nextResumption = nextResumption else {
-                        dispatchChannel.finish()
-                        return
-                    }
-                    repeater.nextResumption = nextResumption
+                    guard let nextResumption = nextResumption else { return }
+                    repeater.dispatchReturn = nextResumption
                     guard case .success = result else {
                         XCTFail("Unexpected failure")
                         dispatchChannel.finish()
-                        return
+                        break
                     }
                     let dispatchValue: Distributor<Int>.DownstreamDispatch = (value, nextResumption)
                     do { try dispatchChannel.tryYield(dispatchValue) }
                     catch { XCTFail("Return cancellable threw: \(error)") }
                     value += 1
-                    if value > 1_000 {
+                    if value > numberOfValues {
                         dispatchChannel.finish()
                         break
                     }
