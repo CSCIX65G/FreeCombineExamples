@@ -7,7 +7,7 @@
 import Atomics
 
 public enum Promises {
-    enum Status: UInt8, Equatable, RawRepresentable {
+    enum Status: UInt8, Equatable, AtomicValue {
         case waiting
         case succeeded
         case failed
@@ -21,7 +21,7 @@ public final class Promise<Output> {
     private let file: StaticString
     private let line: UInt
 
-    private let atomicStatus = ManagedAtomic<UInt8>(Status.waiting.rawValue)
+    private let atomicStatus = ManagedAtomic<Status>(.waiting)
     private let resumption: Resumption<Output>
     public let cancellable: Cancellable<Output>
 
@@ -44,7 +44,7 @@ public final class Promise<Output> {
      [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
      */
     deinit {
-        guard atomicStatus.load(ordering: .sequentiallyConsistent) != Status.waiting.rawValue else {
+        guard atomicStatus.load(ordering: .sequentiallyConsistent) != .waiting else {
             assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self)) CREATED in \(function) @ \(file): \(line)")
             try? cancel()
             return
@@ -53,7 +53,7 @@ public final class Promise<Output> {
 
     private func set(status newStatus: Status) throws -> Resumption<Output> {
         try Result<Void, Swift.Error>.success(())
-            .set(atomic: atomicStatus, from: Status.waiting, to: newStatus)
+            .set(atomic: atomicStatus, from: .waiting, to: newStatus)
             .get()
 
         return resumption

@@ -14,22 +14,22 @@ extension Result {
 }
 
 public extension Result where Failure == Swift.Error {
-    func set<R: RawRepresentable>(
-        atomic: ManagedAtomic<R.RawValue>,
+    func set<R: AtomicValue>(
+        atomic: ManagedAtomic<R>,
         from oldStatus: R,
         to newStatus: R
-    ) -> Self where R.RawValue: AtomicValue {
+    ) -> Self {
         .init {
             let (success, original) = atomic.compareExchange(
-                expected: oldStatus.rawValue,
-                desired: newStatus.rawValue,
+                expected: oldStatus,
+                desired: newStatus,
                 ordering: .sequentiallyConsistent
             )
             guard success else {
                 throw AtomicError.failedTransition(
                     from: oldStatus,
                     to: newStatus,
-                    current: R(rawValue: original)
+                    current: original
                 )
             }
             return try get()

@@ -7,7 +7,7 @@
 import Atomics
 
 public enum UnbreakablePromises {
-    public enum Status: UInt8, Equatable, RawRepresentable {
+    public enum Status: UInt8, Equatable, AtomicValue {
         case waiting
         case succeeded
     }
@@ -19,7 +19,7 @@ public final class UnbreakablePromise<Output> {
     private let file: StaticString
     private let line: UInt
 
-    private let atomicStatus = ManagedAtomic<UInt8>(Status.waiting.rawValue)
+    private let atomicStatus = ManagedAtomic<Status>(.waiting)
     private let resumption: UnfailingResumption<Output>
 
     public let uncancellable: Uncancellable<Output>
@@ -40,7 +40,7 @@ public final class UnbreakablePromise<Output> {
     }
 
     var status: Status {
-        .init(rawValue: atomicStatus.load(ordering: .sequentiallyConsistent))!
+        atomicStatus.load(ordering: .sequentiallyConsistent)
     }
 
     /*:
@@ -55,15 +55,15 @@ public final class UnbreakablePromise<Output> {
 
     private func setSucceeded() throws -> UnfailingResumption<Output> {
         let (success, original) = atomicStatus.compareExchange(
-            expected: Status.waiting.rawValue,
-            desired: Status.succeeded.rawValue,
+            expected: Status.waiting,
+            desired: Status.succeeded,
             ordering: .sequentiallyConsistent
         )
         guard success else {
             throw AtomicError.failedTransition(
                 from: .waiting,
                 to: .succeeded,
-                current: Status(rawValue: original)
+                current: original
             )
         }
         return resumption

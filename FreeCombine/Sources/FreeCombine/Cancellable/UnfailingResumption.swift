@@ -12,11 +12,11 @@ public final class UnfailingResumption<Output: Sendable>: @unchecked Sendable {
     private let file: StaticString
     private let line: UInt
 
-    private let atomicStatus = ManagedAtomic<UInt8>(Status.waiting.rawValue)
+    private let atomicStatus = ManagedAtomic<Status>(.waiting)
     private let continuation: UnsafeContinuation<Output, Never>
 
     private var status: Status {
-        Status(rawValue: atomicStatus.load(ordering: .sequentiallyConsistent))!
+        atomicStatus.load(ordering: .sequentiallyConsistent)
     }
 
     private var leakFailureString: String {
@@ -53,24 +53,24 @@ public final class UnfailingResumption<Output: Sendable>: @unchecked Sendable {
         Result.success(()).set(atomic: self.atomicStatus, from: .waiting, to: newStatus)
     }
 
-    public func tryResume(returning output: Output) throws -> Void {
+    @Sendable public func tryResume(returning output: Output) throws -> Void {
         switch set(status: .resumed) {
             case .success: return continuation.resume(returning: output)
             case .failure(let error): throw error
         }
     }
 
-    public func resume(returning output: Output) -> Void {
+    @Sendable public func resume(returning output: Output) -> Void {
         do { try tryResume(returning: output) }
         catch { preconditionFailure(multipleResumeFailureString) }
     }
 }
 
-extension UnfailingResumption where Output == Void {
-    public func tryResume() throws -> Void {
+public extension UnfailingResumption where Output == Void {
+    @inlinable @Sendable func tryResume() throws -> Void {
         try tryResume(returning: ())
     }
-    public func resume() -> Void {
+    @inlinable @Sendable func resume() -> Void {
         resume(returning: ())
     }
 }

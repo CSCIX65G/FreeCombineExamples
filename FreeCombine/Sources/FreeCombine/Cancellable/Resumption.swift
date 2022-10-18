@@ -7,7 +7,7 @@
 import Atomics
 
 enum Resumptions {
-    enum Status: UInt8, RawRepresentable, Equatable, Sendable {
+    enum Status: UInt8, AtomicValue, Equatable, Sendable {
         case waiting
         case resumed
     }
@@ -19,15 +19,15 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
     private let file: StaticString
     private let line: UInt
 
-    private let atomicStatus = ManagedAtomic<UInt8>(Status.waiting.rawValue)
+    private let atomicStatus = ManagedAtomic<Status>(.waiting)
     private let continuation: UnsafeContinuation<Output, Swift.Error>
 
     private var status: Status {
-        Status(rawValue: atomicStatus.load(ordering: .sequentiallyConsistent))!
+        atomicStatus.load(ordering: .sequentiallyConsistent)
     }
 
     private var leakFailureString: String {
-        "ABORTING DUE TO LEAKED RESUMPTION: \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
+        "ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
     }
 
     private var multipleResumeFailureString: String {
@@ -51,7 +51,7 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
      */
     deinit {
         guard status == .resumed else {
-            assertionFailure(leakFailureString)
+            Assertion.assertionFailure(leakFailureString)
             continuation.resume(throwing: LeakError())
             return
         }

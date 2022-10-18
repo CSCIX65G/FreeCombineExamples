@@ -7,13 +7,13 @@
 import Atomics
 
 public enum Cancellables {
-    @TaskLocal static var status = ManagedAtomic<UInt8>(Status.running.rawValue)
+    @TaskLocal static var status = ManagedAtomic<Status>(.running)
 
     static var isCancelled: Bool {
-        status.load(ordering: .sequentiallyConsistent) == Status.cancelled.rawValue
+        status.load(ordering: .sequentiallyConsistent) == .cancelled
     }
 
-    enum Status: UInt8, Sendable, RawRepresentable, Equatable {
+    enum Status: UInt8, Sendable, AtomicValue, Equatable {
         case running
         case finished
         case cancelled
@@ -28,7 +28,15 @@ public final class Cancellable<Output: Sendable> {
     private let line: UInt
 
     private let task: Task<Output, Swift.Error>
-    private let atomicStatus = ManagedAtomic<UInt8>(Status.running.rawValue)
+    private let atomicStatus = ManagedAtomic<Status>(.running)
+
+    private var status: Status {
+        atomicStatus.load(ordering: .sequentiallyConsistent)
+    }
+
+    private var leakFailureString: String {
+        "ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
+    }
 
     public init(
         function: StaticString = #function,
@@ -43,7 +51,7 @@ public final class Cancellable<Output: Sendable> {
         self.task = .init {
             try await Cancellables.$status.withValue(atomic) {
                 try await Result(catching: operation)
-                    .set(atomic: atomic, from: Status.running, to: Status.finished)
+                    .set(atomic: atomic, from: .running, to: .finished)
                     .mapError {
                         guard let err = $0 as? AtomicError<Status>, case .failedTransition(_, _, .cancelled) = err else {
                             return $0
@@ -77,10 +85,8 @@ public final class Cancellable<Output: Sendable> {
      are dealt with in the same way
      */
     deinit {
-        guard atomicStatus.load(ordering: .sequentiallyConsistent) != Status.running.rawValue else {
-            Assertion.assertionFailure(
-                "ABORTING DUE TO LEAKED \(type(of: Self.self)) CREATED in \(function) @ \(file): \(line)"
-            )
+        guard status != Status.running else {
+            Assertion.assertionFailure(leakFailureString)
             try? cancel()
             return
         }

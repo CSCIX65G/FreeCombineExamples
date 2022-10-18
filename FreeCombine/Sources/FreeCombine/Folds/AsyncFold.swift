@@ -50,17 +50,17 @@ public final class AsyncFold<State, Action: Sendable> {
         get async { await cancellable.result }
     }
 
-    @Sendable func send(
+    func send(
         _ element: Action
     ) throws -> Void {
         try channel.tryYield(element)
     }
 
-    @Sendable func finish() {
+    func finish() {
         channel.finish()
     }
 
-    @Sendable func cancel() throws {
+    func cancel() throws {
         try cancellable.cancel()
     }
 }
