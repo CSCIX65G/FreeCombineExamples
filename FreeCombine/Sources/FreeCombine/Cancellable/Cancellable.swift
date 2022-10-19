@@ -4,7 +4,7 @@
 //
 //  Created by Van Simmons on 9/5/22.
 //
-import Atomics
+@preconcurrency import Atomics
 
 public enum Cancellables {
     @TaskLocal static var status = ManagedAtomic<Status>(.running)
@@ -20,7 +20,7 @@ public enum Cancellables {
     }
 }
 
-public final class Cancellable<Output: Sendable> {
+public final class Cancellable<Output: Sendable>: Sendable {
     typealias Status = Cancellables.Status
 
     private let function: StaticString
