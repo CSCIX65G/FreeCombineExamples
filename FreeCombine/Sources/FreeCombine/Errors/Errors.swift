@@ -10,6 +10,7 @@ public struct CompletionError: Swift.Error, Sendable { }
 public struct CancellationFailureError: Swift.Error, Sendable { }
 
 public struct LeakError: Swift.Error, Sendable { }
+public struct TimeoutError: Swift.Error, Sendable { }
 
 public enum AtomicError<R: AtomicValue>: Error {
     case failedTransition(from: R, to: R, current: R)

@@ -15,53 +15,18 @@ final class RepeaterTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleRepeater() async throws {
-        let dispatchChannel = Channel<Distributor<Int>.DownstreamDispatch>(buffering: .bufferingOldest(1))
-        let returnChannel = Channel<Distributor<Int>.DownstreamReturn>.init(buffering: .bufferingOldest(1))
+        let returnChannel = Channel<Repeater<Int, String>.ResultAndNext>.init(buffering: .bufferingOldest(1))
+//        var resumption: 
 
-        let repeater = Distributor<Int>.Repeater.init(
-            streamId: 0,
-            dispatchChannel: dispatchChannel,
+        let (initialResumption, repeater) = await Repeater.repeater(
+            dispatch: { String.init($0) },
             returnChannel: returnChannel
         )
 
-        var dispatchCancellable: Cancellable<Void>!
-        let _: Void = try await withResumption { resumption in
-            dispatchCancellable = .init {
-                resumption.resume()
-                for await (_, nextResumption) in dispatchChannel.stream {
-                    do { try nextResumption.tryResume(returning: .success(())) }
-                    catch { XCTFail("DispatchCancellable threw error: \(error)") }
-                }
-            }
+        for i in 0 ..< 1000 {
+
         }
 
-        let numberOfValues = 1_000
-        var returnCancellable: Cancellable<Void>!
-        let _: Void = try await withResumption { resumption in
-            returnCancellable = Cancellable<Void> {
-                var value = 0
-                resumption.resume()
-                for await (_, result, nextResumption) in returnChannel.stream {
-                    guard let nextResumption = nextResumption else { return }
-                    repeater.dispatchReturn = nextResumption
-                    guard case .success = result else {
-                        XCTFail("Unexpected failure")
-                        dispatchChannel.finish()
-                        break
-                    }
-                    let dispatchValue: Distributor<Int>.DownstreamDispatch = (value, nextResumption)
-                    do { try dispatchChannel.tryYield(dispatchValue) }
-                    catch { XCTFail("Return cancellable threw: \(error)") }
-                    value += 1
-                    if value > numberOfValues {
-                        dispatchChannel.finish()
-                        break
-                    }
-                }
-            }
-        }
-
-        _ = await dispatchCancellable.result
-        _ = await returnCancellable.result
+        _ = await repeater.cancellable.result
     }
 }

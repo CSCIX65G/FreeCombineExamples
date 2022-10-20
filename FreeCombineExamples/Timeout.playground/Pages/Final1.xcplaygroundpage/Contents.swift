@@ -116,6 +116,7 @@ enum Resumptions {
 
 public struct LeakError: Swift.Error, Sendable { }
 
+@available(iOS 13.0, *)
 public final class Resumption<Output: Sendable>: @unchecked Sendable {
     typealias Status = Resumptions.Status
 
@@ -165,6 +166,7 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
     }
 }
 
+@available(iOS 13.0, *)
 public func withResumption<Output>(
     _ resumingWith: (Resumption<Output>) -> Void
 ) async throws -> Output {
@@ -172,5 +174,61 @@ public func withResumption<Output>(
         resumingWith(.init(continuation: continuation) )
     }
 }
+
+public struct TimeoutError: Swift.Error, Sendable { }
+
+@available(iOS 13.0, *)
+func process<Output: Sendable>(
+    timeout: UInt64,
+    _ process: @escaping () async -> Output
+) -> Cancellable<Output> {
+    .init {
+        var resultCancellable: Cancellable<Output>!
+        let resumption = try! await withResumption { outer in
+            resultCancellable = .init {
+                try await withResumption { inner in try! outer.tryResume(returning: inner) }
+            }
+        }
+        let processCancellable: Cancellable<Void> = .init {
+            let output = await process()
+            try? resumption.tryResume(returning: output)
+        }
+        let timeoutCancellable: Cancellable<Void> = .init {
+            try? await Task.sleep(nanoseconds: timeout)
+            try? resumption.tryResume(throwing: TimeoutError())
+        }
+        return try await withTaskCancellationHandler(
+            operation: {
+                try await resultCancellable.value
+            },
+            onCancel: {
+                try? resumption.tryResume(throwing: CancellationError())
+                try? processCancellable.cancel()
+                try? timeoutCancellable.cancel()
+            }
+        )
+    }
+}
+
+let cancellable1 = process(timeout: 100_000_000) { 13 }
+let cancellationResult1 = Result {
+    try cancellable1.cancel()
+}
+print(cancellationResult1)
+let result1 = await cancellable1.result
+print(result1)
+
+//=================================================
+
+let cancellable3 = process(timeout: 100_000_000) {
+    try? await Task.sleep(nanoseconds: 200_000_000)
+    return 13
+}
+let cancellationResult3 = Result { try cancellable3.cancel() }
+print(cancellationResult3)
+let result3 = await cancellable3.result
+print(result3)
+
+PlaygroundPage.current.finishExecution()
 
 //: [Next](@next)
