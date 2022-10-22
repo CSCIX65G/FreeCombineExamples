@@ -63,6 +63,7 @@ final class RepeaterTests: XCTestCase {
                 repeaters[i] = (repeater: first.repeater, resumption: first.resumption)
             }
             for i in 0 ..< numValues {
+                // Send the values
                 (0 ..< numRepeaters).forEach { n in
                     guard let resumption = repeaters[n]?.resumption else {
                         XCTFail("Could not send")
@@ -70,6 +71,7 @@ final class RepeaterTests: XCTestCase {
                     }
                     resumption.resume(returning: i)
                 }
+                // Gather the returns
                 for _ in 0 ..< numRepeaters {
                     guard let next = await iterator.next() else {
                         XCTFail("Ran out of values")
@@ -90,6 +92,7 @@ final class RepeaterTests: XCTestCase {
                     repeaters[next.id] = (repeater, next.resumption)
                 }
             }
+            // Close everything
             for n in 0 ..< numRepeaters {
                 guard let resumption = repeaters[n]?.resumption else {
                     XCTFail("Could not close")

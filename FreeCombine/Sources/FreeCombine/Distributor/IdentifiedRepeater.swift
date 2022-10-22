@@ -47,7 +47,7 @@ final class IdentifiedRepeater<
                     do {
                         try returnChannel.tryYield(.init(id: id, result: result, resumption: resumption))
                     } catch {
-                        resumption.resume(throwing: CancellationError())
+                        resumption.resume(throwing: BufferError())
                     }
                 }
             }
