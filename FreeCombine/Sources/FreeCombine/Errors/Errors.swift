@@ -9,6 +9,7 @@ import Atomics
 public struct CompletionError: Swift.Error, Sendable { }
 public struct CancellationFailureError: Swift.Error, Sendable { }
 
+public struct ReleaseError: Swift.Error, Sendable { }
 public struct LeakError: Swift.Error, Sendable { }
 public struct TimeoutError: Swift.Error, Sendable { }
 
