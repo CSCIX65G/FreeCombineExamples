@@ -13,7 +13,7 @@ final class IdentifiedRepeater<
     public struct Next: Sendable, Identifiable {
         let id: ID
         let result: Result<Return, Swift.Error>
-        let resumption: Resumption<Arg>
+        let resumption: Resumption<Publisher<Arg>.Result>
     }
 
     private let function: StaticString
@@ -21,16 +21,16 @@ final class IdentifiedRepeater<
     private let line: UInt
 
     let id: ID
-    let dispatch: @Sendable (Arg) async throws -> Return
-    let cancellable: Cancellable<Never>!
+    let dispatch: @Sendable (Publisher<Arg>.Result) async throws -> Return
+    let cancellable: Cancellable<Void>!
 
     required init(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
         id: ID,
-        resumption: UnfailingResumption<Resumption<Arg>>,
-        dispatch: @escaping @Sendable (Arg) async throws -> Return,
+        resumption: UnfailingResumption<Resumption<Publisher<Arg>.Result>>,
+        dispatch: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return,
         returnChannel: Channel<Next>
     ) {
         self.function = function
@@ -44,11 +44,8 @@ final class IdentifiedRepeater<
             while true {
                 let result = await Result { try await dispatch(arg) }
                 arg = try await withResumption { resumption in
-                    do {
-                        try returnChannel.tryYield(.init(id: id, result: result, resumption: resumption))
-                    } catch {
-                        resumption.resume(throwing: BufferError())
-                    }
+                    do { try returnChannel.tryYield(.init(id: id, result: result, resumption: resumption)) }
+                    catch { resumption.resume(throwing: BufferError()) }
                 }
             }
         }
@@ -57,17 +54,17 @@ final class IdentifiedRepeater<
 
 extension IdentifiedRepeater {
     public struct First: Sendable, Identifiable {
-        let resumption: Resumption<Arg>
+        let resumption: Resumption<Publisher<Arg>.Result>
         let repeater: IdentifiedRepeater<ID, Arg, Return>
         public var id: ID { repeater.id }
     }
 
-    static func repeater(
+    static func first(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
         id: ID,
-        dispatch: @escaping @Sendable (Arg) async throws -> Return,
+        dispatch: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return,
         returnChannel: Channel<Next>
     ) async -> First {
         var repeater: IdentifiedRepeater<ID, Arg, Return>!

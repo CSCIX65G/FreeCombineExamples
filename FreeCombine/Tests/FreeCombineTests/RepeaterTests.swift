@@ -17,18 +17,34 @@ final class RepeaterTests: XCTestCase {
 
     override func tearDownWithError() throws { }
 
+    enum TestError: Error {
+        case finished
+        case failure(Error)
+    }
+
+    @Sendable func dispatch(_ result: Publisher<Int>.Result) async throws -> String {
+        switch result {
+            case let .value(value):
+                return .init(value)
+            case .completion(.finished):
+                throw TestError.finished
+            case .completion(.failure(let error)):
+                throw TestError.failure(error)
+        }
+    }
+
     func testSimpleRepeater() async throws {
         let returnChannel = Channel<IdentifiedRepeater<ID, Arg, Return>.Next>.init(buffering: .bufferingOldest(1))
 
-        let first = await IdentifiedRepeater.repeater(
+        let first = await IdentifiedRepeater<ID, Arg, Return>.first(
             id: 0,
-            dispatch: { String.init($0) },
+            dispatch: self.dispatch,
             returnChannel: returnChannel
         )
         let cancellable = Cancellable<Void> {
             let max = 10_000
             var i = 0
-            first.resumption.resume(returning: i)
+            first.resumption.resume(returning: .value(i))
             for await next in returnChannel.stream {
                 guard case let .success(returnValue) = next.result, returnValue == String(i) else {
                     XCTFail("incorrect value: \(next.result)")
@@ -39,7 +55,7 @@ final class RepeaterTests: XCTestCase {
                     next.resumption.resume(throwing: CancellationError())
                     returnChannel.finish()
                 } else {
-                    next.resumption.resume(returning: i)
+                    next.resumption.resume(returning: .value(i))
                 }
             }
             return
@@ -53,11 +69,11 @@ final class RepeaterTests: XCTestCase {
         let returnChannel = Channel<IdentifiedRepeater<ID, Arg, Return>.Next>.init(buffering: .bufferingOldest(numRepeaters))
         let cancellable: Cancellable<Void> = .init {
             var iterator = returnChannel.stream.makeAsyncIterator()
-            var repeaters: [ID: (repeater: IdentifiedRepeater<ID, Arg, Return>, resumption: Resumption<Arg>)] = [:]
+            var repeaters: [ID: (repeater: IdentifiedRepeater<ID, Arg, Return>, resumption: Resumption<Publisher<Arg>.Result>)] = [:]
             for i in 0 ..< numRepeaters {
-                let first = await IdentifiedRepeater.repeater(
+                let first = await IdentifiedRepeater.first(
                     id: i,
-                    dispatch: { String.init($0) },
+                    dispatch: self.dispatch,
                     returnChannel: returnChannel
                 )
                 repeaters[i] = (repeater: first.repeater, resumption: first.resumption)
@@ -69,7 +85,7 @@ final class RepeaterTests: XCTestCase {
                         XCTFail("Could not send")
                         return
                     }
-                    resumption.resume(returning: i)
+                    resumption.resume(returning: .value(i))
                 }
                 // Gather the returns
                 for _ in 0 ..< numRepeaters {

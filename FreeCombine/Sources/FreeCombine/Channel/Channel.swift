@@ -29,6 +29,13 @@ public extension AsyncStream.Continuation {
     }
 }
 
+extension Channel: AsyncSequence {
+    public typealias AsyncIterator = AsyncStream<Element>.AsyncIterator
+    public func makeAsyncIterator() -> AsyncStream<Element>.AsyncIterator {
+        stream.makeAsyncIterator()
+    }
+}
+
 public extension Channel {
     @Sendable func tryYield(_ value: Element) throws -> Void {
         switch continuation.yield(value) {
