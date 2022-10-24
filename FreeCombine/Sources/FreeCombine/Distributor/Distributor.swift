@@ -40,6 +40,30 @@ public final class Distributor<Output: Sendable> {
         (subscriptionChannel, subscriptionCancellable) = Self.createSubscriptionReceiver(upstreamChannel: upstreamChannel)
     }
 
+    static func processValue(
+        repeaters: inout [UInt64 : (repeater: IdentifiedRepeater<UInt64, Output, ()>, resumption: Resumption<Publisher<Output>.Result>)],
+        value: Output,
+        iterator: inout AsyncStream<IdentifiedRepeater<UInt64, Output, ()>.Next>.Iterator,
+        upstreamResumption: Resumption<Void>
+    ) async {
+        let numRepeaters = repeaters.count
+        // Send the value
+        for (_, (_, resumption)) in repeaters { resumption.resume(returning: .value(value)) }
+        // Gather the returns
+        for _ in 0 ..< numRepeaters {
+            guard let next = await iterator.next() else { fatalError("Invalid stream") }
+            guard let repeater = repeaters[next.id]?.repeater else { fatalError("Lost repeater") }
+            guard case .success = next.result else {
+                repeaters.removeValue(forKey: next.id)
+                try? repeater.cancellable.cancel()
+                continue
+            }
+            repeaters[next.id] = (repeater, next.resumption)
+        }
+        do { try upstreamResumption.tryResume() }
+        catch { fatalError("Unhandled value resumption") }
+    }
+
     private static func createUpstreams(
         returnChannel: Channel<Repeater.Next>
     ) -> (Channel<UpstreamAction>, Cancellable<Void>) {
@@ -50,22 +74,12 @@ public final class Distributor<Output: Sendable> {
             for await action in upstreamChannel {
                 switch action {
                     case let .value(value, upstreamResumption):
-                        let numRepeaters = repeaters.count
-                        // Send the value
-                        for (_, (_, resumption)) in repeaters { resumption.resume(returning: .value(value)) }
-                        // Gather the returns
-                        for _ in 0 ..< numRepeaters {
-                            guard let next = await iterator.next() else { fatalError("Invalid stream") }
-                            guard let repeater = repeaters[next.id]?.repeater else { fatalError("Lost repeater") }
-                            guard case .success = next.result else {
-                                repeaters.removeValue(forKey: next.id)
-                                try? repeater.cancellable.cancel()
-                                continue
-                            }
-                            repeaters[next.id] = (repeater, next.resumption)
-                        }
-                        do { try upstreamResumption.tryResume() }
-                        catch { fatalError("Unhandled value resumption") }
+                        await processValue(
+                            repeaters: &repeaters,
+                            value: value,
+                            iterator: &iterator,
+                            upstreamResumption: upstreamResumption
+                        )
                     case let .subscription(action: .subscribe(repeater, returnResumption, idResumption)):
                         repeaters[repeater.id] = (repeater: repeater, resumption: returnResumption)
                         do { try idResumption.tryResume(returning: repeater.id) }
@@ -76,7 +90,10 @@ public final class Distributor<Output: Sendable> {
                             .tryResume(throwing: CancellationError())
                 }
             }
-            for (_, (repeater, _)) in repeaters { try? repeater.cancellable.cancel() }
+            for (_, (repeater, resumption)) in repeaters {
+                resumption.resume(returning: .completion(.finished))
+                _ = await repeater.cancellable.result
+            }
             repeaters = [:]
         }
         return (upstreamChannel, cancellable)
@@ -139,17 +156,17 @@ public final class Distributor<Output: Sendable> {
         try valueChannel.tryYield(value)
     }
 
-    func finish() {
+    func finish() async {
         subscriptionChannel.finish()
+        _ = await subscriptionCancellable.result
         valueChannel.finish()
-        upstreamChannel.finish()
+        _ = await valueCancellable.result
         returnChannel.finish()
+        upstreamChannel.finish()
     }
 
     var result: Result<Void, Swift.Error> {
         get async {
-            _ = await valueCancellable.result
-            _ = await subscriptionCancellable.result
             return await upstreamCancellable.result
         }
     }

@@ -22,7 +22,7 @@ final class IdentifiedRepeater<
 
     let id: ID
     let dispatch: @Sendable (Publisher<Arg>.Result) async throws -> Return
-    let cancellable: Cancellable<Void>!
+    let cancellable: Cancellable<Return>!
 
     required init(
         function: StaticString = #function,
@@ -43,6 +43,7 @@ final class IdentifiedRepeater<
             var arg = try await withResumption(resumption.resume)
             while true {
                 let result = await Result { try await dispatch(arg) }
+                guard case .value = arg else { return try result.get() }
                 arg = try await withResumption { resumption in
                     do { try returnChannel.tryYield(.init(id: id, result: result, resumption: resumption)) }
                     catch { resumption.resume(throwing: BufferError()) }
