@@ -24,7 +24,7 @@ public final class Distributor<Output: Sendable> {
         case subscription(action: SubscriptionAction)
     }
 
-    private let valueChannel: Channel<Output>
+    private let valueChannel: Channel<ValueAction>
     private let valueCancellable: Cancellable<Void>
 
     private let subscriptionChannel: Channel<SubscriptionAction>
@@ -34,8 +34,6 @@ public final class Distributor<Output: Sendable> {
     private let upstreamCancellable: Cancellable<Void>
 
     private let returnChannel: Channel<Repeater.Next>
-
-    private var nextId = UInt64.zero
 
     public init(
         buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1)
@@ -104,13 +102,21 @@ public final class Distributor<Output: Sendable> {
     private static func createValueReceiver(
         buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1),
         upstreamChannel: Channel<UpstreamAction>
-    ) -> (Channel<Output>, Cancellable<Void>) {
-        let channel = Channel<Output>.init(buffering: buffering)
+    ) -> (Channel<ValueAction>, Cancellable<Void>) {
+        let channel = Channel<ValueAction>.init(buffering: buffering)
         let cancellable = Cancellable<Void> {
-            for await output in channel.stream { try await withResumption { resumption in
-                do { try upstreamChannel.tryYield(.value(output, resumption )) }
-                catch { channel.finish() }
-            } }
+            for await outputAction in channel.stream {
+                switch outputAction {
+                    case let .asynchronousValue(output, resumption):
+                        do { try upstreamChannel.tryYield(.value(output, resumption )) }
+                        catch { channel.finish() }
+                    case let .synchronousValue(output):
+                        try await withResumption { resumption in
+                            do { try upstreamChannel.tryYield(.value(output, resumption )) }
+                            catch { channel.finish() }
+                        }
+                }
+            }
         }
         return (channel, cancellable)
     }
@@ -157,7 +163,14 @@ public final class Distributor<Output: Sendable> {
 
     // Send can be sync or async or retryable.  for now only sync
     public func send(_ value: Output) throws {
-        try valueChannel.tryYield(value)
+        try valueChannel.tryYield(.synchronousValue(value))
+    }
+
+    public func send(_ value: Output) async throws {
+        let _: Void = try await withResumption { resumption in
+            do { try valueChannel.tryYield(.asynchronousValue(value, resumption)) }
+            catch { resumption.resume(throwing: BufferError()) }
+        }
     }
 
     func finish() async {
@@ -170,8 +183,6 @@ public final class Distributor<Output: Sendable> {
     }
 
     var result: Result<Void, Swift.Error> {
-        get async {
-            return await upstreamCancellable.result
-        }
+        get async { await upstreamCancellable.result }
     }
 }
