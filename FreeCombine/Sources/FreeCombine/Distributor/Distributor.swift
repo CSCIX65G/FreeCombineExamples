@@ -6,6 +6,13 @@
 //
 public final class Distributor<Output: Sendable> {
     typealias Repeater = IdentifiedRepeater<UInt64, Output, Void>
+    typealias RepeaterDictionary = [UInt64 : (repeater: IdentifiedRepeater<UInt64, Output, ()>, resumption: Resumption<Publisher<Output>.Result>)]
+    typealias ReturnIterator = AsyncStream<IdentifiedRepeater<UInt64, Output, ()>.Next>.Iterator
+
+    private enum ValueAction: Sendable {
+        case synchronousValue(Output)
+        case asynchronousValue(Output, Resumption<Void>)
+    }
 
     private enum SubscriptionAction: Sendable {
         case subscribe(Repeater, Resumption<Publisher<Output>.Result>, Resumption<UInt64>)
@@ -36,21 +43,21 @@ public final class Distributor<Output: Sendable> {
         // Initialize from downstream upward
         returnChannel = Channel<Repeater.Next>(buffering: .unbounded)
         (upstreamChannel, upstreamCancellable) = Self.createUpstreams(returnChannel: returnChannel)
-        (valueChannel, valueCancellable) = Self.createValueReceiver(upstreamChannel: upstreamChannel)
+        (valueChannel, valueCancellable) = Self.createValueReceiver(buffering: buffering, upstreamChannel: upstreamChannel)
         (subscriptionChannel, subscriptionCancellable) = Self.createSubscriptionReceiver(upstreamChannel: upstreamChannel)
     }
 
+    // Send a value to all subscribers
     static func processValue(
-        repeaters: inout [UInt64 : (repeater: IdentifiedRepeater<UInt64, Output, ()>, resumption: Resumption<Publisher<Output>.Result>)],
-        value: Output,
-        iterator: inout AsyncStream<IdentifiedRepeater<UInt64, Output, ()>.Next>.Iterator,
-        upstreamResumption: Resumption<Void>
+        _ value: Output,
+        _ repeaters: inout RepeaterDictionary,
+        _ iterator: inout ReturnIterator,
+        _ upstreamResumption: Resumption<Void>
     ) async {
-        let numRepeaters = repeaters.count
         // Send the value
         for (_, (_, resumption)) in repeaters { resumption.resume(returning: .value(value)) }
         // Gather the returns
-        for _ in 0 ..< numRepeaters {
+        for _ in 0 ..< repeaters.count {
             guard let next = await iterator.next() else { fatalError("Invalid stream") }
             guard let repeater = repeaters[next.id]?.repeater else { fatalError("Lost repeater") }
             guard case .success = next.result else {
@@ -70,16 +77,11 @@ public final class Distributor<Output: Sendable> {
         let upstreamChannel = Channel<UpstreamAction>.init(buffering: .unbounded)
         let cancellable = Cancellable<Void> {
             var iterator = returnChannel.stream.makeAsyncIterator()
-            var repeaters: [UInt64: (repeater: Repeater, resumption: Resumption<Publisher<Output>.Result>)] = [:]
+            var repeaters: RepeaterDictionary = [:]
             for await action in upstreamChannel {
                 switch action {
                     case let .value(value, upstreamResumption):
-                        await processValue(
-                            repeaters: &repeaters,
-                            value: value,
-                            iterator: &iterator,
-                            upstreamResumption: upstreamResumption
-                        )
+                        await processValue(value, &repeaters, &iterator, upstreamResumption)
                     case let .subscription(action: .subscribe(repeater, returnResumption, idResumption)):
                         repeaters[repeater.id] = (repeater: repeater, resumption: returnResumption)
                         do { try idResumption.tryResume(returning: repeater.id) }
@@ -122,7 +124,7 @@ public final class Distributor<Output: Sendable> {
             operation: {
                 for await action in channel.stream {
                     do { try upstreamChannel.tryYield(.subscription(action: action)) }
-                    catch { }
+                    catch { fatalError("Could not subscribe") }
                 }
             },
             onCancel: {
@@ -132,6 +134,7 @@ public final class Distributor<Output: Sendable> {
         return (channel, cancellable)
     }
 
+    // subscribe is async bc it must return the Cancellable
     public func subscribe(
         operation: @escaping @Sendable (Publisher<Output>.Result) async throws -> Void
     ) async throws -> Cancellable<Void> {
@@ -152,6 +155,7 @@ public final class Distributor<Output: Sendable> {
         ) }
     }
 
+    // Send can be sync or async or retryable.  for now only sync
     public func send(_ value: Output) throws {
         try valueChannel.tryYield(value)
     }
