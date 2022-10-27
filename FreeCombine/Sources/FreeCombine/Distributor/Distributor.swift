@@ -83,9 +83,9 @@ public final class Distributor<Output: Sendable> {
                         do { try idResumption.tryResume(returning: repeater.id) }
                         catch { fatalError("Unhandled subscription resumption") }
                     case let .subscription(action: .unsubscribe(streamId)):
-                        try? repeaters.removeValue(forKey: streamId)?
-                            .resumption
-                            .tryResume(throwing: CancellationError())
+                        guard let pair = repeaters.removeValue(forKey: streamId) else { return }
+                        try! pair.resumption.tryResume(throwing: CancellationError())
+                        _ = await pair.repeater.cancellable.result
                 }
             }
             for (_, (repeater, resumption)) in repeaters {
@@ -131,12 +131,20 @@ public final class Distributor<Output: Sendable> {
                     catch { fatalError("Could not subscribe") }
                 }
             },
-            onCancel: { channel.finish() }
+            onCancel: {
+                channel.finish()
+            }
         ) } )
         return (channel, cancellable)
     }
 
     // subscribe is async bc it must return the Cancellable
+    public func subscribe(
+        operation: @escaping @Sendable (Publisher<Output>.Result) async throws -> Void
+    ) -> Cancellable<Cancellable<Void>> {
+        .init { try await self.subscribe(operation: operation) }
+    }
+
     public func subscribe(
         operation: @escaping @Sendable (Publisher<Output>.Result) async throws -> Void
     ) async throws -> Cancellable<Void> {
@@ -148,8 +156,12 @@ public final class Distributor<Output: Sendable> {
         })
         guard compare == id else { throw SubscriptionError() }
         return .init { try await withTaskCancellationHandler(
-            operation: { try await self.upstreamCancellable.value },
-            onCancel: { try? self.subscriptionChannel.tryYield(.unsubscribe(id)) }
+            operation: {
+                _ = try await first.repeater.cancellable.value
+            },
+            onCancel: {
+                try? self.subscriptionChannel.tryYield(.unsubscribe(id))
+            }
         ) }
     }
 

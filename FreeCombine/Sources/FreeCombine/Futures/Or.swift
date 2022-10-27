@@ -22,6 +22,7 @@ public func or<Left, Right>(
     } }
 }
 
+@inlinable
 public func Ored<Left, Right>(
     _ left: Future<Left>,
     _ right: Future<Right>
@@ -30,6 +31,7 @@ public func Ored<Left, Right>(
 }
 
 public extension Future {
+    @inlinable
     func or<Other>(
         _ other: Future<Other>
     ) -> Future<Either<Output, Other>> {
@@ -37,6 +39,7 @@ public extension Future {
     }
 }
 
+@inlinable
 public func ||<Left, Right>(
     _ left: Future<Left>,
     _ right: Future<Right>
@@ -44,12 +47,13 @@ public func ||<Left, Right>(
     Ored(left, right)
 }
 
+@inlinable
 public func or<A, B, C>(
     _ one: Future<A>,
     _ two: Future<B>,
     _ three: Future<C>
 ) -> Future<OneOfThree<A, B, C>> {
-    or(or(one, two), three)
+    ((one || two) || three)
         .map { switch $0 {
             case let .left(.left(one)): return .one(one)
             case let .left(.right(two)): return .two(two)
@@ -57,13 +61,14 @@ public func or<A, B, C>(
         } }
 }
 
+@inlinable
 public func or<A, B, C, D>(
     _ one: Future<A>,
     _ two: Future<B>,
     _ three: Future<C>,
     _ four: Future<D>
 ) -> Future<OneOfFour<A, B, C, D>> {
-    or(or(one, two), or(three, four))
+    ((one || two) || (three || four))
         .map { switch $0 {
             case let .left(.left(one)): return .one(one)
             case let .left(.right(two)): return .two(two)
@@ -72,6 +77,7 @@ public func or<A, B, C, D>(
         } }
 }
 
+@inlinable
 public func or<A, B, C, D, E>(
     _ one: Future<A>,
     _ two: Future<B>,
@@ -79,7 +85,7 @@ public func or<A, B, C, D, E>(
     _ four: Future<D>,
     _ five: Future<E>
 ) -> Future<OneOfFive<A, B, C, D, E>> {
-    or(or(or(one, two), or(three, four)), five)
+    (((one || two) || (three || four)) || five)
         .map { switch $0 {
             case let .left(.left(.left(one))): return .one(one)
             case let .left(.left(.right(two))): return .two(two)
@@ -89,6 +95,7 @@ public func or<A, B, C, D, E>(
         } }
 }
 
+@inlinable
 public func or<A, B, C, D, E, F>(
     _ one: Future<A>,
     _ two: Future<B>,
@@ -97,7 +104,7 @@ public func or<A, B, C, D, E, F>(
     _ five: Future<E>,
     _ six: Future<F>
 ) -> Future<OneOfSix<A, B, C, D, E, F>> {
-    or(or(or(one, two), or(three, four)), or(five, six))
+    (((one || two) || (three || four)) || (five || six))
         .map { switch $0 {
             case let .left(.left(.left(one))): return .one(one)
             case let .left(.left(.right(two))): return .two(two)
@@ -108,6 +115,7 @@ public func or<A, B, C, D, E, F>(
         } }
 }
 
+@inlinable
 public func or<A, B, C, D, E, F, G>(
     _ one: Future<A>,
     _ two: Future<B>,
@@ -117,7 +125,7 @@ public func or<A, B, C, D, E, F, G>(
     _ six: Future<F>,
     _ seven: Future<G>
 ) -> Future<OneOfSeven<A, B, C, D, E, F, G>> {
-    or(or(or(one, two), or(three, four)), or(or(five, six), seven))
+    (((one || two) || (three || four)) || ((five || six) || seven))
         .map { switch $0 {
             case let .left(.left(.left(one))): return .one(one)
             case let .left(.left(.right(two))): return .two(two)
@@ -129,6 +137,7 @@ public func or<A, B, C, D, E, F, G>(
         } }
 }
 
+@inlinable
 public func or<A, B, C, D, E, F, G, H>(
     _ one: Future<A>,
     _ two: Future<B>,
@@ -139,7 +148,7 @@ public func or<A, B, C, D, E, F, G, H>(
     _ seven: Future<G>,
     _ eight: Future<H>
 ) -> Future<OneOfEight<A, B, C, D, E, F, G, H>> {
-    or(or(or(one, two), or(three, four)), or(or(five, six), or(seven, eight)))
+    (((one || two) || (three || four)) || ((five || six) || (seven || eight)))
         .map { switch $0 {
             case let .left(.left(.left(one))): return .one(one)
             case let .left(.left(.right(two))): return .two(two)
