@@ -146,7 +146,7 @@ final class DistributorTests: XCTestCase {
             _ = await subscriptions[i].result
         }
         let expectedCount = ((numValues + 1) * numSubscriptions)
-            - (numUnsubscriptions * ((numValues + 1) - unsubscribeAfter))
+        - (numUnsubscriptions * ((numValues + 1) - unsubscribeAfter))
         let count = counter.count
         XCTAssert(counter.count == expectedCount,
                   """
@@ -156,6 +156,59 @@ final class DistributorTests: XCTestCase {
                   unsubscribeAfter = \(unsubscribeAfter)
                   numUnsubscriptions = \(numUnsubscriptions)
                   Expected: \(expectedCount)
+                  Got: \(count)
+                  """
+        )
+    }
+
+    struct RandomError: Error { }
+
+    func testRandomizedDistributorOperations() async throws {
+        let numValues = Int.random(in: 0 ..< 100)
+
+        let distributor = Distributor<Int>(buffering: .bufferingOldest(numValues))
+        let counter = Counter()
+
+        var subscriptions: [Cancellable<Void>] = []
+
+        for i in 0 ..< numValues {
+            if UInt8.random(in: 0 ..< 3) == 0 {
+                guard let subscription = (try? await distributor.subscribe { result in
+                    switch result {
+                        case .completion(.failure(let error)):
+                            XCTFail("Received failure: \(error)")
+                        default:
+                            if UInt8.random(in: 0 ..< 5) == 0 { throw RandomError() }
+                    }
+                } ) else {
+                    XCTFail("Could not create subscription")
+                    return
+                }
+                subscriptions.append(subscription)
+            }
+            if subscriptions.count > 0, UInt8.random(in: 0 ..< 3) == 0 {
+                let c = subscriptions.remove(at: Int.random(in: 0 ..< subscriptions.count))
+                try? c.cancel()
+                _ = await c.result
+            }
+            do {
+                try await distributor.send(i)
+                counter.increment()
+            }
+            catch {
+                XCTFail("Could not enqueue: \(error)")
+            }
+        }
+        _ = await distributor.finish()
+        _ = await distributor.result
+        for i in 0 ..< subscriptions.count {
+            _ = await subscriptions[i].result
+        }
+        let count = counter.count
+        XCTAssert(count == numValues,
+                  """
+                  Incorrect number of values for:
+                  numValues = \(numValues),
                   Got: \(count)
                   """
         )

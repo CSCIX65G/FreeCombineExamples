@@ -19,10 +19,21 @@ public final class Distributor<Output: Sendable> {
         case unsubscribe(UInt64)
     }
 
-    private enum UpstreamAction: Sendable {
+    private enum UpstreamAction: Sendable, CustomStringConvertible {
         case value(Output, Resumption<Void>)
         case subscription(action: SubscriptionAction)
+        var description: String {
+            switch self {
+                case let .value(value, _): return "Value: \(value)"
+                case let .subscription(action: .subscribe(repeater, _, _)): return "Subscribe: \(repeater.id)"
+                case let .subscription(action: .unsubscribe(id)): return "Unsubscribe: \(id)"
+            }
+        }
     }
+
+    private let function: StaticString
+    private let file: StaticString
+    private let line: UInt
 
     private let valueChannel: Channel<ValueAction>
     private let valueCancellable: Cancellable<Void>
@@ -36,8 +47,14 @@ public final class Distributor<Output: Sendable> {
     private let returnChannel: Channel<Repeater.Next>
 
     public init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1)
     ) {
+        self.function = function
+        self.file = file
+        self.line = line
         // Initialize from downstream upward
         returnChannel = Channel<Repeater.Next>(buffering: .unbounded)
         (upstreamChannel, upstreamCancellable) = Self.createUpstreams(returnChannel: returnChannel)
@@ -56,12 +73,15 @@ public final class Distributor<Output: Sendable> {
         for _ in 0 ..< repeaters.count {
             guard let next = await iterator.next() else { fatalError("Invalid stream") }
             guard let repeater = repeaters[next.id]?.repeater else { fatalError("Lost repeater") }
-            guard case .success = next.result else {
-                repeaters.removeValue(forKey: next.id)
-                try? repeater.cancellable.cancel()
-                continue
+            switch next.result {
+                case let .failure(error):
+                    next.resumption.resume(throwing: error)
+                    _ = await repeater.cancellable.result
+                    repeaters.removeValue(forKey: next.id)
+                    continue
+                case .success:
+                    repeaters[next.id] = (repeater, next.resumption)
             }
-            repeaters[next.id] = (repeater, next.resumption)
         }
         do { try upstreamResumption.tryResume() }
         catch { fatalError("Unhandled value resumption") }
@@ -79,11 +99,16 @@ public final class Distributor<Output: Sendable> {
                     case let .value(value, upstreamResumption):
                         await processValue(value, &repeaters, &iterator, upstreamResumption)
                     case let .subscription(action: .subscribe(repeater, returnResumption, idResumption)):
+                        guard repeaters[repeater.id] == nil else {
+                            fatalError("duplicate key: \(repeater.id)") 
+                        }
                         repeaters[repeater.id] = (repeater: repeater, resumption: returnResumption)
                         do { try idResumption.tryResume(returning: repeater.id) }
                         catch { fatalError("Unhandled subscription resumption") }
                     case let .subscription(action: .unsubscribe(streamId)):
-                        guard let pair = repeaters.removeValue(forKey: streamId) else { return }
+                        guard let pair = repeaters.removeValue(forKey: streamId) else {
+                            continue
+                        }
                         try! pair.resumption.tryResume(throwing: CancellationError())
                         _ = await pair.repeater.cancellable.result
                 }
@@ -106,12 +131,20 @@ public final class Distributor<Output: Sendable> {
             for await outputAction in channel.stream {
                 switch outputAction {
                     case let .asynchronousValue(output, resumption):
-                        do { try upstreamChannel.tryYield(.value(output, resumption)) }
-                        catch { channel.finish() }
+                        do {
+                            try upstreamChannel.tryYield(.value(output, resumption))
+                        }
+                        catch {
+                            channel.finish()
+                            resumption.resume(throwing: error)
+                        }
                     case let .synchronousValue(output):
                         try await withResumption { resumption in
                             do { try upstreamChannel.tryYield(.value(output, resumption)) }
-                            catch { channel.finish() }
+                            catch {
+                                channel.finish()
+                                resumption.resume(throwing: error)
+                            }
                         }
                 }
             }
@@ -140,28 +173,42 @@ public final class Distributor<Output: Sendable> {
 
     // subscribe is async bc it must return the Cancellable
     public func subscribe(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         operation: @escaping @Sendable (Publisher<Output>.Result) async throws -> Void
     ) -> Cancellable<Cancellable<Void>> {
-        .init { try await self.subscribe(operation: operation) }
+        .init { try await self.subscribe(
+            function: function,
+            file: file,
+            line: line,
+            operation: operation
+        ) }
     }
 
     public func subscribe(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         operation: @escaping @Sendable (Publisher<Output>.Result) async throws -> Void
     ) async throws -> Cancellable<Void> {
         let id = UInt64.random(in: 0 ..< UInt64.max)
-        let first = await Repeater.first(id: id, dispatch: operation, returnChannel: returnChannel)
+        let first = await Repeater.first(
+            function: function,
+            file: file,
+            line: line,
+            id: id,
+            dispatch: operation,
+            returnChannel: returnChannel
+        )
         let compare: UInt64 = try await withResumption({ idResumption in
             do { try subscriptionChannel.tryYield(.subscribe(first.repeater, first.resumption, idResumption)) }
             catch { try? idResumption.tryResume(throwing: SubscriptionError()) }
         })
         guard compare == id else { throw SubscriptionError() }
-        return .init { try await withTaskCancellationHandler(
-            operation: {
-                _ = try await first.repeater.cancellable.value
-            },
-            onCancel: {
-                try? self.subscriptionChannel.tryYield(.unsubscribe(id))
-            }
+        return .init(function: function, file: file, line: line) { try await withTaskCancellationHandler(
+            operation: { _ = try await first.repeater.cancellable.value },
+            onCancel: { try? self.subscriptionChannel.tryYield(.unsubscribe(id)) }
         ) }
     }
 
@@ -171,8 +218,12 @@ public final class Distributor<Output: Sendable> {
 
     public func send(_ value: Output) async throws {
         try await withResumption { resumption in
-            do { try valueChannel.tryYield(.asynchronousValue(value, resumption)) }
-            catch { resumption.resume(throwing: BufferError()) }
+            do {
+                try valueChannel.tryYield(.asynchronousValue(value, resumption))
+            }
+            catch {
+                resumption.resume(throwing: BufferError())
+            }
         }
     }
 

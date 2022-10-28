@@ -43,10 +43,16 @@ final class IdentifiedRepeater<
             var arg = try await withResumption(resumption.resume)
             while true {
                 let result = await Result { try await dispatch(arg) }
-                guard case .value = arg else { return try result.get() }
-                arg = try await withResumption { resumption in
-                    do { try returnChannel.tryYield(.init(id: id, result: result, resumption: resumption)) }
-                    catch { resumption.resume(throwing: BufferError()) }
+                switch arg {
+                    case .completion(.finished):
+                        throw CompletionError()
+                    case let .completion(.failure(error)):
+                        throw error
+                    case .value:
+                        arg = try await withResumption { resumption in
+                            do { try returnChannel.tryYield(.init(id: id, result: result, resumption: resumption)) }
+                            catch { resumption.resume(throwing: BufferError()) }
+                        }
                 }
             }
         }
