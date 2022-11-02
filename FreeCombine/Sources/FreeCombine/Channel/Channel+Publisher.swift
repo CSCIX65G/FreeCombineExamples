@@ -38,20 +38,12 @@ public extension Channel {
     ) async -> Cancellable<Demand>  {
         await publisher { upstreamValue in
             try await withResumption(function: function, file: file, line: line) { resumption in
-                if Task.isCancelled {
+                guard !Cancellables.isCancelled else {
                     resumption.resume(throwing: CancellationError())
                     return
                 }
-                switch self.yield(action(upstreamValue, resumption)) {
-                    case .enqueued:
-                        ()
-                    case .dropped(let value):
-                        resumption.resume(throwing: EnqueueError.dropped(value))
-                    case .terminated:
-                        resumption.resume(throwing: CancellationError())
-                    @unknown default:
-                        fatalError("Unhandled resumption value")
-                }
+                do { try self.tryYield(action(upstreamValue, resumption)) }
+                catch { resumption.resume(throwing: error) }
             }
         }
     }

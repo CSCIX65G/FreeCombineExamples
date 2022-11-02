@@ -38,10 +38,10 @@ public extension Publisher {
         case completion(Publishers.Completion)
 
         func get() throws -> Output {
-            guard case let .value(value) = self else {
-                throw CompletionError()
+            switch self {
+                case let .value(value): return value
+                case let .completion(completion): throw CompletionError(completion: completion)
             }
-            return value
         }
     }
 }

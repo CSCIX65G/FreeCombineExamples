@@ -81,7 +81,7 @@ extension Publisher where Output == UInt64 {
                             }
                         }
                         while ticks < maxTicks {
-                            guard !Task.isCancelled else {
+                            guard !Cancellables.isCancelled else {
                                 return try await handleCancellation(of: downstream)
                             }
                             ticks += 1

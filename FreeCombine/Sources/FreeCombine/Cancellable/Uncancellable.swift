@@ -74,3 +74,7 @@ public final class Uncancellable<Output: Sendable> {
         get async { await task.value }
     }
 }
+
+extension Uncancellable: Identifiable {
+    public var id: ObjectIdentifier { ObjectIdentifier(self) }
+}

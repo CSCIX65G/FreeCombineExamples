@@ -9,7 +9,7 @@ extension AsyncFolder {
     public enum Effect {
         case none  // Multiply by 1
         case completion(Completion) // Multiply by 0
-        case emit((State) async throws -> Void)
+//        case emit((State) async throws -> Void)
         case publish((Channel<Action>) -> Void)
     }
 }

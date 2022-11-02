@@ -34,10 +34,9 @@ final class RepeaterTests: XCTestCase {
     }
 
     func testSimpleRepeater() async throws {
-        let returnChannel = Channel<IdentifiedRepeater<ID, Arg, Return>.Next>.init(buffering: .bufferingOldest(1))
+        let returnChannel = Channel<ConcurrentFunc<Arg, Return>.Next>.init(buffering: .bufferingOldest(1))
 
-        let first = await IdentifiedRepeater<ID, Arg, Return>.first(
-            id: 0,
+        let first = await ConcurrentFunc<Arg, Return>.Invocation(
             dispatch: self.dispatch,
             returnChannel: returnChannel
         )
@@ -52,40 +51,35 @@ final class RepeaterTests: XCTestCase {
                 }
                 i += 1
                 if i == max {
-                    next.resumption.resume(throwing: CancellationError())
+                    next.invocation.resumption.resume(throwing: CancellationError())
                     returnChannel.finish()
                 } else {
-                    next.resumption.resume(returning: .value(i))
+                    next.invocation.resumption.resume(returning: .value(i))
                 }
             }
             return
         }
         _ = await cancellable.result
-        _ = await first.repeater.cancellable.result
+        _ = await first.function.cancellable.result
     }
 
     func testMultipleRepeaters() async throws {
         let numRepeaters = 100, numValues = 100
-        let returnChannel = Channel<IdentifiedRepeater<ID, Arg, Return>.Next>.init(buffering: .bufferingOldest(numRepeaters))
+        let returnChannel = Channel<ConcurrentFunc<Arg, Return>.Next>.init(buffering: .bufferingOldest(numRepeaters))
         let cancellable: Cancellable<Void> = .init {
             var iterator = returnChannel.stream.makeAsyncIterator()
-            var repeaters: [ID: (repeater: IdentifiedRepeater<ID, Arg, Return>, resumption: Resumption<Publisher<Arg>.Result>)] = [:]
-            for i in 0 ..< numRepeaters {
-                let first = await IdentifiedRepeater.first(
-                    id: i,
+            var functions: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation] = [:]
+            for _ in 0 ..< numRepeaters {
+                let first = await ConcurrentFunc.Invocation(
                     dispatch: self.dispatch,
                     returnChannel: returnChannel
                 )
-                repeaters[i] = (repeater: first.repeater, resumption: first.resumption)
+                functions[first.function.id] = .init(function: first.function, resumption: first.resumption)
             }
             for i in 0 ..< numValues {
                 // Send the values
-                (0 ..< numRepeaters).forEach { n in
-                    guard let resumption = repeaters[n]?.resumption else {
-                        XCTFail("Could not send")
-                        return
-                    }
-                    resumption.resume(returning: .value(i))
+                for (_, pair) in functions {
+                    pair.resumption.resume(returning: .value(i))
                 }
                 // Gather the returns
                 for _ in 0 ..< numRepeaters {
@@ -101,26 +95,17 @@ final class RepeaterTests: XCTestCase {
                         XCTFail("Incorrect value")
                         return
                     }
-                    guard let repeater = repeaters[next.id]?.repeater else {
-                        XCTFail("Lost repeater")
+                    guard let function = functions[next.id]?.function else {
+                        XCTFail("Lost function")
                         return
                     }
-                    repeaters[next.id] = (repeater, next.resumption)
+                    functions[next.id] = .init(function: function, resumption: next.invocation.resumption)
                 }
             }
             // Close everything
-            for n in 0 ..< numRepeaters {
-                guard let resumption = repeaters[n]?.resumption else {
-                    XCTFail("Could not close")
-                    return
-                }
-                resumption.resume(throwing: CancellationError())
-
-                guard let repeater = repeaters[n]?.repeater else {
-                    XCTFail("Could not finishe")
-                    return
-                }
-                _ = await repeater.cancellable.result
+            for (_, invocation) in functions {
+                invocation.resumption.resume(throwing: CancellationError())
+                _ = await invocation.function.cancellable.result
             }
         }
         _ = await cancellable.result

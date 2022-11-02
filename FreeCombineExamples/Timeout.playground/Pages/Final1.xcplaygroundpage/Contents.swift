@@ -202,9 +202,11 @@ func process<Output: Sendable>(
                 try await resultCancellable.value
             },
             onCancel: {
-                try? resumption.tryResume(throwing: CancellationError())
-                try? processCancellable.cancel()
-                try? timeoutCancellable.cancel()
+                do {
+                    try resumption.tryResume(throwing: CancellationError())
+                    try? processCancellable.cancel()
+                    try? timeoutCancellable.cancel()
+                } catch { }
             }
         )
     }

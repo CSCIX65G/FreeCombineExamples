@@ -26,13 +26,21 @@ final class DistributorTests: XCTestCase {
             }
         })
 
-        (0 ..< numValues).forEach { i in
-            do { try distributor.send(i) }
+        for i in 0 ..< numValues {
+            do { try await distributor.send(i) }
             catch { XCTFail("Could not enqueue: \(error)") }
         }
-        _ = await distributor.finish()
-        _ = await distributor.result
-        _ = await subscription.result
+        _ = try await distributor.finish()
+
+        let subscriptionResult = await subscription.result
+        guard case let .failure(error) = subscriptionResult else {
+            XCTFail("Should have received error")
+            return
+        }
+        guard let _ = error as? CompletionError else {
+            XCTFail("received incorrect error: \(error)")
+            return
+        }
     }
 
     func testMultipleDistributor() async throws {
@@ -44,6 +52,8 @@ final class DistributorTests: XCTestCase {
         for _ in 0 ..< numSubscriptions {
             guard let subscription = (try? await distributor.subscribe(operation: { result in
                 switch result {
+                    case .completion(.finished):
+                        counter.increment()
                     case .completion(.failure(let error)):
                         XCTFail("Received failure: \(error)")
                     default:
@@ -57,12 +67,11 @@ final class DistributorTests: XCTestCase {
         }
         XCTAssert(subscriptions.count == 100, "Could not create subscriptions")
 
-        (0 ..< numValues).forEach { i in
-            do { try distributor.send(i) }
+        for i in 0 ..< numValues {
+            do { try await distributor.send(i) }
             catch { XCTFail("Could not enqueue: \(error)") }
         }
-        _ = await distributor.finish()
-        _ = await distributor.result
+        _ = try await distributor.finish()
         for i in 0 ..< numSubscriptions {
             _ = await subscriptions[i].result
         }
@@ -95,8 +104,7 @@ final class DistributorTests: XCTestCase {
             do { try await distributor.send(i) }
             catch { XCTFail("Could not enqueue: \(error)") }
         }
-        _ = await distributor.finish()
-        _ = await distributor.result
+        _ = try await distributor.finish()
         for i in 0 ..< numSubscriptions {
             _ = await subscriptions[i].result
         }
@@ -140,8 +148,7 @@ final class DistributorTests: XCTestCase {
             do { try await distributor.send(i) }
             catch { XCTFail("Could not enqueue: \(error)") }
         }
-        _ = await distributor.finish()
-        _ = await distributor.result
+        _ = try await distributor.finish()
         for i in 0 ..< subscriptions.count {
             _ = await subscriptions[i].result
         }
@@ -166,7 +173,7 @@ final class DistributorTests: XCTestCase {
     func testRandomizedDistributorOperations() async throws {
         let numValues = Int.random(in: 0 ..< 100)
 
-        let distributor = Distributor<Int>(buffering: .bufferingOldest(numValues))
+        let distributor = Distributor<Int>(buffering: .bufferingOldest(1))
         let counter = Counter()
 
         var subscriptions: [Cancellable<Void>] = []
@@ -199,18 +206,17 @@ final class DistributorTests: XCTestCase {
                 XCTFail("Could not enqueue: \(error)")
             }
         }
-        _ = await distributor.finish()
-        _ = await distributor.result
+        _ = try await distributor.finish()
         for i in 0 ..< subscriptions.count {
             _ = await subscriptions[i].result
         }
         let count = counter.count
         XCTAssert(count == numValues,
-                  """
-                  Incorrect number of values for:
-                  numValues = \(numValues),
-                  Got: \(count)
-                  """
+           """
+           Incorrect number of values for:
+           numValues = \(numValues),
+           Got: \(count)
+           """
         )
     }
 }

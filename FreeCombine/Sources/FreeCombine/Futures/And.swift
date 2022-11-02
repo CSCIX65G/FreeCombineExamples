@@ -8,15 +8,14 @@ public func and<Left, Right>(
     _ left: Future<Left>,
     _ right: Future<Right>
 ) -> Future<(Left, Right)> {
-    typealias Z = And<Left, Right>
-    return .init { resumption, downstream in
+    .init { resumption, downstream in
         .init {
-            let channel = Channel<Z.Action>(buffering: .bufferingOldest(2))
-            let folder = Z.folder(left: left, right: right)
+            let channel = Channel<And<Left, Right>.Action>(buffering: .bufferingOldest(2))
+            let folder = And<Left, Right>.folder(left: left, right: right)
             let fold = channel.fold(onStartup: resumption, into: folder)
             await withTaskCancellationHandler(
                 operation: {
-                    do { try await downstream(.success(Z.extract(state: fold.value))) }
+                    do { try await downstream(.success(And<Left, Right>.extract(state: fold.value))) }
                     catch { await downstream(.failure(error)) }
                 },
                 onCancel: channel.finish

@@ -92,3 +92,7 @@ public final class Cancellable<Output: Sendable>: Sendable {
         }
     }
 }
+
+extension Cancellable: Identifiable {
+    public var id: ObjectIdentifier { ObjectIdentifier(self) }
+}

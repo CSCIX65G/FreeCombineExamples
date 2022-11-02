@@ -25,7 +25,6 @@ public final class AsyncFold<State, Action: Sendable> {
     private let line: UInt
 
     let channel: Channel<Action>
-
     public let cancellable: Cancellable<State>
 
     init(
@@ -96,7 +95,7 @@ extension AsyncFold {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        onStartup: Resumption<Void>,
+        onStartup: Resumption<Void>? = .none,
         channel: Channel<Action>,
         folder: AsyncFolder<State, Action>
     ) {
@@ -120,17 +119,16 @@ extension AsyncFold {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        onStartup: Resumption<Void>,
+        onStartup: Resumption<Void>? = .none,
         channel: Channel<Action>,
         folder: AsyncFolder<State, Action>
     ) async throws -> State {
         var state = await folder.initialize(channel: channel)
         do {
-            onStartup.resume()
+            onStartup?.resume()
             for await action in channel.stream {
-                let effects = try await folder.reduce(state: &state, action: action)
                 try await folder.handle(
-                    effects: effects,
+                    effects: folder.reduce(state: &state, action: action),
                     channel: channel,
                     state: state,
                     action: action
