@@ -8,7 +8,5 @@ func merge<A, B>(
     _ left: Channel<A>,
     _ right: Channel<B>
 ) -> Channel<Either<A, B>> {
-    let output = Channel<Either<A, B>>.init(buffering: .unbounded)
-
-    return output
+    Channel<Either<A, B>>.init(buffering: .unbounded)
 }

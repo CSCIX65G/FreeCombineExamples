@@ -4,7 +4,6 @@
 //
 //  Created by Van Simmons on 10/19/22.
 //
-
 public final class ConcurrentFunc<
     Arg: Sendable,
     Return: Sendable

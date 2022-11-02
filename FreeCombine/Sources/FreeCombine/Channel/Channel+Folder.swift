@@ -7,7 +7,7 @@
 
 public extension Channel {
     func fold<State>(
-        onStartup: Resumption<Void>,
+        onStartup: Resumption<Void>? = .none,
         into folder: AsyncFolder<State, Element>
     ) -> AsyncFold<State, Element> {
         .init(onStartup: onStartup, channel: self, folder: folder)

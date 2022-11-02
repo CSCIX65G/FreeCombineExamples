@@ -4,8 +4,6 @@
 //
 //  Created by Van Simmons on 9/5/22.
 //
-
-
 public struct AsyncFunc<A, B> {
     let call: (A) async throws -> B
     public init(

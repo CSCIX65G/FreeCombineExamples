@@ -22,15 +22,14 @@ public final class Distributor<Output: Sendable> {
         self.function = function
         self.file = file
         self.line = line
+
         returnChannel = Channel<ConcurrentFunc<Output, Void>.Next>(buffering: .unbounded)
-        distributionFold = .init(
-            channel: Channel<DistributionAction>.init(buffering: .unbounded),
-            folder: Self.distributionFolder(returnChannel: returnChannel)
-        )
-        valueFold = .init(
-            channel: Channel<ValueAction>.init(buffering: buffering),
-            folder: Self.valueFolder(mainChannel: distributionFold.channel)
-        )
+
+        distributionFold = Channel<DistributionAction>.init(buffering: .unbounded)
+            .fold(into: Self.distributionFolder(returnChannel: returnChannel))
+        
+        valueFold = Channel<ValueAction>.init(buffering: buffering)
+            .fold(into: Self.valueFolder(mainChannel: distributionFold.channel))
     }
 }
 
