@@ -1,10 +1,9 @@
 //
-//  Distributor+Folders.swift
+//  Distributor+Distribution.swift
 //  
 //
 //  Created by Van Simmons on 10/31/22.
 //
-
 extension Distributor {
     public struct DistributionState {
         var completion: Publishers.Completion? = .none
@@ -22,7 +21,9 @@ extension Distributor {
         returnChannel: Channel<ConcurrentFunc<Output, Void>.Next>
     ) -> AsyncFolder<DistributionState, DistributionAction> {
         .init(
-            initializer: {_ in .init() },
+            initializer: {_ in
+                .init()
+            },
             reducer: { state, action in
                 switch action {
                     case let .finish(completion, resumption):
@@ -33,7 +34,11 @@ extension Distributor {
                             case let .failure(error): throw error
                         }
                     case let .value(value, upstreamResumption):
-                        await ConcurrentFold.processValue(invocations: &state.invocations, arg: value, channel: returnChannel)
+                        state.invocations = await ConcurrentFold.processValue(
+                            invocations: state.invocations,
+                            arg: value,
+                            channel: returnChannel
+                        )
                         upstreamResumption.resume()
                     case let .subscribe(function, returnResumption, idResumption):
                         guard state.invocations[function.id] == nil else { fatalError("duplicate key: \(function.id)") }
