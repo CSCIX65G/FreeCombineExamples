@@ -1,17 +1,18 @@
 //
-//  ConcurrentFold.swift
+//  ConcurrentFunc+Fold.swift
 //  
 //
-//  Created by Van Simmons on 10/30/22.
+//  Created by Van Simmons on 11/3/22.
 //
-public struct ConcurrentFold<Arg, Return, Folded> {
-    public static func processValue(
+
+extension ConcurrentFunc {
+    public static func fold(
         invocations: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation],
         arg: Arg,
         channel: Channel<ConcurrentFunc<Arg, Return>.Next>
-    ) async -> Folded where Folded == [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation] {
+    ) async -> [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation] {
         var iterator = channel.stream.makeAsyncIterator()
-        var retVal: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation] = [:]
+        var folded: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation] = [:]
         invocations.forEach { _, invocation in invocation(arg) }
         for _ in 0 ..< invocations.count {
             guard let next = await iterator.next() else { fatalError("Invalid stream") }
@@ -22,9 +23,9 @@ public struct ConcurrentFold<Arg, Return, Folded> {
                     _ = await invocation.function.cancellable.result
                     continue
                 case .success:
-                    retVal[next.id] = next.invocation
+                    folded[next.id] = next.invocation
             }
         }
-        return retVal
+        return folded
     }
 }

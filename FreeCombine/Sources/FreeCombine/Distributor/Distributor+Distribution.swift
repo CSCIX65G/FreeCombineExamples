@@ -34,7 +34,7 @@ extension Distributor {
                             case let .failure(error): throw error
                         }
                     case let .value(value, upstreamResumption):
-                        state.invocations = await ConcurrentFold.processValue(
+                        state.invocations = await ConcurrentFunc.fold(
                             invocations: state.invocations,
                             arg: value,
                             channel: returnChannel
