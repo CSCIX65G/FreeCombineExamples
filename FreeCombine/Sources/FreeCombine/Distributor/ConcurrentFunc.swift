@@ -107,7 +107,7 @@ public extension ConcurrentFunc {
                     originatingFunction: originatingFunction,
                     file: file,
                     line: line,
-                    resumption: startup,
+                    resumption: startup, // startup: UnfailingResumption<Resumption<Publisher<Arg>.Result>>
                     function: dispatch,
                     returnChannel: returnChannel
                 )

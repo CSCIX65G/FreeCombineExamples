@@ -57,7 +57,7 @@ public extension Distributor {
             returnChannel: returnChannel
         )
         let subscriptionId: ObjectIdentifier = try await withResumption({ idResumption in
-            do { try distributionFold.send(.subscribe(invocation.function, invocation.resumption, idResumption)) }
+            do { try distributionFold.send(.subscribe(invocation, idResumption)) }
             catch { try? idResumption.tryResume(throwing: SubscriptionError()) }
         })
 

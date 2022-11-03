@@ -12,7 +12,7 @@ extension Distributor {
 
     enum DistributionAction: Sendable {
         case value(Output, Resumption<Void>)
-        case subscribe(ConcurrentFunc<Output, Void>, Resumption<Publisher<Output>.Result>, Resumption<ObjectIdentifier>)
+        case subscribe(ConcurrentFunc<Output, Void>.Invocation, Resumption<ObjectIdentifier>)
         case unsubscribe(ObjectIdentifier)
         case finish(Publishers.Completion, Resumption<Void>)
     }
@@ -40,10 +40,12 @@ extension Distributor {
                             channel: returnChannel
                         )
                         upstreamResumption.resume()
-                    case let .subscribe(function, returnResumption, idResumption):
-                        guard state.invocations[function.id] == nil else { fatalError("duplicate key: \(function.id)") }
-                        state.invocations[function.id] = .init(function: function, resumption: returnResumption)
-                        do { try idResumption.tryResume(returning: function.id) }
+                    case let .subscribe(invocation, idResumption):
+                        guard state.invocations[invocation.function.id] == nil else {
+                            fatalError("duplicate key: \(invocation.function.id)")
+                        }
+                        state.invocations[invocation.function.id] = invocation
+                        do { try idResumption.tryResume(returning: invocation.function.id) }
                         catch { fatalError("Unhandled subscription resumption") }
                     case let .unsubscribe(streamId):
                         guard let invocation = state.invocations.removeValue(forKey: streamId) else { return [] }
@@ -58,7 +60,7 @@ extension Distributor {
                         resumption.resume(throwing: CompletionError(completion: completion))
                     case let .value(_, upstreamResumption):
                         upstreamResumption.resume()
-                    case let .subscribe(_, _, idResumption):
+                    case let .subscribe(_, idResumption):
                         idResumption.resume(throwing: CancellationError())
                     case .unsubscribe:
                         ()
