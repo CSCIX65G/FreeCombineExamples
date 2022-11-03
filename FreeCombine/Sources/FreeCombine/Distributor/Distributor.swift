@@ -26,10 +26,20 @@ public final class Distributor<Output: Sendable> {
         returnChannel = Channel<ConcurrentFunc<Output, Void>.Next>(buffering: .unbounded)
 
         distributionFold = Channel<DistributionAction>.init(buffering: .unbounded)
-            .fold(into: Self.distributionFolder(returnChannel: returnChannel))
+            .fold(
+                function: function,
+                file: file,
+                line: line,
+                into: Self.distributionFolder(returnChannel: returnChannel)
+            )
         
         valueFold = Channel<ValueAction>.init(buffering: buffering)
-            .fold(into: Self.valueFolder(mainChannel: distributionFold.channel))
+            .fold(
+                function: function,
+                file: file,
+                line: line,
+                into: Self.valueFolder(mainChannel: distributionFold.channel)
+            )
     }
 }
 
@@ -78,6 +88,13 @@ public extension Distributor {
         }
     }
 
+    func cancel() throws -> Void {
+        do { try valueFold.send(.asyncCompletion(.failure(CancellationError()))) }
+        valueFold.finish()
+        returnChannel.finish()
+        distributionFold.finish()
+    }
+
     func finish(_ completion: Publishers.Completion = .finished) async throws {
         _ = try await withResumption { resumption in
             do { try valueFold.send(.syncCompletion(completion, resumption)) }
@@ -87,7 +104,7 @@ public extension Distributor {
         _ = await valueFold.result
         returnChannel.finish()
         distributionFold.finish()
-        _ = try await distributionFold.value
+        _ = await distributionFold.result
     }
 
     func finish(_ completion: Publishers.Completion = .finished) throws {

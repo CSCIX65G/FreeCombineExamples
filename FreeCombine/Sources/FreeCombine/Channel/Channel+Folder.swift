@@ -7,17 +7,36 @@
 
 public extension Channel {
     func fold<State>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         onStartup: Resumption<Void>? = .none,
         into folder: AsyncFolder<State, Element>
     ) -> AsyncFold<State, Element> {
-        .init(onStartup: onStartup, channel: self, folder: folder)
+        .init(
+            function: function,
+            file: file,
+            line: line,
+            onStartup: onStartup,
+            channel: self,
+            folder: folder
+        )
     }
 }
 
 public extension Channel {
     func fold<State>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         into folder: AsyncFolder<State, Element>
     ) async -> AsyncFold<State, Element> {
-        await AsyncFold<State, Element>.fold(channel: self, folder: folder)
+        await AsyncFold<State, Element>.fold(
+            function: function,
+            file: file,
+            line: line,
+            channel: self,
+            folder: folder
+        )
     }
 }
