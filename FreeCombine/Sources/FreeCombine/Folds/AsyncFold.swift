@@ -25,6 +25,7 @@ public final class AsyncFold<State, Action: Sendable> {
     private let line: UInt
 
     let channel: Channel<Action>
+
     public let cancellable: Cancellable<State>
 
     init(
@@ -83,6 +84,9 @@ extension AsyncFold {
         var fold: Self!
         try! await withResumption(function: function, file: file, line: line) { startup in
             fold = .init(
+                function: function,
+                file: file,
+                line: line,
                 onStartup: startup,
                 channel: channel,
                 folder: folder
@@ -116,9 +120,6 @@ extension AsyncFold {
     }
 
     private static func runloop(
-        function: StaticString = #function,
-        file: StaticString = #file,
-        line: UInt = #line,
         onStartup: Resumption<Void>? = .none,
         channel: Channel<Action>,
         folder: AsyncFolder<State, Action>
@@ -130,7 +131,7 @@ extension AsyncFold {
                 try await folder.handle(
                     effects: folder.reduce(state: &state, action: action),
                     channel: channel,
-                    state: state,
+                    state: &state,
                     action: action
                 )
             }

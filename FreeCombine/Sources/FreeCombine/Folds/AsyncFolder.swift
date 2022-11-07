@@ -38,22 +38,22 @@ public struct AsyncFolder<State, Action> {
     
     let initializer: (Channel<Action>) async -> State
     let reducer: (inout State, Action) async throws -> [Effect]
+    let emitter: (inout State) async throws -> Void
     let disposer: (Action, Completion) async -> Void
     let finalizer: (inout State, Completion) async -> Void
-//    let distributor: Distributor<State>
 
     public init(
         initializer: @escaping (Channel<Action>) async -> State,
         reducer: @escaping (inout State, Action) async throws -> [Effect],
+        emitter: @escaping (inout State) async throws -> Void = { _ in },
         disposer: @escaping (Action, Completion) async -> Void = { _, _ in },
-        finalizer: @escaping (inout State, Completion) async -> Void = { _, _ in } //,
-//        distributor: Distributor<State> = .init()
+        finalizer: @escaping (inout State, Completion) async -> Void = { _, _ in }
     ) {
         self.initializer = initializer
         self.reducer = reducer
+        self.emitter = emitter
         self.disposer = disposer
         self.finalizer = finalizer
-//        self.distributor = distributor
     }
 
     public func callAsFunction(_ channel: Channel<Action>) async -> State {
@@ -85,7 +85,7 @@ extension AsyncFolder {
     func handle(
         effects: [Effect],
         channel: Channel<Action>,
-        state: State,
+        state: inout State,
         action: Action
     ) async throws -> Void {
         for effect in effects {
@@ -94,6 +94,8 @@ extension AsyncFolder {
                 case .completion(.exited): throw Error.completed
                 case .completion(let .failure(error)): throw error
                 case .completion(.finished): throw Error.finished
+                case .emit:
+                    try await emitter(&state)
                 case .publish: ()
             }
         }
