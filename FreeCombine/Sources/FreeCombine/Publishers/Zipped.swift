@@ -30,14 +30,8 @@ public func zip<Left, Right>(
             let folder = Zip<Left, Right>.folder(left: left, right: right, downstream: downstream)
             return try await withTaskCancellationHandler(
                 operation: {
-                    do {
-                        _ = try await channel.fold(onStartup: resumption, into: folder).value
-                        return Publisher<(Left, Right)>.Demand.done
-                    }
-                    catch {
-                        _ = try? await downstream(.completion(.failure(error)))
-                        throw error
-                    }
+                    _ = try await channel.fold(onStartup: resumption, into: folder).value
+                    return Publisher<(Left, Right)>.Demand.done
                 },
                 onCancel: channel.finish
             )

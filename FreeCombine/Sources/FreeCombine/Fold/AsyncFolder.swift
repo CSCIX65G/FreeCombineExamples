@@ -90,13 +90,18 @@ extension AsyncFolder {
     ) async throws -> Void {
         for effect in effects {
             switch effect {
-                case .none: ()
-                case .completion(.exited): throw Error.completed
-                case .completion(let .failure(error)): throw error
-                case .completion(.finished): throw Error.finished
+                case .none:
+                    ()
+                case .completion(.exited):
+                    throw Error.completed
+                case .completion(let .failure(error)):
+                    throw error
+                case .completion(.finished):
+                    throw Error.finished
                 case .emit:
                     try await emitter(&state)
-                case .publish: ()
+                case .publish:
+                    ()
             }
         }
     }

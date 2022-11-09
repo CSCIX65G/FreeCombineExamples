@@ -34,7 +34,7 @@ PlaygroundPage.current.needsIndefiniteExecution = true
 
 
 
-let t1 = Task { 13 }
+let t1 = Task<Int, Never> { 13 }
 let t2 = Task {
     try? await Task.sleep(nanoseconds: 200_000_000)
     t1.cancel()
