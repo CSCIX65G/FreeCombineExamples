@@ -19,13 +19,12 @@
 //  limitations under the License.
 //
 public extension Channel {
-    typealias Demand = Publishers.Demand
     func consume<Upstream>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
         publisher: Publisher<Upstream>
-    ) async -> Cancellable<Demand> where Element == (Publisher<Upstream>.Result, Resumption<Demand>) {
+    ) async -> Cancellable<Void> where Element == (Publisher<Upstream>.Result, Resumption<Void>) {
         await consume(function: function, file: file, line: line, publisher: publisher, using: { ($0, $1) })
     }
 
@@ -34,8 +33,8 @@ public extension Channel {
         file: StaticString = #file,
         line: UInt = #line,
         publisher: Publisher<Upstream>,
-        using action: @escaping (Publisher<Upstream>.Result, Resumption<Demand>) -> Element
-    ) async -> Cancellable<Demand>  {
+        using action: @escaping (Publisher<Upstream>.Result, Resumption<Void>) -> Element
+    ) async -> Cancellable<Void>  {
         await publisher { upstreamValue in
             try await withResumption(function: function, file: file, line: line) { resumption in
                 guard !Cancellables.isCancelled else {

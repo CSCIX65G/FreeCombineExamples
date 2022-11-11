@@ -32,7 +32,7 @@ public extension Publisher {
                         _ = Swift.print("\(prefix) received .completion(.failure(\(error)))")
                 }
                 let demand = try await downstream(r)
-                _ = Swift.print("\(prefix) received Demand(\(demand)))")
+                _ = Swift.print("\(prefix) received Void(\(demand)))")
                 return demand
             }
         }

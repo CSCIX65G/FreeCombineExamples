@@ -38,7 +38,7 @@ class MapTests: XCTestCase {
                 switch result {
                     case let .value(value):
                         XCTAssert(value == 14, "wrong value sent: \(value)")
-                        return .more
+                        return
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
                         throw Publishers.Error.done

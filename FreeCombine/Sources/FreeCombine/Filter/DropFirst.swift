@@ -29,7 +29,7 @@ public extension Publisher {
                 currentValue.set(value: max(0, current))
                 switch r {
                 case .value:
-                    guard current <= 0 else { return .more }
+                    guard current <= 0 else { return }
                     return try await downstream(r)
                 case let .completion(value):
                     return try await downstream(.completion(value))

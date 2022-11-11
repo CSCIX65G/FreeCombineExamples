@@ -25,7 +25,7 @@ public extension Publisher {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in switch r {
                 case .value(let a):
-                    do { guard try await isIncluded(a) else { return .more } }
+                    do { guard try await isIncluded(a) else { return } }
                     catch { return try await handleCancellation(of: downstream) }
                     return try await downstream(r)
                 case .completion:

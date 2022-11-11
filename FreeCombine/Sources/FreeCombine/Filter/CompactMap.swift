@@ -26,7 +26,7 @@ public extension Publisher {
             self(onStartup: resumption) { r in
                 switch r {
                 case .value(let a):
-                    guard let b = await transform(a) else { return .more }
+                    guard let b = await transform(a) else { return }
                     return try await downstream(.value(b))
                 case let .completion(value):
                     return try await downstream(.completion(value))

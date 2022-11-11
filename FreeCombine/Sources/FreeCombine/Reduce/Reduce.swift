@@ -32,7 +32,7 @@ public extension Publisher {
                 switch r {
                     case .value(let a):
                         await currentValue.set(value: transform(currentValue.value, a))
-                        return .more
+                        return
                     case let .completion(value):
                         _ = try await downstream(.value(currentValue.value))
                         return try await downstream(.completion(value))

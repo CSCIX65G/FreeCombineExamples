@@ -40,7 +40,7 @@ class ConcatTests: XCTestCase {
                 switch result {
                     case .value:
                         count.increment()
-                        return .more
+                        return
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
                         throw Publishers.Error.done
@@ -82,7 +82,7 @@ class ConcatTests: XCTestCase {
                 switch result {
                     case .value:
                         count1.increment()
-                        return .more
+                        return
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
                         throw Publishers.Error.done
@@ -105,7 +105,7 @@ class ConcatTests: XCTestCase {
                 switch result {
                     case .value:
                         count2.increment()
-                        return .more
+                        return
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
                         throw Publishers.Error.done

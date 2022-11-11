@@ -20,27 +20,23 @@
 //
 public extension Publisher {
     func handleEvents(
-        receiveDownstream: @escaping (@escaping (Publisher<Output>.Result) async throws -> Demand) -> Void = {_ in },
-        receiveResult: @escaping (Publisher<Output>.Result) async -> Void = { _ in },
-        receiveDemand: @escaping (Demand) async -> Void = { _ in }
+        receiveDownstream: @escaping (@escaping (Publisher<Output>.Result) async throws -> Void) -> Void = {_ in },
+        receiveResult: @escaping (Publisher<Output>.Result) async -> Void = { _ in }
     ) -> Self {
         .init { resumption, downstream in
             receiveDownstream(downstream)
             return self(onStartup: resumption) { r in
                 await receiveResult(r)
-                let demand = try await downstream(r)
-                await receiveDemand(demand)
-                return demand
+                return try await downstream(r)
             }
         }
     }
 
     func handleEvents(
-        receiveDownstream: @escaping (@escaping (Publisher<Output>.Result) async throws -> Demand) -> Void = {_ in },
+        receiveDownstream: @escaping (@escaping (Publisher<Output>.Result) async throws -> Void) -> Void = {_ in },
         receiveOutput: @escaping (Output) async -> Void = { _ in },
         receiveFinished: @escaping () async -> Void = { },
-        receiveFailure: @escaping (Swift.Error) async -> Void = {_ in },
-        receiveDemand: @escaping (Demand) async -> Void = { _ in }
+        receiveFailure: @escaping (Swift.Error) async -> Void = {_ in }
     ) -> Self {
         .init { resumption, downstream in
             receiveDownstream(downstream)
@@ -53,9 +49,7 @@ public extension Publisher {
                     case let .completion(.failure(error)):
                         await receiveFailure(error)
                 }
-                let demand = try await downstream(r)
-                await receiveDemand(demand)
-                return demand
+                return try await downstream(r)
             }
         }
     }

@@ -6,21 +6,20 @@
 //
 
 public struct Zip<Left, Right> {
-    public typealias Demand = Publishers.Demand
     enum Current {
         case nothing
-        case hasLeft(Left, Resumption<Demand>)
-        case hasRight(Right, Resumption<Demand>)
-        case hasBoth(Left, Resumption<Demand>, Right, Resumption<Demand>)
+        case hasLeft(Left, Resumption<Void>)
+        case hasRight(Right, Resumption<Void>)
+        case hasBoth(Left, Resumption<Void>, Right, Resumption<Void>)
         case finished
         case errored(Swift.Error)
     }
 
     public struct State {
-        var leftCancellable: Cancellable<Demand>?
-        var rightCancellable: Cancellable<Demand>?
+        var leftCancellable: Cancellable<Void>?
+        var rightCancellable: Cancellable<Void>?
         var current: Current = .nothing
-        let downstream: @Sendable (Publisher<(Left, Right)>.Result) async throws -> Demand
+        let downstream: @Sendable (Publisher<(Left, Right)>.Result) async throws -> Void
 
         mutating func cancelLeft() throws -> Void {
             guard let can = leftCancellable else { throw AsyncFolders.Error.internalError }
@@ -36,14 +35,14 @@ public struct Zip<Left, Right> {
     }
 
     public enum Action {
-        case left(Publisher<Left>.Result, Resumption<Demand>)
-        case right(Publisher<Right>.Result, Resumption<Demand>)
+        case left(Publisher<Left>.Result, Resumption<Void>)
+        case right(Publisher<Right>.Result, Resumption<Void>)
     }
 
     static func initialize(
         left: Publisher<Left>,
         right: Publisher<Right>,
-        downstream: @escaping @Sendable (Publisher<(Left, Right)>.Result) async throws -> Demand
+        downstream: @escaping @Sendable (Publisher<(Left, Right)>.Result) async throws -> Void
     ) -> (Channel<Action>) async -> State {
         { channel in
             await .init(
@@ -54,7 +53,7 @@ public struct Zip<Left, Right> {
         }
     }
 
-    static func reduceLeft(state: inout State, value: Left, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
+    static func reduceLeft(state: inout State, value: Left, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         switch (state.current) {
             case .nothing:
                 state.current = .hasLeft(value, resumption)
@@ -66,7 +65,7 @@ public struct Zip<Left, Right> {
                 fatalError("Invalid state")
         }
     }
-    static func reduceLeft(state: inout State, error: Swift.Error, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
+    static func reduceLeft(state: inout State, error: Swift.Error, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         resumption.resume(throwing: error)
         switch (state.current) {
             case .nothing:
@@ -80,7 +79,7 @@ public struct Zip<Left, Right> {
                 fatalError("Invalid state")
         }
     }
-    static func reduceLeft(state: inout State, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
+    static func reduceLeft(state: inout State, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
@@ -94,7 +93,7 @@ public struct Zip<Left, Right> {
                 fatalError("Invalid state")
         }
     }
-    static func reduceRight(state: inout State, value: Right, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
+    static func reduceRight(state: inout State, value: Right, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         switch (state.current) {
             case .nothing:
                 state.current = .hasRight(value, resumption)
@@ -106,7 +105,7 @@ public struct Zip<Left, Right> {
                 fatalError("Invalid state")
         }
     }
-    static func reduceRight(state: inout State, error: Swift.Error, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
+    static func reduceRight(state: inout State, error: Swift.Error, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         resumption.resume(throwing: error)
         switch (state.current) {
             case .nothing:
@@ -120,7 +119,7 @@ public struct Zip<Left, Right> {
                 fatalError("Invalid state")
         }
     }
-    static func reduceRight(state: inout State, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
+    static func reduceRight(state: inout State, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
@@ -160,11 +159,11 @@ public struct Zip<Left, Right> {
     ) async throws -> Void {
         switch state.current {
             case let .hasBoth(left, leftResumption, right, rightResumption):
-                let r = await Result<Demand, Swift.Error> { try await state.downstream(.value((left, right))) }
-                    .map { demand in
-                        leftResumption.resume(returning: demand)
-                        rightResumption.resume(returning: demand)
-                        return demand == .more ? Zip<Left, Right>.Current.nothing : .finished
+                let r = await Result<Void, Swift.Error> { try await state.downstream(.value((left, right))) }
+                    .map {
+                        leftResumption.resume()
+                        rightResumption.resume()
+                        return Zip<Left, Right>.Current.nothing
                     }
                     .mapError {
                         leftResumption.resume(throwing: $0)
@@ -182,7 +181,7 @@ public struct Zip<Left, Right> {
         _ action: Action,
         _ completion: AsyncFolder<State, Action>.Completion
     ) async {
-        var resumption: Resumption<Demand>!
+        var resumption: Resumption<Void>!
         switch action {
             case let .left(_, lResumption): resumption = lResumption
             case let .right(_, rResumption): resumption = rResumption
@@ -193,7 +192,7 @@ public struct Zip<Left, Right> {
         }
     }
 
-    static func resumptions(_ current: Zip<Left, Right>.Current) -> (Resumption<Demand>?, Resumption<Demand>?) {
+    static func resumptions(_ current: Zip<Left, Right>.Current) -> (Resumption<Void>?, Resumption<Void>?) {
         switch current {
             case .nothing, .finished, .errored:
                 return (.none, .none)
@@ -229,7 +228,7 @@ public struct Zip<Left, Right> {
     static func folder(
         left: Publisher<Left>,
         right: Publisher<Right>,
-        downstream: @escaping @Sendable (Publisher<(Left, Right)>.Result) async throws -> Demand
+        downstream: @escaping @Sendable (Publisher<(Left, Right)>.Result) async throws -> Void
     ) -> AsyncFolder<State, Action> {
         .init(
             initializer: initialize(left: left, right: right, downstream: downstream),

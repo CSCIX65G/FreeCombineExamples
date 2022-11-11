@@ -37,7 +37,7 @@ class JustTests: XCTestCase {
             switch result {
                 case let .value(value):
                     XCTAssert(value == 7, "wrong value sent: \(value)")
-                    return .more
+                    return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
                     throw Publishers.Error.done
@@ -52,7 +52,7 @@ class JustTests: XCTestCase {
             switch result {
                 case let .value(value):
                     XCTAssert(value == 7, "wrong value sent: \(value)")
-                    return .more
+                    return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
                     throw Publishers.Error.done
@@ -80,7 +80,7 @@ class JustTests: XCTestCase {
             switch result {
                 case let .value(value):
                     XCTAssert(value == [1, 2, 3, 4], "wrong value sent: \(value)")
-                    return .more
+                    return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
                     throw Publishers.Error.done
@@ -114,7 +114,7 @@ class JustTests: XCTestCase {
             switch result {
                 case let .value(value):
                     XCTAssert(value == 7, "wrong value sent: \(value)")
-                    return .more
+                    return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
                     throw Publishers.Error.done
@@ -125,13 +125,13 @@ class JustTests: XCTestCase {
             }
         }
 
-        var t: Cancellable<Publishers.Demand>! = .none
+        var t: Cancellable<Void>! = .none
         do { _ = try await withResumption { resumption in
             t = just.sink(onStartup: resumption, { result in
                 switch result {
                     case let .value(value):
                         XCTAssert(value == 7, "wrong value sent: \(value)")
-                        return .more
+                        return
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
                         throw Publishers.Error.done

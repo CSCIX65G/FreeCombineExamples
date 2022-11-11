@@ -5,11 +5,6 @@
 //  Created by Van Simmons on 9/19/22.
 //
 public enum Publishers {
-    public enum Demand: Equatable, Sendable {
-        case more
-//        case done
-    }
-
     public enum Error: Swift.Error {
         case done
     }

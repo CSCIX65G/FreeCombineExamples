@@ -56,7 +56,7 @@ class ZipTests: XCTestCase {
                         catch { XCTFail("Failed to complete promise: \(error)") }
                         throw Publishers.Error.done
                 }
-                return .more
+                return
             }
 
         do { _ = try await promise.value }
@@ -89,7 +89,7 @@ class ZipTests: XCTestCase {
                         catch { XCTFail("Failed to complete: \(error)") }
                         throw Publishers.Error.done
                 }
-                return .more
+                return
             }
 
         do { _ = try await promise.value }
@@ -113,7 +113,7 @@ class ZipTests: XCTestCase {
                 switch result {
                     case .value:
                         _ = counter.increment()
-                        return .more
+                        return
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
                         throw Publishers.Error.done
@@ -148,7 +148,7 @@ class ZipTests: XCTestCase {
                         if count == 10 {
                             try startup.succeed()
                             try await waiter.value
-                            return .more
+                            return
                         }
                         if count > 10 {
                             XCTFail("Got values after cancellation")
@@ -171,7 +171,7 @@ class ZipTests: XCTestCase {
                         catch { XCTFail("Failed to complete: \(error)") }
                         throw Publishers.Error.done
                 }
-                return .more
+                return
             }
 
         do {
@@ -219,7 +219,7 @@ class ZipTests: XCTestCase {
                     if (count2 == 1) {
                         try startup1.succeed()
                     }
-                    return .more
+                    return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
                     throw Publishers.Error.done
@@ -240,12 +240,12 @@ class ZipTests: XCTestCase {
                         if count1 == 10 {
                             try startup2.succeed()
                             try await waiter.value
-                            return .more
+                            return
                         }
                         if count1 > 10 {
                             XCTFail("Received values after cancellation.  count: \(count1)")
                         }
-                        return .more
+                        return
                     case let .completion(.failure(error)):
                         if error as? CancellationError == nil {
                             XCTFail("Failed with wrong error: \(error)")
@@ -289,7 +289,7 @@ class ZipTests: XCTestCase {
                 switch result {
                     case .value:
                         counter.increment()
-                        return .more
+                        return
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
                         throw Publishers.Error.done
@@ -328,7 +328,7 @@ class ZipTests: XCTestCase {
                 switch result {
                     case .value:
                         counter.increment()
-                        return .more
+                        return
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
                         throw Publishers.Error.done
@@ -370,7 +370,7 @@ class ZipTests: XCTestCase {
                 switch result {
                     case .value:
                         count1.increment()
-                        return .more
+                        return
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
                         throw Publishers.Error.done
@@ -391,10 +391,10 @@ class ZipTests: XCTestCase {
                 switch result {
                     case .value:
                         count2.increment()
-                        return .more
+                        return
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
-                        return .more
+                        return
                     case .completion(.finished):
                         let count = count2.count
                         XCTAssert(count == 26, "wrong number of values sent: \(count)")

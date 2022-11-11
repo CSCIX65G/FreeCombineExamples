@@ -28,7 +28,7 @@ public extension Publisher {
                     var c: B? = .none
                     do { c = try await transform(a) }
                     catch { return try await downstream(.completion(.failure(error))) }
-                    guard let b = c else { return .more }
+                    guard let b = c else { return }
                     return try await downstream(.value(b))
                 case let .completion(value):
                     return try await downstream(.completion(value))

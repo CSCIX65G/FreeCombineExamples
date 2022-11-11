@@ -39,7 +39,7 @@ public extension Publisher {
             return .init {
                 resumption.resume()
                 for p in publishers {
-                    guard try await p(flattenedDownstream).value == .more else { throw Publishers.Error.done }
+                    try await p(flattenedDownstream).value
                 }
                 return try await downstream(.completion(.finished))
             }
@@ -75,9 +75,7 @@ public extension Publisher {
             let flattenedDownstream = flattener(downstream)
             return .init {
                 resumption.resume()
-                while let p = await flattening() {
-                    guard try await p(flattenedDownstream).value == .more else { throw Publishers.Error.done }
-                }
+                while let p = await flattening() { try await p(flattenedDownstream).value }
                 return try await downstream(.completion(.finished))
             }
         }

@@ -10,7 +10,7 @@ let cancellable = await numbers.asyncPublisher
         switch result {
             case .value(let value):
                 Swift.print("Value: \(value)")
-                return .more
+                return
             case .completion(.finished):
                 Swift.print("Completion: Finished")
                 throw Publishers.Error.done

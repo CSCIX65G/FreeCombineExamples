@@ -54,7 +54,7 @@ class DeferTests: XCTestCase {
                     }
                     throw Publishers.Error.done
             }
-            return .more
+            return
         })
 
         let count2 = Counter()
@@ -75,7 +75,7 @@ class DeferTests: XCTestCase {
                     }
                     throw Publishers.Error.done
             }
-            return .more
+            return
         }
 
         do {  _ = try await c1.value }
@@ -109,7 +109,7 @@ class DeferTests: XCTestCase {
             switch result {
                 case .value:
                     count1.increment()
-                    return .more
+                    return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
                     throw Publishers.Error.done
@@ -130,7 +130,7 @@ class DeferTests: XCTestCase {
             switch result {
                 case .value:
                     count2.increment()
-                    return .more
+                    return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
                     throw Publishers.Error.done

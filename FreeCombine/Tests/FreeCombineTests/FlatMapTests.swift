@@ -40,7 +40,7 @@ class FlatMapTests: XCTestCase {
                 switch result {
                     case let .value(value):
                         checksum.increment(by: value)
-                        return .more
+                        return
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
                         throw Publishers.Error.done

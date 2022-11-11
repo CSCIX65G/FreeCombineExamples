@@ -38,7 +38,7 @@ class FilterTests: XCTestCase {
             switch result {
                 case .value:
                     counter1.increment()
-                    return .more
+                    return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
                     throw Publishers.Error.done

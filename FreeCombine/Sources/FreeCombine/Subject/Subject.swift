@@ -59,10 +59,10 @@ extension Subject {
         try await distributor.finish(completion)
     }
 
-    var result: Result<Publishers.Demand, Swift.Error> {
+    var result: Result<Void, Swift.Error> {
         get async {
             switch await distributor.result {
-                case .success: return .success(.more)
+                case .success: return .success(())
                 case .failure: return .failure(Publishers.Error.done)
             }
         }

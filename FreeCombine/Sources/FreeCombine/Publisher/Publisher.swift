@@ -19,19 +19,18 @@
 //  limitations under the License.
 //
 public struct Publisher<Output: Sendable>: Sendable {
-    private let call: @Sendable (Resumption<Void>, @escaping Downstream) -> Cancellable<Demand>
+    private let call: @Sendable (Resumption<Void>, @escaping Downstream) -> Cancellable<Void>
 
     internal init(
-        _ call: @escaping @Sendable (Resumption<Void>, @escaping Downstream) -> Cancellable<Demand>
+        _ call: @escaping @Sendable (Resumption<Void>, @escaping Downstream) -> Cancellable<Void>
     ) {
         self.call = call
     }
 }
 
 public extension Publisher {
-    typealias Demand = Publishers.Demand
     typealias Completion = Publishers.Completion
-    typealias Downstream = @Sendable (Publisher<Output>.Result) async throws -> Demand
+    typealias Downstream = @Sendable (Publisher<Output>.Result) async throws -> Void
 
     enum Result: Sendable {
         case value(Output)
@@ -48,12 +47,12 @@ public extension Publisher {
 
 public extension Publisher {
     @discardableResult
-    func sink(onStartup: Resumption<Void>, _ downstream: @escaping Downstream) -> Cancellable<Demand> {
+    func sink(onStartup: Resumption<Void>, _ downstream: @escaping Downstream) -> Cancellable<Void> {
         self(onStartup: onStartup, downstream)
     }
 
     @discardableResult
-    func callAsFunction(onStartup: Resumption<Void>, _ downstream: @escaping Downstream) -> Cancellable<Demand> {
+    func callAsFunction(onStartup: Resumption<Void>, _ downstream: @escaping Downstream) -> Cancellable<Void> {
         call(onStartup, { result in
             guard !Cancellables.isCancelled else {
                 return try await handleCancellation(of: downstream)
@@ -75,7 +74,7 @@ public extension Publisher {
         file: StaticString = #file,
         line: UInt = #line,
         _ downstream: @escaping Downstream
-    ) async -> Cancellable<Demand> {
+    ) async -> Cancellable<Void> {
         await self(function: function, file: file, line: line, downstream)
     }
 
@@ -85,8 +84,8 @@ public extension Publisher {
         file: StaticString = #file,
         line: UInt = #line,
         _ downstream: @escaping Downstream
-    ) async -> Cancellable<Demand> {
-        var cancellable: Cancellable<Demand>!
+    ) async -> Cancellable<Void> {
+        var cancellable: Cancellable<Void>!
         let _: Void = try! await withResumption(function: function, file: file, line: line) { resumption in
             cancellable = self(onStartup: resumption, downstream)
         }

@@ -39,7 +39,7 @@ class SubjectTests: XCTestCase {
 //            switch result {
 //                case .value:
 //                    _ = counter.increment()
-//                    return .more
+//                    return
 //                case let .completion(.failure(error)):
 //                    XCTFail("Got an error? \(error)")
 //                    throw Publishers.Error.done
@@ -95,7 +95,7 @@ class SubjectTests: XCTestCase {
 //            switch result {
 //                case .value:
 //                    _ = counter1.increment()
-//                    return .more
+//                    return
 //                case let .completion(.failure(error)):
 //                    XCTFail("Got an error? \(error)")
 //                    throw Publishers.Error.done
@@ -116,7 +116,7 @@ class SubjectTests: XCTestCase {
 //            switch result {
 //                case .value:
 //                    _ = counter2.increment()
-//                    return .more
+//                    return
 //                case let .completion(.failure(error)):
 //                    XCTFail("Got an error? \(error)")
 //                    throw Publishers.Error.done
@@ -178,14 +178,14 @@ class SubjectTests: XCTestCase {
 //                    if count == 8 {
 //                        do {
 //                            try await expectation.complete()
-//                            return .more
+//                            return
 //                        }
 //                        catch {
 //                            XCTFail("failed to complete")
 //                        }
 //                        do {
 //                            try await release.value
-//                            return .more
+//                            return
 //                        } catch {
 //                            guard let error = error as? PublisherError, case error = PublisherError.cancelled else {
 //                                XCTFail("Timed out waiting for release")
@@ -196,7 +196,7 @@ class SubjectTests: XCTestCase {
 //                        XCTFail("Got value after cancellation")
 //                        throw Publishers.Error.done
 //                    }
-//                    return .more
+//                    return
 //                case let .completion(.failure(error)):
 //                    XCTFail("Should not have gotten error: \(error)")
 //                    throw Publishers.Error.done
@@ -248,7 +248,7 @@ class SubjectTests: XCTestCase {
 //                case let .value(value):
 //                    let count = counter.increment()
 //                    XCTAssertEqual(value, count, "Wrong value sent")
-//                    return .more
+//                    return
 //                case let .completion(.failure(error)):
 //                    XCTFail("Should not have gotten error: \(error)")
 //                    throw Publishers.Error.done
@@ -291,7 +291,7 @@ class SubjectTests: XCTestCase {
 //                case let .value(value):
 //                    let count = counter.increment()
 //                    XCTAssertEqual(value, count, "Wrong value sent")
-//                    return .more
+//                    return
 //                case let .completion(.failure(error)):
 //                    XCTFail("Should not have gotten error: \(error)")
 //                    throw Publishers.Error.done
@@ -344,7 +344,7 @@ class SubjectTests: XCTestCase {
 //                switch value {
 //                    case .value(_):
 //                        counter.increment()
-//                        return .more
+//                        return
 //                    case let .completion(.failure(error)):
 //                        XCTFail("Should not have received failure: \(error)")
 //                        throw Publishers.Error.done
