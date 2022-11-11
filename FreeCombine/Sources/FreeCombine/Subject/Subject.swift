@@ -60,7 +60,12 @@ extension Subject {
     }
 
     var result: Result<Publishers.Demand, Swift.Error> {
-        get async { await distributor.result.map { _ in Publishers.Demand.done } }
+        get async {
+            switch await distributor.result {
+                case .success: return .success(.more)
+                case .failure: return .failure(Publishers.Error.done)
+            }
+        }
     }
 }
 
@@ -75,7 +80,7 @@ public extension Publisher {
             try await distributor.subscribe { result in
                 _ = try await downstream(result)
             }.result.get()
-            return .done
+            throw Publishers.Error.done
         } }
     }
 }

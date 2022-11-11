@@ -81,13 +81,13 @@ public struct Zip<Left, Right> {
         }
     }
     static func reduceLeft(state: inout State, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
-        resumption.resume(returning: .done)
+        resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
                 state.current = .finished
                 return .completion(.finished)
             case let .hasRight(_, rightResumption):
-                rightResumption.resume(returning: .done)
+                rightResumption.resume(throwing: Publishers.Error.done)
                 state.current = .finished
                 return .completion(.finished)
             case .finished, .errored, .hasLeft, .hasBoth:
@@ -121,13 +121,13 @@ public struct Zip<Left, Right> {
         }
     }
     static func reduceRight(state: inout State, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
-        resumption.resume(returning: .done)
+        resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
                 state.current = .finished
                 return .completion(.finished)
             case let .hasLeft(_, leftResumption):
-                leftResumption.resume(returning: .done)
+                leftResumption.resume(throwing: Publishers.Error.done)
                 state.current = .finished
                 return .completion(.finished)
             case .finished, .errored, .hasRight, .hasBoth:
@@ -188,7 +188,7 @@ public struct Zip<Left, Right> {
             case let .right(_, rResumption): resumption = rResumption
         }
         switch completion {
-            case .finished: resumption.resume(returning: .done)
+            case .finished: resumption.resume(throwing: Publishers.Error.done)
             case let .failure(error): resumption.resume(throwing: error)
         }
     }
@@ -216,8 +216,8 @@ public struct Zip<Left, Right> {
         switch completion {
             case .finished:
                 _ = try? await state.downstream(.completion(.finished))
-                currentResumptions.0?.resume(returning: .done)
-                currentResumptions.1?.resume(returning: .done)
+                currentResumptions.0?.resume(throwing: Publishers.Error.done)
+                currentResumptions.1?.resume(throwing: Publishers.Error.done)
             case let .failure(error):
                 _ = try? await state.downstream(.completion(.failure(error)))
                 currentResumptions.0?.resume(throwing: error)

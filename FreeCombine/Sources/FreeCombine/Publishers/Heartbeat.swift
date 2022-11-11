@@ -20,8 +20,8 @@ extension Publisher where Output == UInt64 {
                 var ticks: UInt64 = 0
                 var current = start
                 do {
-                    guard !tickAtStart, try await downstream(.value(current)) != .done else {
-                        return .done
+                    if tickAtStart {
+                        _ = try await downstream(.value(current))
                     }
                     while ticks < maxTicks {
                         guard !Cancellables.isCancelled else {
@@ -33,15 +33,13 @@ extension Publisher where Output == UInt64 {
                         if current > next { continue }
                         try? await Task.sleep(nanoseconds: next - current)
                         current = DispatchTime.now().uptimeNanoseconds
-                        guard try await downstream(.value(current)) != .done else {
-                            return .done
-                        }
+                        _ = try await downstream(.value(current))
                     }
                     _ = try await downstream(.completion(.finished))
                 } catch {
                     throw error
                 }
-                return .done
+                throw Publishers.Error.done
             }
         }
     }
@@ -77,7 +75,7 @@ extension Publisher where Output == UInt64 {
                         if tickAtStart {
                             maxTicks -= 1
                             guard try await downstream(.value(current)) != .done else {
-                                return .done
+                                throw Publishers.Error.done
                             }
                         }
                         while ticks < maxTicks {
@@ -91,14 +89,14 @@ extension Publisher where Output == UInt64 {
                             try await clock.sleep(until: next, tolerance: tolerance)
                             current = clock.now
                             guard try await downstream(.value(current)) != .done else {
-                                return .done
+                                throw Publishers.Error.done
                             }
                         }
                         _ = try await downstream(.completion(.finished))
                     } catch {
                         throw error
                     }
-                    return .done
+                    throw Publishers.Error.done
                 }
             }
         }

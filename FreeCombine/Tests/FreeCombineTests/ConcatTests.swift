@@ -43,7 +43,7 @@ class ConcatTests: XCTestCase {
                         return .more
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         let n = count.count
                         XCTAssert(n == 42, "wrong number of values sent: \(n)")
@@ -53,12 +53,17 @@ class ConcatTests: XCTestCase {
                         } catch {
                             XCTFail("Could not complete: \(error)")
                         }
-                        return .done
+                        throw Publishers.Error.done
                 }
             }
 
         do {  _ = try await c1.value }
-        catch { XCTFail("Should have completed") }
+        catch {
+            guard let error = error as? Publishers.Error, case error = Publishers.Error.done else {
+                XCTFail("Failed with: \(error)")
+                return
+            }
+        }
     }
 
     func testMultiConcat() async throws {
@@ -80,7 +85,7 @@ class ConcatTests: XCTestCase {
                         return .more
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         let count = count1.count
                         XCTAssert(count == 42, "wrong number of values sent: \(count)")
@@ -90,7 +95,7 @@ class ConcatTests: XCTestCase {
                         } catch {
                             XCTFail("Failed to complete branch 1: \(error)")
                         }
-                        return .done
+                        throw Publishers.Error.done
                 }
             }
 
@@ -103,7 +108,7 @@ class ConcatTests: XCTestCase {
                         return .more
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         let count = count2.count
                         XCTAssert(count == 42, "wrong number of values sent: \(count)")
@@ -112,14 +117,23 @@ class ConcatTests: XCTestCase {
                             _ = await expectation2.result
                         }
                         catch { XCTFail("Failed to complete branch 2: \(error)") }
-                        return .done
+                        throw Publishers.Error.done
                 }
             }
 
-        do {
-            _ = try await c1.value
-            _ = try await c2.value
+        do {  _ = try await c1.value }
+        catch {
+            guard let error = error as? Publishers.Error, case error = Publishers.Error.done else {
+                XCTFail("Failed with: \(error)")
+                return
+            }
         }
-        catch { XCTFail("Should have completed") }
+        do {  _ = try await c2.value }
+        catch {
+            guard let error = error as? Publishers.Error, case error = Publishers.Error.done else {
+                XCTFail("Failed with: \(error)")
+                return
+            }
+        }
     }
 }

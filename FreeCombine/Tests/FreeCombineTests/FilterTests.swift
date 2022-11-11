@@ -41,16 +41,16 @@ class FilterTests: XCTestCase {
                     return .more
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
-                    return .done
+                    throw Publishers.Error.done
                 case .completion(.finished):
                     let count = counter1.count
                     guard count == 34 else {
                         XCTFail("Incorrect count: \(count) in subscription 1")
-                        return .done
+                        throw Publishers.Error.done
                     }
                     do { try expectation1.succeed()  }
                     catch { XCTFail("Failed to succeed with error: \(error)") }
-                    return .done
+                    throw Publishers.Error.done
             }
         }
         do { _ = try await expectation1.value }
@@ -58,9 +58,11 @@ class FilterTests: XCTestCase {
 
         do {
             let finalValue = try await u1.value
-            XCTAssert(finalValue == .done, "Did not succeed")
         } catch {
-            XCTFail("Failed to get final value")
+            guard let error = error as? Publishers.Error, case error = Publishers.Error.done else {
+                XCTFail("Did not complete, error = \(error)")
+                return
+            }
         }
     }
 }

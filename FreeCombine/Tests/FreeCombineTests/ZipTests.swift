@@ -49,12 +49,12 @@ class ZipTests: XCTestCase {
                         XCTAssertTrue(value.1 == "abcdefghijklmnopqrstuvwxyz", "Incorrect String value")
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         XCTAssert(count == 1, "wrong number of values sent: \(count)")
                         do {  try promise.succeed() }
                         catch { XCTFail("Failed to complete promise: \(error)") }
-                        return .done
+                        throw Publishers.Error.done
                 }
                 return .more
             }
@@ -87,7 +87,7 @@ class ZipTests: XCTestCase {
                         XCTAssert(count == 0, "wrong number of values sent: \(count)")
                         do {  try promise.succeed() }
                         catch { XCTFail("Failed to complete: \(error)") }
-                        return .done
+                        throw Publishers.Error.done
                 }
                 return .more
             }
@@ -116,12 +116,12 @@ class ZipTests: XCTestCase {
                         return .more
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         XCTAssert(count == 26, "wrong number of values sent: \(count)")
                         do {  try promise.succeed() }
                         catch { XCTFail("Failed to complete: \(error)") }
-                        return .done
+                        throw Publishers.Error.done
                 }
             }
 
@@ -164,12 +164,12 @@ class ZipTests: XCTestCase {
                         }
                         do { try expectation.succeed() }
                         catch { XCTFail("Failed to complete: \(error)") }
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         XCTFail("Got to end of task that should have been cancelled")
                         do { try expectation.succeed() }
                         catch { XCTFail("Failed to complete: \(error)") }
-                        return .done
+                        throw Publishers.Error.done
                 }
                 return .more
             }
@@ -222,13 +222,13 @@ class ZipTests: XCTestCase {
                     return .more
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
-                    return .done
+                    throw Publishers.Error.done
                 case .completion(.finished):
                     let count2 = counter2.count
                     XCTAssertTrue(count2 == 26, "Incorrect count: \(count2)")
                     do { try expectation2.succeed() }
                     catch { XCTFail("Multiple finishes sent: \(error)") }
-                    return .done
+                    throw Publishers.Error.done
             }
         }
 
@@ -251,12 +251,12 @@ class ZipTests: XCTestCase {
                             XCTFail("Failed with wrong error: \(error)")
                         }
                         try expectation.succeed()
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         XCTFail("Got to end of task that should have been cancelled")
                         do { try expectation.succeed() }
                         catch { XCTFail("Multiple finishes sent: \(error)") }
-                        return .done
+                        throw Publishers.Error.done
                 }
             }
 
@@ -292,13 +292,13 @@ class ZipTests: XCTestCase {
                         return .more
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         let count = counter.count
                         XCTAssert(count == 26, "wrong number of values sent: \(count)")
                         do { try promise.succeed() }
                         catch { XCTFail("Failed to complete: \(error)") }
-                        return .done
+                        throw Publishers.Error.done
                 }
             })
 
@@ -331,13 +331,13 @@ class ZipTests: XCTestCase {
                         return .more
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         let count = counter.count
                         XCTAssert(count == 26, "wrong number of values sent: \(count)")
                         do { try promise.succeed() }
                         catch { XCTFail("Multiple finishes sent: \(error)") }
-                        return .done
+                        throw Publishers.Error.done
                 }
             }
 
@@ -373,12 +373,12 @@ class ZipTests: XCTestCase {
                         return .more
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         let count = count1.count
                         XCTAssert(count == 26, "wrong number of values sent: \(count1)")
                         try promise1.succeed()
-                        return .done
+                        throw Publishers.Error.done
                 }
             }
 
@@ -399,7 +399,7 @@ class ZipTests: XCTestCase {
                         let count = count2.count
                         XCTAssert(count == 26, "wrong number of values sent: \(count)")
                         try promise2.succeed()
-                        return .done
+                        throw Publishers.Error.done
                 }
             }
 

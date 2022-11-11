@@ -42,7 +42,7 @@ class SubjectTests: XCTestCase {
 //                    return .more
 //                case let .completion(.failure(error)):
 //                    XCTFail("Got an error? \(error)")
-//                    return .done
+//                    throw Publishers.Error.done
 //                case .completion(.finished):
 //                    XCTAssert(count == 5, "wrong number of values sent: \(count)")
 //                    do {
@@ -51,10 +51,10 @@ class SubjectTests: XCTestCase {
 //                    catch {
 //                        XCTFail("Failed to complete: \(error)")
 //                    }
-//                    return .done
+//                    throw Publishers.Error.done
 //                case .completion(.cancelled):
 //                    XCTFail("Should not have cancelled")
-//                    return .done
+//                    throw Publishers.Error.done
 //            }
 //        }
 //        do {
@@ -98,15 +98,15 @@ class SubjectTests: XCTestCase {
 //                    return .more
 //                case let .completion(.failure(error)):
 //                    XCTFail("Got an error? \(error)")
-//                    return .done
+//                    throw Publishers.Error.done
 //                case .completion(.finished):
 //                    XCTAssert(count == 5, "wrong number of values sent: \(count)")
 //                    do { try await expectation1.complete() }
 //                    catch { XCTFail("Failed to complete: \(error)") }
-//                    return .done
+//                    throw Publishers.Error.done
 //                case .completion(.cancelled):
 //                    XCTFail("Should not have cancelled")
-//                    return .done
+//                    throw Publishers.Error.done
 //            }
 //        }
 //
@@ -119,15 +119,15 @@ class SubjectTests: XCTestCase {
 //                    return .more
 //                case let .completion(.failure(error)):
 //                    XCTFail("Got an error? \(error)")
-//                    return .done
+//                    throw Publishers.Error.done
 //                case .completion(.finished):
 //                    XCTAssert(count == 5, "wrong number of values sent: \(count)")
 //                    do { try await expectation2.complete() }
 //                    catch { XCTFail("Failed to complete: \(error)") }
-//                    return .done
+//                    throw Publishers.Error.done
 //                case .completion(.cancelled):
 //                    XCTFail("Should not have cancelled")
-//                    return .done
+//                    throw Publishers.Error.done
 //            }
 //        }
 //
@@ -189,23 +189,23 @@ class SubjectTests: XCTestCase {
 //                        } catch {
 //                            guard let error = error as? PublisherError, case error = PublisherError.cancelled else {
 //                                XCTFail("Timed out waiting for release")
-//                                return .done
+//                                throw Publishers.Error.done
 //                            }
 //                        }
 //                    } else if count > 8 {
 //                        XCTFail("Got value after cancellation")
-//                        return .done
+//                        throw Publishers.Error.done
 //                    }
 //                    return .more
 //                case let .completion(.failure(error)):
 //                    XCTFail("Should not have gotten error: \(error)")
-//                    return .done
+//                    throw Publishers.Error.done
 //                case .completion(.finished):
 //                    XCTFail("Should not have finished")
-//                    return .done
+//                    throw Publishers.Error.done
 //                case .completion(.cancelled):
 //                    try await expectation3.complete()
-//                    return .done
+//                    throw Publishers.Error.done
 //            }
 //        })
 //
@@ -251,16 +251,16 @@ class SubjectTests: XCTestCase {
 //                    return .more
 //                case let .completion(.failure(error)):
 //                    XCTFail("Should not have gotten error: \(error)")
-//                    return .done
+//                    throw Publishers.Error.done
 //                case .completion(.finished):
 //                    do { try await expectation.complete() }
 //                    catch { XCTFail("Failed to complete expectation") }
 //                    let count = counter.count
 //                    XCTAssert(count == 1000, "Received wrong number of invocations: \(count)")
-//                    return .done
+//                    throw Publishers.Error.done
 //                case .completion(.cancelled):
 //                    XCTFail("Should not have cancelled")
-//                    return .done
+//                    throw Publishers.Error.done
 //            }
 //        })
 //
@@ -294,16 +294,16 @@ class SubjectTests: XCTestCase {
 //                    return .more
 //                case let .completion(.failure(error)):
 //                    XCTFail("Should not have gotten error: \(error)")
-//                    return .done
+//                    throw Publishers.Error.done
 //                case .completion(.finished):
 //                    do { try await expectation.complete() }
 //                    catch { XCTFail("Could not complete, error: \(error)") }
 //                    let count = counter.count
 //                    XCTAssert(count == 5, "Received wrong number of invocations: \(count)")
-//                    return .done
+//                    throw Publishers.Error.done
 //                case .completion(.cancelled):
 //                    XCTFail("Should not have cancelled")
-//                    return .done
+//                    throw Publishers.Error.done
 //            }
 //        })
 //
@@ -347,15 +347,15 @@ class SubjectTests: XCTestCase {
 //                        return .more
 //                    case let .completion(.failure(error)):
 //                        XCTFail("Should not have received failure: \(error)")
-//                        return .done
+//                        throw Publishers.Error.done
 //                    case .completion(.finished):
 //                        let count = counter.count
 //                        if count != 28  { XCTFail("Incorrect number of values") }
 //                        try await expectation.complete()
-//                        return .done
+//                        throw Publishers.Error.done
 //                    case .completion(.cancelled):
 //                        XCTFail("Should not have cancelled")
-//                        return .done
+//                        throw Publishers.Error.done
 //                }
 //            })
 //

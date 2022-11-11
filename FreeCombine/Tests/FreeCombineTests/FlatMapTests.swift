@@ -43,7 +43,7 @@ class FlatMapTests: XCTestCase {
                         return .more
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         let value = checksum.count
                         XCTAssert(value == 56, "Did not get all values")
@@ -53,7 +53,7 @@ class FlatMapTests: XCTestCase {
                         } catch {
                             XCTFail("Should not have failed promise")
                         }
-                        return .done
+                        throw Publishers.Error.done
                 }
             }
 

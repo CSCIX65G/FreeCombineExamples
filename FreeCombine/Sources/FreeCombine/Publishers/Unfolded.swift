@@ -38,7 +38,7 @@ extension Publisher {
                         return try await handleCancellation(of: downstream)
                     }
                     guard try await downstream(.value(a)) == .more else {
-                        return .done
+                        throw Publishers.Error.done
                     }
                 }
                 return try await downstream(.completion(.finished))
@@ -62,7 +62,7 @@ extension Publisher {
                     guard !Cancellables.isCancelled else {
                         return try await handleCancellation(of: downstream)
                     }
-                    guard try await downstream(.value(a)) == .more else { return .done }
+                    guard try await downstream(.value(a)) == .more else { throw Publishers.Error.done }
                 }
                 return try await downstream(.completion(.finished))
             }

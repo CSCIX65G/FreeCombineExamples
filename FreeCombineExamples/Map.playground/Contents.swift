@@ -13,10 +13,10 @@ let cancellable = await numbers.asyncPublisher
                 return .more
             case .completion(.finished):
                 Swift.print("Completion: Finished")
-                return .done
+                throw Publishers.Error.done
             case .completion(.failure(let error)):
                 Swift.print("Completion: Error: \(error)")
-                return .done
+                throw Publishers.Error.done
         }
     }
 

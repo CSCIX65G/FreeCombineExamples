@@ -41,16 +41,16 @@ class UnfoldedTests: XCTestCase {
                     return .more
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
-                    return .done
+                    throw Publishers.Error.done
                 case .completion(.finished):
                     let count = counter1.count
                     guard count == 10 else {
                         XCTFail("Incorrect count: \(count) in subscription 1")
-                        return .done
+                        throw Publishers.Error.done
                     }
                     do { try expectation1.succeed() }
                     catch { XCTFail("Failed to complete with error: \(error)") }
-                    return .done
+                    throw Publishers.Error.done
             }
         }
 
@@ -62,16 +62,16 @@ class UnfoldedTests: XCTestCase {
                     return .more
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
-                    return .done
+                    throw Publishers.Error.done
                 case .completion(.finished):
                     let count = counter2.count
                     guard count == 10 else {
                         XCTFail("Incorrect count: \(count) in subscription 1")
-                        return .done
+                        throw Publishers.Error.done
                     }
                     do { try expectation2.succeed() }
                     catch { XCTFail("Failed to complete with error: \(error)") }
-                    return .done
+                    throw Publishers.Error.done
             }
         }
 
@@ -99,16 +99,16 @@ class UnfoldedTests: XCTestCase {
                     return .more
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
-                    return .done
+                    throw Publishers.Error.done
                 case .completion(.finished):
                     let count = counter1.count
                     guard count == 10 else {
                         XCTFail("Incorrect count: \(count) in subscription 1")
-                        return .done
+                        throw Publishers.Error.done
                     }
                     do { try expectation1.succeed() }
                     catch { XCTFail("Failed to complete with error: \(error)") }
-                    return .done
+                    throw Publishers.Error.done
             }
         }
 
@@ -120,16 +120,16 @@ class UnfoldedTests: XCTestCase {
                     return .more
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
-                    return .done
+                    throw Publishers.Error.done
                 case .completion(.finished):
                     let count = counter2.count
                     guard count == 10 else {
                         XCTFail("Incorrect count: \(count) in subscription 1")
-                        return .done
+                        throw Publishers.Error.done
                     }
                     do { try expectation2.succeed() }
                     catch { XCTFail("Failed to complete with error: \(error)") }
-                    return .done
+                    throw Publishers.Error.done
             }
         }
 

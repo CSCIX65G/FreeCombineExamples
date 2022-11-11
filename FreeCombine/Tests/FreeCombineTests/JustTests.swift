@@ -40,11 +40,11 @@ class JustTests: XCTestCase {
                     return .more
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
-                    return .done
+                    throw Publishers.Error.done
                 case .completion(.finished):
                     do { try expectation1.succeed() }
                     catch { XCTFail("Failed to complete with error: \(error)") }
-                    return .done
+                    throw Publishers.Error.done
             }
         }
 
@@ -55,11 +55,11 @@ class JustTests: XCTestCase {
                     return .more
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
-                    return .done
+                    throw Publishers.Error.done
                 case .completion(.finished):
                     do { try expectation2.succeed() }
                     catch { XCTFail("Failed to complete with error: \(error)") }
-                    return .done
+                    throw Publishers.Error.done
             }
         }
 
@@ -83,20 +83,22 @@ class JustTests: XCTestCase {
                     return .more
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
-                    return .done
+                    throw Publishers.Error.done
                 case .completion(.finished):
                     do { try expectation1.succeed() }
                     catch {
                         XCTFail("Failed to complete with error: \(error)")
                     }
-                    return .done
+                    throw Publishers.Error.done
             }
         }
         do {
-            let finalDemand = try await c1.value
-            XCTAssert(finalDemand == .done, "Incorrect return")
+            _ = try await c1.value
         } catch {
-            XCTFail("Errored out")
+            guard let error = error as? Publishers.Error, case error = Publishers.Error.done else {
+                XCTFail("Did not complete, error = \(error)")
+                return
+            }
         }
         do { _ = try await expectation1.value }
         catch { XCTFail("Timed out") }
@@ -115,11 +117,11 @@ class JustTests: XCTestCase {
                     return .more
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
-                    return .done
+                    throw Publishers.Error.done
                 case .completion(.finished):
                     do { try expectation1.succeed() }
                     catch { XCTFail("Failed to complete with error: \(error)") }
-                    return .done
+                    throw Publishers.Error.done
             }
         }
 
@@ -132,13 +134,13 @@ class JustTests: XCTestCase {
                         return .more
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         do { try expectation2.succeed() }
                         catch {
                             XCTFail("Failed to complete with error: \(error)")
                         }
-                        return .done
+                        throw Publishers.Error.done
                 }
             } )
         } } catch {
@@ -146,10 +148,12 @@ class JustTests: XCTestCase {
         }
 
         do {
-            let finalDemand = try await t.value
-            XCTAssert(finalDemand == .done, "Incorrect return")
+            _ = try await t.value
         } catch {
-            XCTFail("Errored out")
+            guard let error = error as? Publishers.Error, case error = Publishers.Error.done else {
+                XCTFail("Did not complete, error = \(error)")
+                return
+            }
         }
         do {
             _ = try await expectation1.value

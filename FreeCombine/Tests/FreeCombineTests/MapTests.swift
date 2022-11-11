@@ -41,14 +41,14 @@ class MapTests: XCTestCase {
                         return .more
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
-                        return .done
+                        throw Publishers.Error.done
                     case .completion(.finished):
                         do {
                             try expectation1.succeed()
                             _ = await expectation1.result
                         }
                         catch { XCTFail("Failed to complete with error: \(error)") }
-                        return .done
+                        throw Publishers.Error.done
                 }
             }
 

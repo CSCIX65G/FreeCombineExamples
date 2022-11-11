@@ -27,7 +27,8 @@ public extension Publisher {
         self = .init { resumption, downstream in
             .init {
                 resumption.resume()
-                return try await downstream(.value(a)) == .more ? try await downstream(.completion(.finished)) : .done
+                _ = try await downstream(.value(a))
+                return try await downstream(.completion(.finished))
             }
         }
     }
@@ -42,7 +43,8 @@ public extension Publisher {
         self = .init { resumption, downstream in
             .init {
                 resumption.resume()
-                return try await downstream(.value(generator())) == .more ? try await downstream(.completion(.finished)) : .done
+                _ = try await downstream(.value(generator()))
+                return try await downstream(.completion(.finished))
             }
         }
     }
@@ -57,7 +59,8 @@ public extension Publisher {
         self = .init { resumption, downstream in
             .init {
                 resumption.resume()
-                return try await downstream(result) == .more ? try await downstream(.completion(.finished)) : .done
+                _ = try await downstream(result)
+                return try await downstream(.completion(.finished))
             }
         }
     }
@@ -76,9 +79,8 @@ public extension Publisher {
         self = .init { resumption, downstream in
             .init {
                 resumption.resume()
-                return try await downstream(generator()) == .more
-                    ? try await downstream(.completion(.finished))
-                    : .done
+                _ = try await downstream(generator())
+                return try await downstream(.completion(.finished))
             }
         }
     }

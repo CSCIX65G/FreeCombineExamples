@@ -7,6 +7,10 @@
 public enum Publishers {
     public enum Demand: Equatable, Sendable {
         case more
+//        case done
+    }
+
+    public enum Error: Swift.Error {
         case done
     }
 

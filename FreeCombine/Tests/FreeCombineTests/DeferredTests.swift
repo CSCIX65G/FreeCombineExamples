@@ -52,7 +52,7 @@ class DeferTests: XCTestCase {
                     } catch {
                         XCTFail("Failed to complete")
                     }
-                    return .done
+                    throw Publishers.Error.done
             }
             return .more
         })
@@ -73,16 +73,25 @@ class DeferTests: XCTestCase {
                     } catch {
                         XCTFail("Failed to complete")
                     }
-                    return .done
+                    throw Publishers.Error.done
             }
             return .more
         }
 
-        do {
-            _ = try await c1.value
-            _ = try await c2.value
+        do {  _ = try await c1.value }
+        catch {
+            guard let error = error as? Publishers.Error, case error = Publishers.Error.done else {
+                XCTFail("Failed with: \(error)")
+                return
+            }
         }
-        catch { XCTFail("Should have completed") }
+        do {  _ = try await c2.value }
+        catch {
+            guard let error = error as? Publishers.Error, case error = Publishers.Error.done else {
+                XCTFail("Failed with: \(error)")
+                return
+            }
+        }
     }
 
     func testDeferredDefer() async throws {
@@ -103,7 +112,7 @@ class DeferTests: XCTestCase {
                     return .more
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
-                    return .done
+                    throw Publishers.Error.done
                 case .completion(.finished):
                     let count = count1.count
                     XCTAssert(count == 3, "wrong number of values sent: \(count)")
@@ -112,7 +121,7 @@ class DeferTests: XCTestCase {
                         _ = await expectation1.result
                     }
                     catch { XCTFail("Failed to complete") }
-                    return .done
+                    throw Publishers.Error.done
             }
         })
 
@@ -124,7 +133,7 @@ class DeferTests: XCTestCase {
                     return .more
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
-                    return .done
+                    throw Publishers.Error.done
                 case .completion(.finished):
                     let count = count2.count
                     XCTAssert(count == 3, "wrong number of values sent: \(count)")
@@ -133,14 +142,23 @@ class DeferTests: XCTestCase {
                         _ = await expectation2.result
                     }
                     catch { XCTFail("Failed to complete") }
-                    return .done
+                    throw Publishers.Error.done
             }
         }
 
-        do {
-            _ = try await c1.value
-            _ = try await c2.value
+        do {  _ = try await c1.value }
+        catch {
+            guard let error = error as? Publishers.Error, case error = Publishers.Error.done else {
+                XCTFail("Failed with: \(error)")
+                return
+            }
         }
-        catch { XCTFail("Should have completed") }
+        do {  _ = try await c2.value }
+        catch {
+            guard let error = error as? Publishers.Error, case error = Publishers.Error.done else {
+                XCTFail("Failed with: \(error)")
+                return
+            }
+        }
     }
 }
