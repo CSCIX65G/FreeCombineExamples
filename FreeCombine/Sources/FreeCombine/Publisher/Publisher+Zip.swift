@@ -12,12 +12,8 @@ public struct Zip<Left, Right> {
         case hasLeft(Left, Resumption<Demand>)
         case hasRight(Right, Resumption<Demand>)
         case hasBoth(Left, Resumption<Demand>, Right, Resumption<Demand>)
-        case completed
+        case finished
         case errored(Swift.Error)
-    }
-
-    enum Error: Swift.Error {
-        case invalidState(Current)
     }
 
     public struct State {
@@ -25,6 +21,18 @@ public struct Zip<Left, Right> {
         var rightCancellable: Cancellable<Demand>?
         var current: Current = .nothing
         let downstream: @Sendable (Publisher<(Left, Right)>.Result) async throws -> Demand
+
+        mutating func cancelLeft() throws -> Void {
+            guard let can = leftCancellable else { throw AsyncFolders.Error.internalError }
+            leftCancellable = .none
+            try can.cancel()
+        }
+
+        mutating func cancelRight() throws -> Void {
+            guard let can = rightCancellable else { throw AsyncFolders.Error.internalError }
+            rightCancellable = .none
+            try can.cancel()
+        }
     }
 
     public enum Action {
@@ -46,117 +54,83 @@ public struct Zip<Left, Right> {
         }
     }
 
-    static func reduceLeft(state: inout State, value: Left, resumption: Resumption<Demand>) -> [AsyncFolder<State, Action>.Effect] {
+    static func reduceLeft(state: inout State, value: Left, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
         switch (state.current) {
             case .nothing:
                 state.current = .hasLeft(value, resumption)
-                return Cancellables.isCancelled ? [.completion(.exited)] : []
+                return Cancellables.isCancelled ? .completion(.failure(CancellationError())) : .none
             case let .hasRight(rightValue, rightResumption):
                 state.current = .hasBoth(value, resumption, rightValue, rightResumption)
-                return [.emit(emit)]
-            case .completed, .errored:
-                try? state.leftCancellable?.cancel()
-                state.leftCancellable = .none
-                resumption.resume(returning: .done)
-                return [.completion(.exited)]
-            case .hasLeft, .hasBoth:
+                return Cancellables.isCancelled ? .completion(.failure(CancellationError())): .emit(emit)
+            case .finished, .errored, .hasLeft, .hasBoth:
                 fatalError("Invalid state")
         }
     }
-    static func reduceLeft(state: inout State, error: Swift.Error, resumption: Resumption<Demand>) -> [AsyncFolder<State, Action>.Effect] {
-        try? state.leftCancellable?.cancel()
-        state.leftCancellable = .none
-        resumption.resume(returning: .done)
+    static func reduceLeft(state: inout State, error: Swift.Error, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
+        resumption.resume(throwing: error)
         switch (state.current) {
             case .nothing:
                 state.current = .errored(error)
-                return [.emit(emit)]
+                return .completion(.failure(error))
             case let .hasRight(_, rightResumption):
-                try? state.rightCancellable?.cancel()
-                state.rightCancellable = .none
                 rightResumption.resume(throwing: error)
                 state.current = .errored(error)
-                return [.emit(emit), .completion(.failure(error))]
-            case .completed, .errored:
-                return [.completion(.exited)]
-            case .hasLeft, .hasBoth:
+                return .completion(.failure(error))
+            case .finished, .errored, .hasLeft, .hasBoth:
                 fatalError("Invalid state")
         }
     }
-    static func reduceLeft(state: inout State, resumption: Resumption<Demand>) -> [AsyncFolder<State, Action>.Effect] {
-        try? state.leftCancellable?.cancel()
-        state.leftCancellable = .none
+    static func reduceLeft(state: inout State, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
         resumption.resume(returning: .done)
         switch (state.current) {
             case .nothing:
-                state.current = .completed
-                return [.emit(emit)]
+                state.current = .finished
+                return .completion(.finished)
             case let .hasRight(_, rightResumption):
-                try? state.rightCancellable?.cancel()
-                state.rightCancellable = .none
                 rightResumption.resume(returning: .done)
-                state.current = .completed
-                return [.emit(emit), .completion(.finished)]
-            case .completed, .errored:
-                return [.completion(.exited)]
-            case .hasLeft, .hasBoth:
+                state.current = .finished
+                return .completion(.finished)
+            case .finished, .errored, .hasLeft, .hasBoth:
                 fatalError("Invalid state")
         }
     }
-    static func reduceRight(state: inout State, value: Right, resumption: Resumption<Demand>) -> [AsyncFolder<State, Action>.Effect] {
+    static func reduceRight(state: inout State, value: Right, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
         switch (state.current) {
             case .nothing:
                 state.current = .hasRight(value, resumption)
-                return Cancellables.isCancelled ? [.completion(.exited)] : []
+                return Cancellables.isCancelled ? .completion(.failure(CancellationError())) : .none
             case let .hasLeft(leftValue, leftResumption):
                 state.current = .hasBoth(leftValue, leftResumption, value, resumption)
-                return [.emit(emit)]
-            case .completed, .errored:
-                try? state.rightCancellable?.cancel()
-                state.rightCancellable = .none
-                resumption.resume(returning: .done)
-                return [.completion(.exited)]
-            case .hasRight, .hasBoth:
+                return Cancellables.isCancelled ? .completion(.failure(CancellationError())) : .emit(emit)
+            case .finished, .errored, .hasRight, .hasBoth:
                 fatalError("Invalid state")
         }
     }
-    static func reduceRight(state: inout State, error: Swift.Error, resumption: Resumption<Demand>) -> [AsyncFolder<State, Action>.Effect] {
-        try? state.rightCancellable?.cancel()
-        state.rightCancellable = .none
-        resumption.resume(returning: .done)
+    static func reduceRight(state: inout State, error: Swift.Error, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
+        resumption.resume(throwing: error)
         switch (state.current) {
             case .nothing:
                 state.current = .errored(error)
-                return [.emit(emit)]
+                return .completion(.failure(error))
             case let .hasLeft(_, leftResumption):
-                try? state.leftCancellable?.cancel()
-                state.leftCancellable = .none
                 leftResumption.resume(throwing: error)
                 state.current = .errored(error)
-                return [.emit(emit), .completion(.failure(error))]
-            case .completed, .errored:
-                return [.completion(.exited)]
-            case .hasRight, .hasBoth:
+                return .completion(.failure(error))
+            case .finished, .errored, .hasRight, .hasBoth:
                 fatalError("Invalid state")
         }
     }
-    static func reduceRight(state: inout State, resumption: Resumption<Demand>) -> [AsyncFolder<State, Action>.Effect] {
-        try? state.rightCancellable?.cancel()
-        state.rightCancellable = .none
+    static func reduceRight(state: inout State, resumption: Resumption<Demand>) -> AsyncFolder<State, Action>.Effect {
         resumption.resume(returning: .done)
         switch (state.current) {
             case .nothing:
-                state.current = .completed
-                return [.emit(emit)]
+                state.current = .finished
+                return .completion(.finished)
             case let .hasLeft(_, leftResumption):
-                try? state.leftCancellable?.cancel()
-                state.leftCancellable = .none
                 leftResumption.resume(returning: .done)
-                state.current = .completed
-                return [.emit(emit), .completion(.finished)]
-            case .completed, .errored:
-                return [.completion(.exited)]
-            case .hasRight, .hasBoth:
+                state.current = .finished
+                return .completion(.finished)
+            case .finished, .errored, .hasRight, .hasBoth:
                 fatalError("Invalid state")
         }
     }
@@ -164,7 +138,7 @@ public struct Zip<Left, Right> {
     static func reduce(
         _ state: inout State,
         _ action: Action
-    ) async -> [AsyncFolder<State, Action>.Effect] {
+    ) async -> AsyncFolder<State, Action>.Effect {
         switch (action) {
             case let (.left(.value(value), resumption)):
                 return reduceLeft(state: &state, value: value, resumption: resumption)
@@ -186,15 +160,20 @@ public struct Zip<Left, Right> {
     ) async throws -> Void {
         switch state.current {
             case let .hasBoth(left, leftResumption, right, rightResumption):
-                let result = try await state.downstream(.value((left, right)))
-                state.current = .nothing
-                leftResumption.resume(returning: result)
-                rightResumption.resume(returning: result)
-            case .completed:
-                _ = try await state.downstream(.completion(.finished))
-            case let .errored(error):
-                _ = try await state.downstream(.completion(.failure(error)))
-            case .nothing, .hasLeft, .hasRight:
+                let r = await Result<Demand, Swift.Error> { try await state.downstream(.value((left, right))) }
+                    .map { demand in
+                        leftResumption.resume(returning: demand)
+                        rightResumption.resume(returning: demand)
+                        return demand == .more ? Zip<Left, Right>.Current.nothing : .finished
+                    }
+                    .mapError {
+                        leftResumption.resume(throwing: $0)
+                        rightResumption.resume(throwing: $0)
+                        return $0
+                    }
+                state.current = try r.get()
+                if case .finished = state.current { throw AsyncFolder<State, Action>.Error.finished }
+            case .nothing, .hasLeft, .hasRight,.finished, .errored:
                 fatalError("Invalid emit state in zip")
         }
     }
@@ -203,17 +182,27 @@ public struct Zip<Left, Right> {
         _ action: Action,
         _ completion: AsyncFolder<State, Action>.Completion
     ) async {
+        var resumption: Resumption<Demand>!
         switch action {
-            case let .left(_, resumption):
-                switch completion {
-                    case .finished, .exited: resumption.resume(returning: .done)
-                    case let .failure(error): resumption.resume(throwing: error)
-                }
-            case let .right(_, resumption):
-                switch completion {
-                    case .finished, .exited: resumption.resume(returning: .done)
-                    case let .failure(error): resumption.resume(throwing: error)
-                }
+            case let .left(_, lResumption): resumption = lResumption
+            case let .right(_, rResumption): resumption = rResumption
+        }
+        switch completion {
+            case .finished: resumption.resume(returning: .done)
+            case let .failure(error): resumption.resume(throwing: error)
+        }
+    }
+
+    static func resumptions(_ current: Zip<Left, Right>.Current) -> (Resumption<Demand>?, Resumption<Demand>?) {
+        switch current {
+            case .nothing, .finished, .errored:
+                return (.none, .none)
+            case let .hasLeft(_, resumption):
+                return (resumption, .none)
+            case let .hasRight(_, resumption):
+                return (.none, resumption)
+            case let .hasBoth(_, lResumption, _, rResumption):
+                return (lResumption, rResumption)
         }
     }
 
@@ -221,37 +210,20 @@ public struct Zip<Left, Right> {
         state: inout State,
         completion: AsyncFolder<State, Action>.Completion
     ) async {
-        switch state.current {
-            case .nothing:
-                ()
-            case let .hasLeft(_, resumption):
-                resumption.resume(throwing: CancellationError())
-            case let .hasRight(_, resumption):
-                resumption.resume(throwing: CancellationError())
-            case let .hasBoth(_, lResumption, _, rResumption):
-                lResumption.resume(throwing: CancellationError())
-                rResumption.resume(throwing: CancellationError())
-            case .completed, .errored:
-                ()
+        try? state.cancelRight()
+        try? state.cancelLeft()
+        let currentResumptions = resumptions(state.current)
+        switch completion {
+            case .finished:
+                _ = try? await state.downstream(.completion(.finished))
+                currentResumptions.0?.resume(returning: .done)
+                currentResumptions.1?.resume(returning: .done)
+            case let .failure(error):
+                _ = try? await state.downstream(.completion(.failure(error)))
+                currentResumptions.0?.resume(throwing: error)
+                currentResumptions.1?.resume(throwing: error)
         }
-        try? state.rightCancellable?.cancel()
-        state.rightCancellable = .none
-        try? state.leftCancellable?.cancel()
-        state.leftCancellable = .none
         state.current = .nothing
-    }
-
-    static func extract(state: State) throws -> (Left, Right) {
-        switch state.current {
-            case .nothing, .hasLeft, .hasRight:
-                throw CancellationError()
-            case let .hasBoth(leftValue, _, rightValue, _):
-                return (leftValue, rightValue)
-            case let .errored(error):
-                throw error
-            case .completed:
-                throw CancellationError()
-        }
     }
 
     static func folder(

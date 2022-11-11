@@ -27,6 +27,10 @@ class ZipTests: XCTestCase {
 
     override func tearDownWithError() throws { }
 
+    enum TestError: Error {
+        case failed
+    }
+
     func testSimpleJustZip() async throws {
         let promise = await Promise<Void>()
 
@@ -124,6 +128,151 @@ class ZipTests: XCTestCase {
         do { _ = try await promise.value }
         catch { XCTFail("Timed out, count = \(counter.count)") }
         _ = await z1.result
+    }
+
+    func testSimpleZipCancellation() async throws {
+        let expectation = await Promise<Void>()
+        let waiter = await Promise<Void>()
+        let startup = await Promise<Void>()
+
+        let publisher1 = (0 ... 100).asyncPublisher
+        let publisher2 = "abcdefghijklmnopqrstuvwxyz".asyncPublisher
+
+        let counter = Counter()
+        let z1 = await zip(publisher1, publisher2)
+            .map { ($0.0 + 100, $0.1.uppercased()) }
+            .sink { result in
+                switch result {
+                    case .value:
+                        let count = counter.increment()
+                        if count == 10 {
+                            try startup.succeed()
+                            try await waiter.value
+                            return .more
+                        }
+                        if count > 10 {
+                            XCTFail("Got values after cancellation")
+                            do { try expectation.succeed() }
+                            catch { XCTFail("Failed to complete: \(error)") }
+                            throw TestError.failed
+                        }
+                    case let .completion(.failure(error)):
+                        guard error is CancellationError else {
+                            XCTFail("Did not cancel")
+                            try expectation.succeed()
+                            throw TestError.failed
+                        }
+                        do { try expectation.succeed() }
+                        catch { XCTFail("Failed to complete: \(error)") }
+                        return .done
+                    case .completion(.finished):
+                        XCTFail("Got to end of task that should have been cancelled")
+                        do { try expectation.succeed() }
+                        catch { XCTFail("Failed to complete: \(error)") }
+                        return .done
+                }
+                return .more
+            }
+
+        do {
+            try await startup.value
+            try z1.cancel()
+            try waiter.succeed()
+        } catch {
+            XCTFail("Failed with error: \(error)")
+        }
+
+        _ = await z1.result
+        do {
+            try expectation.succeed()
+            XCTFail("Should not have succeeded expectation")
+        } catch { }
+        do {
+            try waiter.succeed()
+            XCTFail("Should not have succeeded waiter")
+        } catch { }
+        do {
+            try startup.succeed()
+            XCTFail("Should not have succeeded startup")
+        } catch { }
+    }
+
+    func testMultiZipCancellation() async throws {
+        let expectation = await Promise<Void>()
+        let expectation2 = await Promise<Void>()
+        let waiter = await Promise<Void>()
+        let startup1 = await Promise<Void>()
+        let startup2 = await Promise<Void>()
+
+        let publisher1 = Unfolded(0 ... 100)
+        let publisher2 = Unfolded("abcdefghijklmnopqrstuvwxyz")
+
+        let counter1 = Counter()
+        let counter2 = Counter()
+        let zipped = zip(publisher1, publisher2)
+            .map { ($0.0 + 100, $0.1.uppercased()) }
+
+        let z1 = await zipped.sink { result in
+            switch result {
+                case .value:
+                    let count2 = counter2.increment()
+                    if (count2 == 1) {
+                        try startup1.succeed()
+                    }
+                    return .more
+                case let .completion(.failure(error)):
+                    XCTFail("Got an error? \(error)")
+                    return .done
+                case .completion(.finished):
+                    let count2 = counter2.count
+                    XCTAssertTrue(count2 == 26, "Incorrect count: \(count2)")
+                    do { try expectation2.succeed() }
+                    catch { XCTFail("Multiple finishes sent: \(error)") }
+                    return .done
+            }
+        }
+
+        let z2 = await zipped
+            .sink { result in
+                switch result {
+                    case .value:
+                        let count1 = counter1.increment()
+                        if count1 == 10 {
+                            try startup2.succeed()
+                            try await waiter.value
+                            return .more
+                        }
+                        if count1 > 10 {
+                            XCTFail("Received values after cancellation.  count: \(count1)")
+                        }
+                        return .more
+                    case let .completion(.failure(error)):
+                        if error as? CancellationError == nil {
+                            XCTFail("Failed with wrong error: \(error)")
+                        }
+                        try expectation.succeed()
+                        return .done
+                    case .completion(.finished):
+                        XCTFail("Got to end of task that should have been cancelled")
+                        do { try expectation.succeed() }
+                        catch { XCTFail("Multiple finishes sent: \(error)") }
+                        return .done
+                }
+            }
+
+        do {
+            try await startup1.value
+            try await startup2.value
+            try z2.cancel()
+            try waiter.succeed()
+        } catch {
+            XCTFail("Failed with error: \(error)")
+        }
+
+        _ = await expectation.result
+        _ = await expectation2.result
+        _ = await z1.result
+        _ = await z2.result
     }
 
     func testSimpleZip() async throws {

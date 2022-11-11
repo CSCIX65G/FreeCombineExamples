@@ -23,7 +23,7 @@ extension Distributor {
         .init(
             initializer: { _ in .init() },
             reducer: { state, action in
-                guard !state.isFinished else { return [] }
+                guard !state.isFinished else { return .none }
                 switch action {
                     case let .asyncValue(output):
                         try await withResumption { resumption in
@@ -44,7 +44,7 @@ extension Distributor {
                         catch { resumption.resume(throwing: error) }
                         throw CompletionError(completion: completion)
                 }
-                return []
+                return .none
             }
         )
     }

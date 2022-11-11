@@ -49,6 +49,7 @@ public final class Promise<Output> {
             try? cancel()
             return
         }
+        try? cancellable.cancel()
     }
 
     private func set(status newStatus: Status) throws -> Resumption<Output> {

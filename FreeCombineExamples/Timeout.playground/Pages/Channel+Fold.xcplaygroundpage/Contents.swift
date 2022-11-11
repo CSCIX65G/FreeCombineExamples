@@ -37,14 +37,14 @@ public extension Channel where Element == Void {
 
 public enum AsyncFolders {
     public enum Completion {
-        case exited
+//        case exited
         case failure(Swift.Error)
         case finished
     }
 
     public enum Error: Swift.Error {
         case cancelled
-        case completed
+//        case completed
         case finished
     }
 }
@@ -96,7 +96,7 @@ extension AsyncFolder {
         channel.finish()
         for await action in channel.stream {
             switch error {
-                case Error.completed:
+                case Error.finished:
                     await disposer(action, .finished); continue
                 case Error.cancelled:
                     await disposer(action, .failure(Error.cancelled)); continue
@@ -115,7 +115,6 @@ extension AsyncFolder {
         for effect in effects {
             switch effect {
                 case .none: ()
-                case .completion(.exited): throw Error.completed
                 case .completion(let .failure(error)): throw error
                 case .completion(.finished): throw Error.finished
             }
@@ -136,8 +135,6 @@ extension AsyncFolder {
                 throw completion
             case .finished:
                 await finalizer(&state, .finished)
-            case .completed:
-                await finalizer(&state, .exited)
         }
     }
 

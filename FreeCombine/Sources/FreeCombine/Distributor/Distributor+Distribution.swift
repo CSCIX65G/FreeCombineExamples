@@ -21,7 +21,7 @@ extension Distributor {
         action: Distributor<Output>.DistributionAction,
         state: inout Distributor<Output>.DistributionState,
         returnChannel: Channel<ConcurrentFunc<Output, Void>.Next>
-    ) async throws -> [AsyncFolder<Distributor<Output>.DistributionState, Distributor<Output>.DistributionAction>.Effect] {
+    ) async throws -> AsyncFolder<Distributor<Output>.DistributionState, Distributor<Output>.DistributionAction>.Effect {
         switch action {
             case let .finish(completion, resumption):
                 state.completion = completion
@@ -45,11 +45,11 @@ extension Distributor {
                 do { try idResumption.tryResume(returning: invocation.function.id) }
                 catch { fatalError("Unhandled subscription resumption") }
             case let .unsubscribe(streamId):
-                guard let invocation = state.invocations.removeValue(forKey: streamId) else { return [] }
+                guard let invocation = state.invocations.removeValue(forKey: streamId) else { return .none }
                 try! invocation.resumption.tryResume(throwing: CancellationError())
                 _ = await invocation.function.cancellable.result
         }
-        return []
+        return .none
     }
 
     static func dispose(_ action: Distributor<Output>.DistributionAction) {

@@ -37,22 +37,22 @@ public struct Or<Left, Right> {
     static func reduce(
         _ state: inout State,
         _ action: Action
-    ) async -> [AsyncFolder<State, Action>.Effect]  {
+    ) async -> AsyncFolder<State, Action>.Effect {
         do {
             guard !Cancellables.isCancelled else { throw CancellationError() }
             switch (action, state.current) {
                 case let (.left(leftResult), .nothing):
                     state.current = try .complete(.left(leftResult.get()))
-                    return [.completion(.exited)]
+                    return .completion(.finished)
                 case let (.right(rightResult), .nothing):
                     state.current = try .complete(.right(rightResult.get()))
-                    return [.completion(.exited)]
+                    return .completion(.finished)
                 default:
                     fatalError("Illegal state")
             }
         } catch {
             state.current = .errored(error)
-            return [.completion(.exited)]
+            return .completion(.finished)
         }
     }
 

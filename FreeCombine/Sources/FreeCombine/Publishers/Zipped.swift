@@ -23,17 +23,22 @@ public func zip<Left, Right>(
     _ left: Publisher<Left>,
     _ right: Publisher<Right>
 ) -> Publisher<(Left, Right)> {
-//    fatalError("Unimplemented")
     .init { resumption, downstream in
-        .init {
-            let channel = Channel<Zip<Left, Right>.Action>(buffering: .bufferingOldest(2))
-            let folder = Zip<Left, Right>.folder(left: left, right: right, downstream: downstream)
-            return try await withTaskCancellationHandler(
+        let cancellable = Channel<Zip<Left, Right>.Action>(buffering: .bufferingOldest(2))
+            .fold(
+                onStartup: resumption,
+                into: Zip<Left, Right>.folder(left: left, right: right, downstream: downstream)
+            )
+            .cancellable
+        return .init {
+            try await withTaskCancellationHandler(
                 operation: {
-                    _ = try await channel.fold(onStartup: resumption, into: folder).value
-                    return Publisher<(Left, Right)>.Demand.done
+                    _ = try await cancellable.value
+                    return .done
                 },
-                onCancel: channel.finish
+                onCancel: {
+                    try? cancellable.cancel()
+                }
             )
         }
     }

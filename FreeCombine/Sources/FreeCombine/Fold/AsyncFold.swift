@@ -129,11 +129,12 @@ extension AsyncFold {
             onStartup?.resume()
             for await action in channel.stream {
                 try await folder.handle(
-                    effects: folder.reduce(state: &state, action: action),
+                    effect: folder.reduce(state: &state, action: action),
                     channel: channel,
                     state: &state,
                     action: action
                 )
+                guard !Cancellables.isCancelled else { throw CancellationError() }
             }
             await folder.finalize(&state, .finished)
         } catch {
