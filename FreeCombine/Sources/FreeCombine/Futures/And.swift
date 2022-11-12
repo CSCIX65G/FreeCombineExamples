@@ -10,15 +10,17 @@ public func and<Left, Right>(
 ) -> Future<(Left, Right)> {
     .init { resumption, downstream in
         .init {
-            let channel = Channel<And<Left, Right>.Action>(buffering: .bufferingOldest(2))
-            let folder = And<Left, Right>.folder(left: left, right: right)
-            let fold = channel.fold(onStartup: resumption, into: folder)
+            let fold = Channel(buffering: .bufferingOldest(2))
+                .fold(
+                    onStartup: resumption,
+                    into: And<Left, Right>.folder(left: left, right: right)
+                )
             await withTaskCancellationHandler(
                 operation: {
                     do { try await downstream(.success(And<Left, Right>.extract(state: fold.value))) }
                     catch { await downstream(.failure(error)) }
                 },
-                onCancel: channel.finish
+                onCancel: { try? fold.cancel() }
             )
         }
     }

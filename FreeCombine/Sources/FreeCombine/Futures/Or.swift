@@ -9,15 +9,17 @@ public func or<Left, Right>(
     _ right: Future<Right>
 ) -> Future<Either<Left, Right>> {
     .init { resumption, downstream in .init {
-        let channel = Channel<Or<Left, Right>.Action>(buffering: .bufferingOldest(2))
-        let folder = Or<Left, Right>.folder(left: left, right: right)
-        let fold = channel.fold(onStartup: resumption, into: folder)
+        let fold = Channel(buffering: .bufferingOldest(2))
+            .fold(
+                onStartup: resumption,
+                into: Or<Left, Right>.folder(left: left, right: right)
+            )
         await withTaskCancellationHandler(
             operation: {
                 do { try await downstream(.success(Or<Left, Right>.extract(state: fold.value))) }
                 catch { await downstream(.failure(error)) }
             },
-            onCancel: channel.finish
+            onCancel: { try? fold.cancel() }
         )
     } }
 }

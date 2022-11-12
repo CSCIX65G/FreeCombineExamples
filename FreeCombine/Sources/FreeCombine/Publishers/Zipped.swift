@@ -34,11 +34,9 @@ public func zip<Left, Right>(
             try await withTaskCancellationHandler(
                 operation: {
                     _ = try await cancellable.value
-                    throw Publishers.Error.done
+                    return
                 },
-                onCancel: {
-                    try? cancellable.cancel()
-                }
+                onCancel: { try? cancellable.cancel() }
             )
         }
     }
