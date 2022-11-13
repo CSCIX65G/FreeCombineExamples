@@ -31,7 +31,7 @@ extension Distributor {
                     case let .failure(error): throw error
                 }
             case let .value(value, upstreamResumption):
-                state.invocations = await ConcurrentFunc.fold(
+                state.invocations = await ConcurrentFunc.batch(
                     invocations: state.invocations,
                     arg: value,
                     channel: returnChannel

@@ -56,7 +56,26 @@ public func merge<Output, S: Sequence>(
     _ upstream2: Publisher<Output>,
     _ otherUpstreams: S
 ) -> Publisher<Output> where S.Element == Publisher<Output> {
-    fatalError("Unimplemented")
+    .init { resumption, downstream in
+        let cancellable = Channel<Merge<Output>.Action>(buffering: .bufferingOldest(2 + otherUpstreams.underestimatedCount))
+            .fold(
+                onStartup: resumption,
+                into: Merge<Output>.folder(
+                    publishers: [upstream1, upstream2] + otherUpstreams,
+                    downstream: downstream
+                )
+            )
+            .cancellable
+        return .init {
+            try await withTaskCancellationHandler(
+                operation: {
+                    _ = try await cancellable.value
+                    return
+                },
+                onCancel: { try? cancellable.cancel() }
+            )
+        }
+    }
 }
 
 public func merge<Output, S: Sequence>(

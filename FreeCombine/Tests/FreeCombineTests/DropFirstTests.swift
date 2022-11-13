@@ -57,7 +57,7 @@ class DropFirstTests: XCTestCase {
         catch { XCTFail("Timed out") }
 
         do {
-            let finalValue = try await u1.value
+            _ = try await u1.value
         } catch {
             guard let error = error as? Publishers.Error, case error = Publishers.Error.done else {
                 XCTFail("Did not complete, error = \(error)")

@@ -6,7 +6,7 @@
 //
 
 extension ConcurrentFunc {
-    public static func fold(
+    public static func batch(
         invocations: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation],
         arg: Arg,
         channel: Channel<ConcurrentFunc<Arg, Return>.Next>
