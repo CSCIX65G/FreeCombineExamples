@@ -76,7 +76,7 @@ public struct Merge<Value> {
         switch (state.current) {
             case .nothing:
                 state.current = .hasValue(value.index, value.value, resumption)
-                return Cancellables.isCancelled ? .completion(.failure(CancellationError())): .emit(emit)
+                return Cancellables.isCancelled ? .completion(.failure(CancellationError())): .none
             case .finished, .errored, .hasValue:
                 fatalError("Invalid state")
         }
@@ -148,7 +148,7 @@ public struct Merge<Value> {
                     throw AsyncFolder<State, Action>.Error.finished
                 }
             default:
-                fatalError("Invalid emit state in merge")
+                ()
         }
     }
 

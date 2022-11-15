@@ -55,7 +55,7 @@ public struct Select<Left, Right> {
         switch (state.current) {
             case .nothing:
                 state.current = .hasLeft(value, resumption)
-                return Cancellables.isCancelled ? .completion(.failure(CancellationError())): .emit(emit)
+                return Cancellables.isCancelled ? .completion(.failure(CancellationError())): .none
             case .finished, .errored, .hasLeft, .hasRight:
                 fatalError("Invalid state")
         }
@@ -87,7 +87,7 @@ public struct Select<Left, Right> {
         switch (state.current) {
             case .nothing:
                 state.current = .hasRight(value, resumption)
-                return Cancellables.isCancelled ? .completion(.failure(CancellationError())) : .emit(emit)
+                return Cancellables.isCancelled ? .completion(.failure(CancellationError())) : .none
             case .finished, .errored, .hasRight, .hasLeft:
                 fatalError("Invalid state")
         }
@@ -163,7 +163,7 @@ public struct Select<Left, Right> {
                     .get()
                 if case .finished = state.current { throw AsyncFolder<State, Action>.Error.finished }
             default:
-                fatalError("Invalid emit state in zip")
+                ()
         }
     }
 

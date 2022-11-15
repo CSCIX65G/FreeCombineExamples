@@ -97,11 +97,15 @@ extension AsyncFolder {
                 throw error
             case .completion(.finished):
                 throw Error.finished
-            case .emit:
-                try await emitter(&state)
             case .publish:
                 ()
         }
+    }
+
+    func emit(
+        state: inout State
+    ) async throws -> Void {
+        try await emitter(&state)
     }
 
     func dispose(
@@ -124,13 +128,12 @@ extension AsyncFolder {
     func finalize(
         state: inout State,
         error: Swift.Error
-    ) async throws -> Void {
+    ) async -> Void {
         switch error as? Error {
             case .finished:
                 await self(&state, .finished)
             default:
                 await self(&state, .failure(error))
-                throw error
         }
     }
 

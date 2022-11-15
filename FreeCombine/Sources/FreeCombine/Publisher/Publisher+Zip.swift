@@ -60,7 +60,7 @@ public struct Zip<Left, Right> {
                 return Cancellables.isCancelled ? .completion(.failure(CancellationError())) : .none
             case let .hasRight(rightValue, rightResumption):
                 state.current = .hasBoth(value, resumption, rightValue, rightResumption)
-                return Cancellables.isCancelled ? .completion(.failure(CancellationError())): .emit(emit)
+                return Cancellables.isCancelled ? .completion(.failure(CancellationError())): .none
             case .finished, .errored, .hasLeft, .hasBoth:
                 fatalError("Invalid state")
         }
@@ -100,7 +100,7 @@ public struct Zip<Left, Right> {
                 return Cancellables.isCancelled ? .completion(.failure(CancellationError())) : .none
             case let .hasLeft(leftValue, leftResumption):
                 state.current = .hasBoth(leftValue, leftResumption, value, resumption)
-                return Cancellables.isCancelled ? .completion(.failure(CancellationError())) : .emit(emit)
+                return Cancellables.isCancelled ? .completion(.failure(CancellationError())) : .none
             case .finished, .errored, .hasRight, .hasBoth:
                 fatalError("Invalid state")
         }
@@ -173,7 +173,7 @@ public struct Zip<Left, Right> {
                 state.current = try r.get()
                 if case .finished = state.current { throw AsyncFolder<State, Action>.Error.finished }
             case .nothing, .hasLeft, .hasRight,.finished, .errored:
-                fatalError("Invalid emit state in zip")
+                ()
         }
     }
 

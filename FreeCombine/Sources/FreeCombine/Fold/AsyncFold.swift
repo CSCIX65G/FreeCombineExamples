@@ -135,12 +135,14 @@ extension AsyncFold {
                     action: action
                 )
                 guard !Cancellables.isCancelled else { throw CancellationError() }
+                try await folder.emit(state: &state)
             }
             await folder.finalize(&state, .finished)
         } catch {
             await folder.dispose(channel: channel, error: error)
-            try await folder.finalize(state: &state, error: error)
+            await folder.finalize(state: &state, error: error)
         }
+        try await folder.emit(state: &state)
         return state
     }
 }
