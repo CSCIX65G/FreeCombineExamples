@@ -38,8 +38,7 @@ public extension Channel {
         await publisher { upstreamValue in
             try await withResumption(function: function, file: file, line: line) { resumption in
                 guard !Cancellables.isCancelled else {
-                    resumption.resume(throwing: CancellationError())
-                    return
+                    return resumption.resume(throwing: CancellationError())
                 }
                 do { try self.tryYield(action(upstreamValue, resumption)) }
                 catch { resumption.resume(throwing: error) }

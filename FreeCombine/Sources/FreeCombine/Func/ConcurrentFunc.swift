@@ -118,14 +118,8 @@ public extension ConcurrentFunc {
         public func callAsFunction(_ arg: Arg) -> Void {
             resumption.resume(returning: .value(arg))
         }
-        public func callAsFunction(_ completion: Publishers.Completion) -> Void {
+        public func callAsFunction(completion: Publishers.Completion) -> Void {
             resumption.resume(returning: .completion(completion))
-        }
-        public func callAsFunction(_ error: Swift.Error) -> Void {
-            resumption.resume(throwing: error)
-        }
-        public func callAsFunction() -> Void {
-            resumption.resume(returning: .completion(.finished))
         }
     }
 
@@ -133,5 +127,11 @@ public extension ConcurrentFunc {
         public let result: Result<Return, Swift.Error>
         public let invocation: Invocation
         public var id: ObjectIdentifier { invocation.function.id }
+    }
+}
+
+public extension ConcurrentFunc.Invocation where Arg == Void {
+    func callAsFunction() -> Void {
+        resumption.resume(returning: .value(()))
     }
 }

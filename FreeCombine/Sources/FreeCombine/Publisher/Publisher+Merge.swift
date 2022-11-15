@@ -20,13 +20,14 @@ public struct Merge<Value> {
 
     public struct State {
         var current: Current = .nothing
-        var cancellables: [Cancellable<Void>?]
+        var cancellables: [Int: Cancellable<Void>]
         let downstream: @Sendable (Publisher<Value>.Result) async throws -> Void
 
-        mutating func cancel(_ index: Int) throws -> Void {
-            guard let can = cancellables[index] else { throw AsyncFolders.Error.internalError }
-            cancellables[index] = .none
+        mutating func cancel(_ id: Int) throws -> Void {
+            guard let can = cancellables[id] else { throw AsyncFolders.Error.internalError }
+            cancellables[id] = .none
             try can.cancel()
+            cancellables.removeValue(forKey: id)
         }
     }
 
@@ -61,13 +62,13 @@ public struct Merge<Value> {
         downstream: @escaping @Sendable (Publisher<Value>.Result) async throws -> Void
     ) -> (Channel<Action>) async -> State {
         { channel in
-            var cancellables = ContiguousArray<Cancellable<Void>>()
+            var cancellables = [Int: Cancellable<Void>]()
             cancellables.reserveCapacity(upstreams.count)
             for i in 0 ..< upstreams.count {
                 let cancellable = await channel.consume(publisher: upstreams[i], using: Self.consume(i))
-                cancellables.append(cancellable)
+                cancellables[i] = cancellable
             }
-            return .init(cancellables: .init(cancellables), downstream: downstream)
+            return .init(cancellables: cancellables, downstream: downstream)
         }
     }
 
@@ -96,9 +97,8 @@ public struct Merge<Value> {
         resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
-                try? state.cancellables[index]?.cancel()
-                state.cancellables[index] = .none
-                return state.cancellables.allSatisfy({ $0 == nil }) ? .completion(.finished) : .none
+                try? state.cancel(index)
+                return state.cancellables.isEmpty ? .completion(.finished) : .none
             case .finished, .errored, .hasValue:
                 fatalError("Invalid state")
         }
@@ -132,19 +132,23 @@ public struct Merge<Value> {
     ) async throws -> Void {
         switch valuePair(state.current) {
             case let .some((value, resumption)):
-                state.current = try await Result<Void, Swift.Error> { try await state.downstream(.value(value)) }
-                    .map {
-                        resumption.resume()
-                        return Merge<Value>.Current.nothing
-                    }
-                    .mapError {
-                        resumption.resume(throwing: $0)
-                        return $0
-                    }
-                    .get()
-                if case .finished = state.current { throw AsyncFolder<State, Action>.Error.finished }
+                state.current = try await Result<Void, Swift.Error> {
+                    try await state.downstream(.value(value))
+                }
+                .map {
+                    resumption.resume()
+                    return Merge<Value>.Current.nothing
+                }
+                .mapError {
+                    resumption.resume(throwing: $0)
+                    return $0
+                }
+                .get()
+                if case .finished = state.current {
+                    throw AsyncFolder<State, Action>.Error.finished
+                }
             default:
-                fatalError("Invalid emit state in zip")
+                fatalError("Invalid emit state in merge")
         }
     }
 
@@ -176,7 +180,7 @@ public struct Merge<Value> {
         state: inout State,
         completion: AsyncFolder<State, Action>.Completion
     ) async {
-        state.cancellables.forEach { try? $0?.cancel() }
+        state.cancellables.forEach { _, cancellable in try? cancellable.cancel() }
         let resumption = resumption(state.current)
         switch completion {
             case .finished:
