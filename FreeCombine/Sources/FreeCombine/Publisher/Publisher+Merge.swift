@@ -96,8 +96,9 @@ public struct Merge<Value> {
         resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
-                state.current = .finished
-                return .completion(.finished)
+                try? state.cancellables[index]?.cancel()
+                state.cancellables[index] = .none
+                return state.cancellables.allSatisfy({ $0 == nil }) ? .completion(.finished) : .none
             case .finished, .errored, .hasValue:
                 fatalError("Invalid state")
         }

@@ -27,7 +27,7 @@ class MergeTests: XCTestCase {
 
     override func tearDownWithError() throws { }
 
-    func xtestSimpleMerge() async throws {
+    func testSimpleMerge() async throws {
         let expectation = await Promise<Void>()
 
         let publisher1 = "01234567890123".asyncPublisher
@@ -39,9 +39,8 @@ class MergeTests: XCTestCase {
             .map { $0.uppercased() }
             .sink { result in
                 switch result {
-                    case let .value(value):
+                    case .value:
                         counter.increment()
-                        print("Value = \(value), count = \(counter.count)")
                         return
                     case let .completion(.failure(error)):
                         XCTFail("Got an error? \(error)")
@@ -57,29 +56,29 @@ class MergeTests: XCTestCase {
 
         _ = await m1.result
     }
-//
-//    func testInlineMerge() async throws {
-//        let expectation = await Promise<Void>()
-//
-//        let fseq1 = (101 ... 150).asyncPublisher
-//        let fseq2 = (1 ... 100).asyncPublisher
-//
-//        let fm1 = Merged(fseq1, fseq2)
-//
-//        let c1 = await fm1
-//            .sink({ value in
-//                switch value {
-//                    case .value(_):
-//                        return
-//                    case let .completion(.failure(error)):
-//                        XCTFail("Should not have received failure: \(error)")
-//                        throw Publishers.Error.done
-//                    case .completion(.finished):
-//                        try expectation.succeed()
-//                        throw Publishers.Error.done
-//                }
-//            })
-//
-//        _ = await c1.result
-//    }
+
+    func testInlineMerge() async throws {
+        let expectation = await Promise<Void>()
+
+        let fseq1 = (101 ... 150).asyncPublisher
+        let fseq2 = (1 ... 100).asyncPublisher
+
+        let fm1 = Merged(fseq1, fseq2)
+
+        let c1 = await fm1
+            .sink({ value in
+                switch value {
+                    case .value(_):
+                        return
+                    case let .completion(.failure(error)):
+                        XCTFail("Should not have received failure: \(error)")
+                        throw Publishers.Error.done
+                    case .completion(.finished):
+                        try expectation.succeed()
+                        throw Publishers.Error.done
+                }
+            })
+
+        _ = await c1.result
+    }
 }
