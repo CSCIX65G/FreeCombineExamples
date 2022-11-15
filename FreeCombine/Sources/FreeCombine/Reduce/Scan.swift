@@ -1,8 +1,8 @@
 //
-//  Print.swift
+//  Scan.swift
 //
 //
-//  Created by Van Simmons on 6/6/22.
+//  Created by Van Simmons on 5/18/22.
 //
 //  Copyright 2022, ComputeCycles, LLC
 //
@@ -19,20 +19,19 @@
 //  limitations under the License.
 //
 public extension Publisher {
-    func print(prefix: String = "") -> Self {
+    func scan<T>(
+        _ initialValue: T,
+        _ transform: @escaping (T, Output) async -> T
+    ) -> Publisher<T> {
         return .init { resumption, downstream in
-            _ = Swift.print("\(prefix) received subscriber: \(type(of: downstream))")
+            let currentValue: ValueRef<T> = ValueRef(value: initialValue)
             return self(onStartup: resumption) { r in
                 switch r {
                     case .value(let a):
-                        _ = Swift.print("\(prefix) received value: \(a))")
-                    case .completion(.finished):
-                        _ = Swift.print("\(prefix) received .completion(.finished))")
-                    case let .completion(.failure(error)):
-                        _ = Swift.print("\(prefix) received .completion(.failure(\(error)))")
+                        return try await downstream(.value(currentValue.set(value: transform(currentValue.value, a))))
+                    case let .completion(value):
+                        return try await downstream(.completion(value))
                 }
-                _ = try await downstream(r)
-                return
             }
         }
     }
