@@ -50,7 +50,9 @@ public extension Distributor {
         line: UInt = #line,
         operation: @escaping @Sendable (Publisher<Output>.Result) async throws -> Void
     ) -> Cancellable<Cancellable<Void>> {
-        .init { try await self.subscribe(function: function, file: file, line: line, operation: operation) }
+        .init {
+          try await self.subscribe(function: function, file: file, line: line, operation: operation)
+        }
     }
 
     func subscribe(
@@ -67,29 +69,39 @@ public extension Distributor {
             returnChannel: returnChannel
         )
         let subscriptionId: ObjectIdentifier = try await withResumption({ idResumption in
-            do { try distributionFold.send(.subscribe(invocation, idResumption)) }
-            catch { try? idResumption.tryResume(throwing: SubscriptionError()) }
+            do {
+                try distributionFold.send(.subscribe(invocation, idResumption))
+            }
+            catch {
+                try? idResumption.tryResume(throwing: SubscriptionError())
+            }
         })
 
-        return .init(function: function, file: file, line: line) { try await withTaskCancellationHandler(
-            operation: { _ = try await invocation.function.cancellable.value },
-            onCancel: { try? self.distributionFold.send(.unsubscribe(subscriptionId)) }
-        ) }
+        return .init(function: function, file: file, line: line) {
+            try await withTaskCancellationHandler(
+                operation: {
+                    try await invocation.function.cancellable.value
+                },
+                onCancel: {
+                    try? self.distributionFold.send(.unsubscribe(subscriptionId))
+                }
+            )
+        }
     }
 
     func send(_ value: Output) throws {
-        try valueFold.send(.asyncValue(value))
+        try valueFold.send(.asyncValue(.value(value)))
     }
 
     func send(_ value: Output) async throws {
         try await withResumption { resumption in
-            do { try valueFold.send(.syncValue(value, resumption)) }
+            do { try valueFold.send(.syncValue(.value(value), resumption)) }
             catch { resumption.resume(throwing: BufferError()) }
         }
     }
 
     func cancel() throws -> Void {
-        do { try valueFold.send(.asyncCompletion(.failure(CancellationError()))) }
+        try valueFold.send(.asyncCompletion(.failure(CancellationError())))
         valueFold.finish()
         returnChannel.finish()
         distributionFold.finish()

@@ -37,9 +37,8 @@ public final class Subject<Output: Sendable> {
     }
 }
 
-extension Subject {
-
-    func send(_ value: Output) throws {
+public extension Subject {
+    func yield(_ value: Output) throws {
         try distributor.send(value)
     }
 
@@ -77,15 +76,22 @@ public extension Publisher {
         distributor: Distributor<Output>
     ) {
         self = .init { resumption, downstream in .init {
-            try await distributor.subscribe { result in
+            let inner = try await distributor.subscribe { result in
                 _ = try await downstream(result)
-            }.result.get()
-            throw Publishers.Error.done
+            }
+            return try await withTaskCancellationHandler(
+                operation: { try await inner.result.get() },
+                onCancel: { try? inner.cancel() }
+            )
         } }
     }
 }
 
 public extension Subject {
+    var asyncPublisher: Publisher<Output> {
+        publisher()
+    }
+
     func publisher(
         function: StaticString = #function,
         file: StaticString = #file,

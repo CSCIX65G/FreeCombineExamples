@@ -107,7 +107,7 @@ public extension ConcurrentFunc {
                     originatingFunction: originatingFunction,
                     file: file,
                     line: line,
-                    resumption: startup, // startup: UnfailingResumption<Resumption<Publisher<Arg>.Result>>
+                    resumption: startup,
                     function: dispatch,
                     returnChannel: returnChannel
                 )
@@ -120,6 +120,9 @@ public extension ConcurrentFunc {
         }
         public func callAsFunction(completion: Publishers.Completion) -> Void {
             resumption.resume(returning: .completion(completion))
+        }
+        public func callAsFunction(_ result: Publisher<Arg>.Result) -> Void {
+            resumption.resume(returning: result)
         }
     }
 

@@ -16,7 +16,7 @@ final class DistributorTests: XCTestCase {
 
     func testSimpleDistributor() async throws {
         let numValues = 100
-        let distributor = Distributor<Int>(buffering: .bufferingOldest(100))
+        let distributor: Distributor<Int> = .init(buffering: .bufferingOldest(100))
         let subscription = try await distributor.subscribe(operation: { result in
             switch result {
                 case .completion(.failure(let error)):

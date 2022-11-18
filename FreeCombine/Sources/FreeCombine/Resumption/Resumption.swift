@@ -102,13 +102,13 @@ public func withResumption<Output>(
     line: UInt = #line,
     _ resumingWith: (Resumption<Output>) -> Void
 ) async throws -> Output {
-    try await withUnsafeThrowingContinuation { continuation in
+    try await withUnsafeThrowingContinuation { resumption in
         resumingWith(
             .init(
                 function: function,
                 file: file,
                 line: line,
-                continuation: continuation
+                continuation: resumption
             )
         )
     }

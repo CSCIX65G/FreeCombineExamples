@@ -8,7 +8,7 @@
 extension ConcurrentFunc {
     public static func batch(
         invocations: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation],
-        arg: Arg,
+        arg: Publisher<Arg>.Result,
         channel: Channel<ConcurrentFunc<Arg, Return>.Next>
     ) async -> [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation] {
         var iterator = channel.stream.makeAsyncIterator()

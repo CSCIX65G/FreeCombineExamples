@@ -11,8 +11,8 @@ extension Distributor {
     }
 
     enum ValueAction: Sendable {
-        case asyncValue(Output)
-        case syncValue(Output, Resumption<Void>)
+        case asyncValue(Publisher<Output>.Result)
+        case syncValue(Publisher<Output>.Result, Resumption<Void>)
         case asyncCompletion(Publishers.Completion)
         case syncCompletion(Publishers.Completion, Resumption<Void>)
     }

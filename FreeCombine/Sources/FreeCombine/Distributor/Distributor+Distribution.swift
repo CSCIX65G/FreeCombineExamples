@@ -11,7 +11,7 @@ extension Distributor {
     }
 
     enum DistributionAction: Sendable {
-        case value(Output, Resumption<Void>)
+        case value(Publisher<Output>.Result, Resumption<Void>)
         case subscribe(ConcurrentFunc<Output, Void>.Invocation, Resumption<ObjectIdentifier>)
         case unsubscribe(ObjectIdentifier)
         case finish(Publishers.Completion, Resumption<Void>)
@@ -65,11 +65,13 @@ extension Distributor {
         }
     }
 
-    static func finalize(_ state: Distributor<Output>.DistributionState) {
+    static func finalize(_ state: inout Distributor<Output>.DistributionState) {
         for (_, invocation) in state.invocations {
             switch state.completion {
-                case .finished: invocation.resumption.resume(returning: .completion(.finished))
-                case let .failure(error): invocation.resumption.resume(throwing: error)
+                case .finished:
+                    invocation.resumption.resume(returning: .completion(.finished))
+                case let .failure(error):
+                    invocation.resumption.resume(throwing: error)
                 case .none: ()
             }
         }
@@ -82,7 +84,7 @@ extension Distributor {
             initializer: {_ in .init() },
             reducer: { state, action in try await reduce(action: action, state: &state, returnChannel: returnChannel) },
             disposer: { action, completion in dispose(action) },
-            finalizer: { state, completion in finalize(state) }
+            finalizer: { state, completion in finalize(&state) }
         )
     }
 }
