@@ -83,7 +83,7 @@ public extension Distributor {
                     try await invocation.function.cancellable.value
                 },
                 onCancel: {
-                    try? self.distributionFold.send(.unsubscribe(subscriptionId))
+                    try? self.distributionFold.send(.cancel(subscriptionId))
                 }
             )
         }

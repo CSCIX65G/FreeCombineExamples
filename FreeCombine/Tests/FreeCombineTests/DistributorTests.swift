@@ -124,7 +124,7 @@ final class DistributorTests: XCTestCase {
         for _ in 0 ..< numSubscriptions {
             guard let subscription = (try? await distributor.subscribe { result in
                 switch result {
-                    case .completion(.failure(let error)):
+                    case .completion(.failure(let error)) where !(error is CancellationError):
                         XCTFail("Received failure: \(error)")
                     default:
                         counter.increment()
@@ -153,7 +153,7 @@ final class DistributorTests: XCTestCase {
             _ = await subscriptions[i].result
         }
         let expectedCount = ((numValues + 1) * numSubscriptions)
-        - (numUnsubscriptions * ((numValues + 1) - unsubscribeAfter))
+        - (numUnsubscriptions * (numValues - unsubscribeAfter))
         let count = counter.count
         XCTAssert(counter.count == expectedCount,
                   """
@@ -182,7 +182,7 @@ final class DistributorTests: XCTestCase {
             if UInt8.random(in: 0 ..< 3) == 0 {
                 guard let subscription = (try? await distributor.subscribe { result in
                     switch result {
-                        case .completion(.failure(let error)):
+                        case .completion(.failure(let error)) where !(error is CancellationError):
                             XCTFail("Received failure: \(error)")
                         default:
                             if UInt8.random(in: 0 ..< 5) == 0 { throw RandomError() }

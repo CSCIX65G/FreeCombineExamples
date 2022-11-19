@@ -75,15 +75,15 @@ public extension Publisher {
         line: UInt = #line,
         distributor: Distributor<Output>
     ) {
-        self = .init { resumption, downstream in .init {
-            let inner = try await distributor.subscribe { result in
-                _ = try await downstream(result)
-            }
-            return try await withTaskCancellationHandler(
-                operation: { try await inner.result.get() },
-                onCancel: { try? inner.cancel() }
-            )
-        } }
+        self = .init { resumption, downstream in
+            Cancellable<Cancellable<Void>> {
+                let cancellable = try await distributor.subscribe { result in
+                    _ = try await downstream(result)
+                }
+                resumption.resume()
+                return cancellable
+            }.join()
+        }
     }
 }
 

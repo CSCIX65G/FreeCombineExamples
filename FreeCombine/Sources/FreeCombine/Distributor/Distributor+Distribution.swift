@@ -14,6 +14,7 @@ extension Distributor {
         case value(Publisher<Output>.Result, Resumption<Void>)
         case subscribe(ConcurrentFunc<Output, Void>.Invocation, Resumption<ObjectIdentifier>)
         case unsubscribe(ObjectIdentifier)
+        case cancel(ObjectIdentifier)
         case finish(Publishers.Completion, Resumption<Void>)
     }
 
@@ -44,9 +45,17 @@ extension Distributor {
                 state.invocations[invocation.function.id] = invocation
                 do { try idResumption.tryResume(returning: invocation.function.id) }
                 catch { fatalError("Unhandled subscription resumption") }
+            case let .cancel(streamId):
+                guard let invocation = state.invocations.removeValue(forKey: streamId) else {
+                    return .none
+                }
+                try! invocation.resumption.tryResume(returning: .completion(.failure(CancellationError())))
+                _ = await invocation.function.cancellable.result
             case let .unsubscribe(streamId):
-                guard let invocation = state.invocations.removeValue(forKey: streamId) else { return .none }
-                try! invocation.resumption.tryResume(throwing: CancellationError())
+                guard let invocation = state.invocations.removeValue(forKey: streamId) else {
+                    return .none
+                }
+                try! invocation.resumption.tryResume(returning: .completion(.finished))
                 _ = await invocation.function.cancellable.result
         }
         return .none
@@ -60,6 +69,8 @@ extension Distributor {
                 upstreamResumption.resume()
             case let .subscribe(_, idResumption):
                 idResumption.resume(throwing: CancellationError())
+            case .cancel:
+                ()
             case .unsubscribe:
                 ()
         }

@@ -27,7 +27,7 @@ class SubjectTests: XCTestCase {
 
     override func tearDownWithError() throws { }
 
-    func xtestSimpleCancellation() async throws {
+    func testSimpleCancellation() async throws {
         let counter = Counter()
         let expectation = await Promise<Void>()
         let expectation3 = await Promise<Void>()
@@ -40,7 +40,6 @@ class SubjectTests: XCTestCase {
             switch result {
                 case let .value(value):
                     let count = counter.increment()
-                    print(count)
                     XCTAssertEqual(value, count, "Wrong value sent")
                     if count == 8 {
                         do { try expectation.succeed() }
@@ -109,7 +108,7 @@ class SubjectTests: XCTestCase {
         _ = await subject.result
     }
 
-    func xtestSimpleTermination() async throws {
+    func testSimpleTermination() async throws {
         let counter = Counter()
         let expectation = await Promise<Void>()
 
@@ -149,7 +148,7 @@ class SubjectTests: XCTestCase {
         _ = await subject.result
     }
 
-    func xtestSimpleSubjectSend() async throws {
+    func testSimpleSubjectSend() async throws {
         let counter = Counter()
         let expectation = await Promise<Void>()
 
@@ -189,7 +188,7 @@ class SubjectTests: XCTestCase {
         _ = await subject.result
     }
 
-    func xtestSyncAsync() async throws {
+    func testSyncAsync() async throws {
         let expectation = await Promise<Void>()
         let fsubject1 = try await PassthroughSubject(Int.self)
         let fsubject2 = try await PassthroughSubject(String.self)
@@ -240,6 +239,7 @@ class SubjectTests: XCTestCase {
         _ = await fsubject2.result
 
     }
+
 //    func testSimpleSubject() async throws {
 //        let expectation = await Promise<Void>()
 //
@@ -294,7 +294,7 @@ class SubjectTests: XCTestCase {
 //
 //        _ = await c1.result
 //    }
-//
+
 //    func testMultisubscriptionSubject() async throws {
 //        let expectation1 = await Promise<Void>()
 //        let expectation2 = await Promise<Void>()

@@ -40,7 +40,13 @@ public extension Cancellable {
                 try? inner.cancel()
                 throw CancellationError()
             }
-            let value = try await inner.value
+            let value = try await withTaskCancellationHandler(
+                operation: {try await inner.value },
+                onCancel: {
+                    try? inner.cancel()
+                }
+            )
+
             return value
         }
     }
