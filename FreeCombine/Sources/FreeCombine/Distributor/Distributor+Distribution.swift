@@ -7,6 +7,7 @@
 extension Distributor {
     public struct DistributionState {
         var completion: Publishers.Completion? = .none
+        var currentValue: Output? = .none
         var invocations: [ObjectIdentifier : ConcurrentFunc<Output, Void>.Invocation] = [:]
     }
 
@@ -32,6 +33,9 @@ extension Distributor {
                     case let .failure(error): throw error
                 }
             case let .value(value, upstreamResumption):
+                if case let .value(output) = value, state.currentValue != nil {
+                    state.currentValue = output
+                }
                 state.invocations = await ConcurrentFunc.batch(
                     invocations: state.invocations,
                     arg: value,
@@ -39,12 +43,24 @@ extension Distributor {
                 )
                 upstreamResumption.resume()
             case let .subscribe(invocation, idResumption):
+                var inv = invocation
                 guard state.invocations[invocation.function.id] == nil else {
                     fatalError("duplicate key: \(invocation.function.id)")
                 }
-                state.invocations[invocation.function.id] = invocation
+                if let currentValue = state.currentValue {
+                    invocation.resumption.resume(returning: .value(currentValue))
+                    var it = returnChannel.stream.makeAsyncIterator()
+                    guard let next = await it.next() else {
+                        fatalError("premature stream termination")
+                    }
+                    switch next.result {
+                        case let .failure(error): try! idResumption.tryResume(throwing: error)
+                        default: inv = next.invocation
+                    }
+                }
+                state.invocations[invocation.function.id] = inv
                 do { try idResumption.tryResume(returning: invocation.function.id) }
-                catch { fatalError("Unhandled subscription resumption") }
+                catch { fatalError("Unhandled subscription resumption error") }
             case let .cancel(streamId):
                 guard let invocation = state.invocations.removeValue(forKey: streamId) else {
                     return .none
@@ -89,10 +105,11 @@ extension Distributor {
     }
 
     static func distributionFolder(
+        currentValue: Output? = .none,
         returnChannel: Channel<ConcurrentFunc<Output, Void>.Next>
     ) -> AsyncFolder<DistributionState, DistributionAction> {
         .init(
-            initializer: {_ in .init() },
+            initializer: {_ in .init(currentValue: currentValue) },
             reducer: { state, action in try await reduce(action: action, state: &state, returnChannel: returnChannel) },
             disposer: { action, completion in dispose(action) },
             finalizer: { state, completion in finalize(&state) }

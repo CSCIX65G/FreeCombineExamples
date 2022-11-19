@@ -33,12 +33,8 @@ final class DistributorTests: XCTestCase {
         _ = try await distributor.finish()
 
         let subscriptionResult = await subscription.result
-        guard case let .failure(error) = subscriptionResult else {
-            XCTFail("Should have received error")
-            return
-        }
-        guard let _ = error as? CompletionError else {
-            XCTFail("received incorrect error: \(error)")
+        guard case .success = subscriptionResult else {
+            XCTFail("Should not have received failure: \(subscriptionResult)")
             return
         }
     }

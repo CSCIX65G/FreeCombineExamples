@@ -28,12 +28,13 @@ public final class Subject<Output: Sendable> {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1)
+        buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1),
+        initialValue: Output? = .none
     ) async throws {
         self.function = function
         self.file = file
         self.line = line
-        distributor = .init(buffering: buffering)
+        distributor = .init(buffering: buffering, initialValue: initialValue)
     }
 }
 
@@ -56,6 +57,10 @@ public extension Subject {
 
     func finish(_ completion: Publishers.Completion = .finished) async throws {
         try await distributor.finish(completion)
+    }
+
+    var value: Void {
+        get async throws { _ = try await distributor.result.get() }
     }
 
     var result: Result<Void, Swift.Error> {

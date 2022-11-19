@@ -17,7 +17,8 @@ public final class Distributor<Output: Sendable> {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1)
+        buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1),
+        initialValue: Output? = .none
     ) {
         self.function = function
         self.file = file
@@ -30,7 +31,7 @@ public final class Distributor<Output: Sendable> {
                 function: function,
                 file: file,
                 line: line,
-                into: Self.distributionFolder(returnChannel: returnChannel)
+                into: Self.distributionFolder(currentValue: initialValue, returnChannel: returnChannel)
             )
         
         valueFold = Channel<ValueAction>.init(buffering: buffering)
@@ -80,7 +81,12 @@ public extension Distributor {
         return .init(function: function, file: file, line: line) {
             try await withTaskCancellationHandler(
                 operation: {
-                    try await invocation.function.cancellable.value
+                    switch await invocation.function.cancellable.result {
+                        case let .failure(error) where !(error is CompletionError):
+                            throw error
+                        default:
+                            return
+                    }
                 },
                 onCancel: {
                     try? self.distributionFold.send(.cancel(subscriptionId))
