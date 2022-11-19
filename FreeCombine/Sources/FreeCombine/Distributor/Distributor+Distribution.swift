@@ -38,7 +38,7 @@ extension Distributor {
                 }
                 state.invocations = await ConcurrentFunc.batch(
                     invocations: state.invocations,
-                    arg: value,
+                    resultArg: value,
                     channel: returnChannel
                 )
                 upstreamResumption.resume()

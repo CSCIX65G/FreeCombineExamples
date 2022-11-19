@@ -8,7 +8,7 @@ public final class ConcurrentFunc<
     Arg: Sendable,
     Return: Sendable
 >: Identifiable, @unchecked Sendable {
-    private let originatingFunction: StaticString
+    private let function: StaticString
     private let file: StaticString
     private let line: UInt
 
@@ -46,40 +46,40 @@ public final class ConcurrentFunc<
     }
 
     init(
-        originatingFunction: StaticString = #function,
+        function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
         resumption: UnfailingResumption<Resumption<Publisher<Arg>.Result>>,
-        function: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return,
+        asyncFunction: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return,
         returnChannel: Channel<Next>
     ) {
-        self.originatingFunction = originatingFunction
+        self.function = function
         self.file = file
         self.line = line
 
-        self.asyncFunction = function
+        self.asyncFunction = asyncFunction
         self.cancellable = .init {
             var arg = try await withResumption(resumption.resume)
-            return try await Self.invoke(me: self, asyncFunction: function, arg: &arg, returnChannel: returnChannel)
+            return try await Self.invoke(me: self, asyncFunction: asyncFunction, arg: &arg, returnChannel: returnChannel)
         }
     }
 
     init(
-        originatingFunction: StaticString = #function,
+        function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        function: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return,
+        asyncFunction: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return,
         arg invocationArg: Arg,
         returnChannel: Channel<Next>
     ) {
-        self.originatingFunction = originatingFunction
+        self.function = function
         self.file = file
         self.line = line
 
-        self.asyncFunction = function
+        self.asyncFunction = asyncFunction
         self.cancellable = .init {
             var arg = Publisher<Arg>.Result.value(invocationArg)
-            return try await Self.invoke(me: self, asyncFunction: function, arg: &arg, returnChannel: returnChannel)
+            return try await Self.invoke(me: self, asyncFunction: asyncFunction, arg: &arg, returnChannel: returnChannel)
         }
     }
 }
@@ -104,11 +104,11 @@ public extension ConcurrentFunc {
             var function: ConcurrentFunc<Arg, Return>!
             let resumption = await withUnfailingResumption(function: originatingFunction, file: file, line: line) { startup in
                 function = .init(
-                    originatingFunction: originatingFunction,
+                    function: originatingFunction,
                     file: file,
                     line: line,
                     resumption: startup,
-                    function: dispatch,
+                    asyncFunction: dispatch,
                     returnChannel: returnChannel
                 )
             }
@@ -121,8 +121,8 @@ public extension ConcurrentFunc {
         public func callAsFunction(completion: Publishers.Completion) -> Void {
             resumption.resume(returning: .completion(completion))
         }
-        public func callAsFunction(_ result: Publisher<Arg>.Result) -> Void {
-            resumption.resume(returning: result)
+        public func callAsFunction(resultArg: Publisher<Arg>.Result) -> Void {
+            resumption.resume(returning: resultArg)
         }
     }
 

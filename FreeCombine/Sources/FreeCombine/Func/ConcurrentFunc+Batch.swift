@@ -8,12 +8,12 @@
 extension ConcurrentFunc {
     public static func batch(
         invocations: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation],
-        arg: Publisher<Arg>.Result,
+        resultArg: Publisher<Arg>.Result,
         channel: Channel<ConcurrentFunc<Arg, Return>.Next>
     ) async -> [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation] {
         var iterator = channel.stream.makeAsyncIterator()
         var folded: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation] = [:]
-        invocations.forEach { _, invocation in invocation(arg) }
+        invocations.forEach { _, invocation in invocation(resultArg: resultArg) }
         for _ in 0 ..< invocations.count {
             guard let next = await iterator.next() else { fatalError("Invalid stream") }
             guard let invocation = invocations[next.id] else { fatalError("Lost concurrent function") }
