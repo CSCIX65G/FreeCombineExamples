@@ -129,5 +129,7 @@ final class AndTests: XCTestCase {
         try promise8.succeed("p")
 
         _ = await cancellation.result
+        do { try await expectation.value }
+        catch { XCTFail("Should not have received: \(error)") }
     }
 }
