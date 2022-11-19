@@ -44,8 +44,8 @@ extension Distributor {
                 upstreamResumption.resume()
             case let .subscribe(invocation, idResumption):
                 var inv = invocation
-                guard state.invocations[invocation.function.id] == nil else {
-                    fatalError("duplicate key: \(invocation.function.id)")
+                guard state.invocations[invocation.dispatch.id] == nil else {
+                    fatalError("duplicate key: \(invocation.dispatch.id)")
                 }
                 if let currentValue = state.currentValue {
                     invocation.resumption.resume(returning: .value(currentValue))
@@ -58,21 +58,21 @@ extension Distributor {
                         default: inv = next.invocation
                     }
                 }
-                state.invocations[invocation.function.id] = inv
-                do { try idResumption.tryResume(returning: invocation.function.id) }
+                state.invocations[invocation.dispatch.id] = inv
+                do { try idResumption.tryResume(returning: invocation.dispatch.id) }
                 catch { fatalError("Unhandled subscription resumption error") }
             case let .cancel(streamId):
                 guard let invocation = state.invocations.removeValue(forKey: streamId) else {
                     return .none
                 }
                 try! invocation.resumption.tryResume(returning: .completion(.failure(CancellationError())))
-                _ = await invocation.function.cancellable.result
+                _ = await invocation.dispatch.cancellable.result
             case let .unsubscribe(streamId):
                 guard let invocation = state.invocations.removeValue(forKey: streamId) else {
                     return .none
                 }
                 try! invocation.resumption.tryResume(returning: .completion(.finished))
-                _ = await invocation.function.cancellable.result
+                _ = await invocation.dispatch.cancellable.result
         }
         return .none
     }

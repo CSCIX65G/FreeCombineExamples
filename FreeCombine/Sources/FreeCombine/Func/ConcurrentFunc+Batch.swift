@@ -20,7 +20,7 @@ extension ConcurrentFunc {
             switch next.result {
                 case let .failure(error):
                     next.invocation.resumption.resume(throwing: error)
-                    _ = await invocation.function.cancellable.result
+                    _ = await invocation.dispatch.cancellable.result
                     continue
                 case .success:
                     folded[next.id] = next.invocation

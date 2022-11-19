@@ -81,7 +81,7 @@ public extension Distributor {
         return .init(function: function, file: file, line: line) {
             try await withTaskCancellationHandler(
                 operation: {
-                    switch await invocation.function.cancellable.result {
+                    switch await invocation.dispatch.cancellable.result {
                         case let .failure(error) where !(error is CompletionError):
                             throw error
                         default:

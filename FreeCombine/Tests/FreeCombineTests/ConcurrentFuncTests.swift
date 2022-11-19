@@ -8,10 +8,9 @@
 import XCTest
 @testable import FreeCombine
 
-final class RepeaterTests: XCTestCase {
-    typealias ID = Int
-    typealias Arg = Int
-    typealias Return = String
+final class ConcurrentFuncTests: XCTestCase {
+    typealias TestArg = Int
+    typealias TestReturn = String
 
     override func setUpWithError() throws { }
 
@@ -22,7 +21,7 @@ final class RepeaterTests: XCTestCase {
         case failure(Error)
     }
 
-    @Sendable func dispatch(_ result: Publisher<Int>.Result) async throws -> String {
+    @Sendable func dispatch(_ result: Publisher<TestArg>.Result) async throws -> TestReturn {
         switch result {
             case let .value(value):
                 return .init(value)
@@ -33,10 +32,39 @@ final class RepeaterTests: XCTestCase {
         }
     }
 
-    func testSimpleRepeater() async throws {
-        let returnChannel = Channel<ConcurrentFunc<Arg, Return>.Next>.init(buffering: .bufferingOldest(1))
+    func testSimpleConcurrentFunc() async throws {
+        let returnChannel = Channel<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(1))
 
-        let first = await ConcurrentFunc<Arg, Return>.Invocation(
+        let f = await ConcurrentFunc<TestArg, TestReturn>.Invocation(
+            dispatch: self.dispatch,
+            returnChannel: returnChannel
+        )
+        let cancellable = Cancellable<Void> {
+            var iterator = returnChannel.stream.makeAsyncIterator()
+            f.resumption.resume(returning: .value(14))
+            guard let next = await iterator.next() else {
+                XCTFail("No result")
+                return
+            }
+            switch next.result {
+                case let .success(value): XCTAssert(value == "14", "Incorrect value: \(value)")
+                case let .failure(error): XCTFail("Received error: \(error)")
+            }
+            next.invocation.resumption.resume(returning: .completion(.finished))
+            returnChannel.finish()
+            guard await iterator.next() == nil else {
+                XCTFail("did not complete")
+                return
+            }
+        }
+
+        _ = await cancellable.result
+    }
+
+    func testSimpleRepeater() async throws {
+        let returnChannel = Channel<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(1))
+
+        let first = await ConcurrentFunc<TestArg, TestReturn>.Invocation(
             dispatch: self.dispatch,
             returnChannel: returnChannel
         )
@@ -60,21 +88,24 @@ final class RepeaterTests: XCTestCase {
             return
         }
         _ = await cancellable.result
-        _ = await first.function.cancellable.result
+        _ = await first.dispatch.cancellable.result
     }
 
     func testMultipleRepeaters() async throws {
         let numRepeaters = 100, numValues = 100
-        let returnChannel = Channel<ConcurrentFunc<Arg, Return>.Next>.init(buffering: .bufferingOldest(numRepeaters))
+        let returnChannel = Channel<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(numRepeaters))
         let cancellable: Cancellable<Void> = .init {
             var iterator = returnChannel.stream.makeAsyncIterator()
-            var functions: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Invocation] = [:]
+            var functions: [ObjectIdentifier: ConcurrentFunc<TestArg, TestReturn>.Invocation] = [:]
             for _ in 0 ..< numRepeaters {
                 let first = await ConcurrentFunc.Invocation(
                     dispatch: self.dispatch,
                     returnChannel: returnChannel
                 )
-                functions[first.function.id] = .init(function: first.function, resumption: first.resumption)
+                functions[first.dispatch.id] = .init(
+                    function: first.dispatch,
+                    resumption: first.resumption
+                )
             }
             for i in 0 ..< numValues {
                 // Send the values
@@ -95,7 +126,7 @@ final class RepeaterTests: XCTestCase {
                         XCTFail("Incorrect value")
                         return
                     }
-                    guard let function = functions[next.id]?.function else {
+                    guard let function = functions[next.id]?.dispatch else {
                         XCTFail("Lost function")
                         return
                     }
@@ -105,7 +136,7 @@ final class RepeaterTests: XCTestCase {
             // Close everything
             for (_, invocation) in functions {
                 invocation.resumption.resume(throwing: CancellationError())
-                _ = await invocation.function.cancellable.result
+                _ = await invocation.dispatch.cancellable.result
             }
         }
         _ = await cancellable.result

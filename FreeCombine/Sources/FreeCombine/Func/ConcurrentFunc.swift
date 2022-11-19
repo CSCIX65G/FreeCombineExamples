@@ -17,35 +17,7 @@ public final class ConcurrentFunc<
 
     public var id: ObjectIdentifier { .init(self) }
 
-    private static func invoke(
-        me: ConcurrentFunc<Arg, Return>,
-        asyncFunction: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return,
-        arg: inout Publisher<Arg>.Result,
-        returnChannel: Channel<Next>
-    ) async throws -> Return {
-        var result = Result<Return, Swift.Error>.failure(InvocationError())
-        while true {
-            result = await Result { try await asyncFunction(arg) }
-            switch arg {
-                case .completion(.finished):
-                    throw CompletionError(completion: .finished)
-                case let .completion(.failure(error)):
-                    throw error
-                case .value:
-                    arg = try await withResumption { resumption in
-                        do {
-                            try returnChannel.tryYield(.init(
-                                result: result, invocation: .init(function: me, resumption: resumption)
-                            ))
-                        }
-                        catch { resumption.resume(throwing: BufferError()) }
-                    }
-            }
-        }
-        return try result.get()
-    }
-
-    init(
+    private init(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
@@ -60,37 +32,36 @@ public final class ConcurrentFunc<
         self.asyncFunction = asyncFunction
         self.cancellable = .init {
             var arg = try await withResumption(resumption.resume)
-            return try await Self.invoke(me: self, asyncFunction: asyncFunction, arg: &arg, returnChannel: returnChannel)
-        }
-    }
-
-    init(
-        function: StaticString = #function,
-        file: StaticString = #file,
-        line: UInt = #line,
-        asyncFunction: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return,
-        arg invocationArg: Arg,
-        returnChannel: Channel<Next>
-    ) {
-        self.function = function
-        self.file = file
-        self.line = line
-
-        self.asyncFunction = asyncFunction
-        self.cancellable = .init {
-            var arg = Publisher<Arg>.Result.value(invocationArg)
-            return try await Self.invoke(me: self, asyncFunction: asyncFunction, arg: &arg, returnChannel: returnChannel)
+            var result = Result<Return, Swift.Error>.failure(InvocationError())
+            while true {
+                result = await Result { try await asyncFunction(arg) }
+                switch arg {
+                    case .completion(.finished):
+                        throw CompletionError(completion: .finished)
+                    case let .completion(.failure(error)):
+                        throw error
+                    case .value:
+                        arg = try await withResumption { resumption in
+                            do { try returnChannel.tryYield(Next(
+                                result: result,
+                                invocation: .init(function: self, resumption: resumption)
+                            ) ) }
+                            catch { resumption.resume(throwing: BufferError()) }
+                        }
+                }
+            }
+            return try result.get()
         }
     }
 }
 
 public extension ConcurrentFunc {
     struct Invocation: Sendable {
-        let function: ConcurrentFunc<Arg, Return>
+        let dispatch: ConcurrentFunc<Arg, Return>
         let resumption: Resumption<Publisher<Arg>.Result>
 
-        public init(function: ConcurrentFunc<Arg, Return>, resumption: Resumption<Publisher<Arg>.Result>) {
-            self.function = function
+        init(function: ConcurrentFunc<Arg, Return>, resumption: Resumption<Publisher<Arg>.Result>) {
+            self.dispatch = function
             self.resumption = resumption
         }
 
@@ -127,9 +98,9 @@ public extension ConcurrentFunc {
     }
 
     struct Next: Sendable {
+        public var id: ObjectIdentifier { invocation.dispatch.id }
         public let result: Result<Return, Swift.Error>
         public let invocation: Invocation
-        public var id: ObjectIdentifier { invocation.function.id }
     }
 }
 
