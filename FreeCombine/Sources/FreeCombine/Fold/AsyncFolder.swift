@@ -18,22 +18,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-public enum AsyncFolders {
-    public enum Completion {
-        case failure(Swift.Error)
-        case finished
-    }
-
-    public enum Error: Swift.Error {
-        case finished
-        case internalError
-    }
-}
-
 public struct AsyncFolder<State, Action> {
-    public typealias Completion = AsyncFolders.Completion
-    public typealias Error = AsyncFolders.Error
-    
+    public typealias Completion = Publishers.Completion
+
     let initializer: (Channel<Action>) async -> State
     let reducer: (inout State, Action) async throws -> Effect
     let emitter: (inout State) async throws -> Void
@@ -96,7 +83,7 @@ extension AsyncFolder {
             case .completion(let .failure(error)):
                 throw error
             case .completion(.finished):
-                throw Error.finished
+                throw FinishedError()
             case .publish:
                 ()
         }
@@ -115,7 +102,7 @@ extension AsyncFolder {
         channel.finish()
         for await action in channel.stream {
             switch error {
-                case Error.finished:
+                case is FinishedError:
                     await self(action, .finished); continue
                 case is CancellationError:
                     await self(action, .failure(error)); continue
@@ -129,8 +116,8 @@ extension AsyncFolder {
         state: inout State,
         error: Swift.Error
     ) async -> Void {
-        switch error as? Error {
-            case .finished:
+        switch error {
+            case is FinishedError:
                 await self(&state, .finished)
             default:
                 await self(&state, .failure(error))

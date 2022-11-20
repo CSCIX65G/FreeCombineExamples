@@ -24,7 +24,7 @@ public struct Merge<Value> {
         let downstream: @Sendable (Publisher<Value>.Result) async throws -> Void
 
         mutating func cancel(_ id: Int) throws -> Void {
-            guard let can = cancellables[id] else { throw AsyncFolders.Error.internalError }
+            guard let can = cancellables[id] else { throw InternalError() }
             cancellables[id] = .none
             try can.cancel()
             cancellables.removeValue(forKey: id)
@@ -145,7 +145,7 @@ public struct Merge<Value> {
                 }
                 .get()
                 if case .finished = state.current {
-                    throw AsyncFolder<State, Action>.Error.finished
+                    throw FinishedError()
                 }
             default:
                 ()
@@ -185,10 +185,12 @@ public struct Merge<Value> {
         switch completion {
             case .finished:
                 _ = try? await state.downstream(.completion(.finished))
-                resumption?.resume(throwing: Publishers.Error.done)
+                do { try resumption?.tryResume(throwing: Publishers.Error.done) }
+                catch { fatalError("Failed resumption") }
             case let .failure(error):
                 _ = try? await state.downstream(.completion(.failure(error)))
-                resumption?.resume(throwing: error)
+                do { try resumption?.tryResume(throwing: error) }
+                catch { fatalError("Failed resumption with error: \(error)") }
         }
         state.current = .nothing
     }

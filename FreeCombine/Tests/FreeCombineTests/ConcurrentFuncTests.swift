@@ -35,7 +35,7 @@ final class ConcurrentFuncTests: XCTestCase {
     func testSimpleConcurrentFunc() async throws {
         let returnChannel = Channel<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(1))
 
-        let f = await ConcurrentFunc<TestArg, TestReturn>.Invocation(
+        let f = await ConcurrentFunc<TestArg, TestReturn>(
             dispatch: self.dispatch,
             returnChannel: returnChannel
         )
@@ -64,7 +64,7 @@ final class ConcurrentFuncTests: XCTestCase {
     func testSimpleRepeater() async throws {
         let returnChannel = Channel<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(1))
 
-        let first = await ConcurrentFunc<TestArg, TestReturn>.Invocation(
+        let first = await ConcurrentFunc<TestArg, TestReturn>(
             dispatch: self.dispatch,
             returnChannel: returnChannel
         )
@@ -96,9 +96,9 @@ final class ConcurrentFuncTests: XCTestCase {
         let returnChannel = Channel<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(numRepeaters))
         let cancellable: Cancellable<Void> = .init {
             var iterator = returnChannel.stream.makeAsyncIterator()
-            var functions: [ObjectIdentifier: ConcurrentFunc<TestArg, TestReturn>.Invocation] = [:]
+            var functions: [ObjectIdentifier: ConcurrentFunc<TestArg, TestReturn>] = [:]
             for _ in 0 ..< numRepeaters {
-                let first = await ConcurrentFunc.Invocation(
+                let first = await ConcurrentFunc(
                     dispatch: self.dispatch,
                     returnChannel: returnChannel
                 )

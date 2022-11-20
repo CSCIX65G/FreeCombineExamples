@@ -8,12 +8,12 @@ extension Distributor {
     public struct DistributionState {
         var completion: Publishers.Completion? = .none
         var currentValue: Output? = .none
-        var invocations: [ObjectIdentifier : ConcurrentFunc<Output, Void>.Invocation] = [:]
+        var invocations: [ObjectIdentifier : ConcurrentFunc<Output, Void>] = [:]
     }
 
     enum DistributionAction: Sendable {
         case value(Publisher<Output>.Result, Resumption<Void>)
-        case subscribe(ConcurrentFunc<Output, Void>.Invocation, Resumption<ObjectIdentifier>)
+        case subscribe(ConcurrentFunc<Output, Void>, Resumption<ObjectIdentifier>)
         case unsubscribe(ObjectIdentifier)
         case cancel(ObjectIdentifier)
         case finish(Publishers.Completion, Resumption<Void>)
@@ -28,16 +28,13 @@ extension Distributor {
             case let .finish(completion, resumption):
                 state.completion = completion
                 resumption.resume()
-                switch completion {
-                    case .finished: throw AsyncFolder<DistributionState, DistributionAction>.Error.finished
-                    case let .failure(error): throw error
-                }
+                throw completion.error
             case let .value(value, upstreamResumption):
                 if case let .value(output) = value, state.currentValue != nil {
                     state.currentValue = output
                 }
                 state.invocations = await ConcurrentFunc.batch(
-                    invocations: state.invocations,
+                    downstreams: state.invocations,
                     resultArg: value,
                     channel: returnChannel
                 )
@@ -58,15 +55,15 @@ extension Distributor {
                         default: inv = next.invocation
                     }
                 }
-                state.invocations[invocation.dispatch.id] = inv
-                do { try idResumption.tryResume(returning: invocation.dispatch.id) }
+                state.invocations[invocation.id] = inv
+                do { try idResumption.tryResume(returning: invocation.id) }
                 catch { fatalError("Unhandled subscription resumption error") }
             case let .cancel(streamId):
                 guard let invocation = state.invocations.removeValue(forKey: streamId) else {
                     return .none
                 }
-                try! invocation.resumption.tryResume(returning: .completion(.failure(CancellationError())))
-                _ = await invocation.dispatch.cancellable.result
+                try! invocation(completion: .failure(CancellationError()))
+                _ = await invocation.result
             case let .unsubscribe(streamId):
                 guard let invocation = state.invocations.removeValue(forKey: streamId) else {
                     return .none

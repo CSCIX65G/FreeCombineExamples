@@ -62,8 +62,8 @@ public extension Distributor {
         line: UInt = #line,
         operation: @escaping @Sendable (Publisher<Output>.Result) async throws -> Void
     ) async throws -> Cancellable<Void> {
-        let invocation: ConcurrentFunc<Output, Void>.Invocation = await .init(
-            originatingFunction: function,
+        let invocation: ConcurrentFunc<Output, Void> = await .init(
+            function: function,
             file: file,
             line: line,
             dispatch: operation,
@@ -102,7 +102,7 @@ public extension Distributor {
     func send(_ value: Output) async throws {
         try await withResumption { resumption in
             do { try valueFold.send(.syncValue(.value(value), resumption)) }
-            catch { resumption.resume(throwing: BufferError()) }
+            catch { resumption.resume(throwing: StreamEnqueueError()) }
         }
     }
 

@@ -18,8 +18,6 @@
 //  limitations under the License.
 //
 public final class AsyncFold<State, Action: Sendable> {
-    public typealias Error = AsyncFolders.Error
-
     private let function: StaticString
     private let file: StaticString
     private let line: UInt

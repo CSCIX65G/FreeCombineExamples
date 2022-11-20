@@ -22,13 +22,13 @@ public struct Zip<Left, Right> {
         let downstream: @Sendable (Publisher<(Left, Right)>.Result) async throws -> Void
 
         mutating func cancelLeft() throws -> Void {
-            guard let can = leftCancellable else { throw AsyncFolders.Error.internalError }
+            guard let can = leftCancellable else { throw InternalError() }
             leftCancellable = .none
             try can.cancel()
         }
 
         mutating func cancelRight() throws -> Void {
-            guard let can = rightCancellable else { throw AsyncFolders.Error.internalError }
+            guard let can = rightCancellable else { throw InternalError() }
             rightCancellable = .none
             try can.cancel()
         }
@@ -171,7 +171,7 @@ public struct Zip<Left, Right> {
                         return $0
                     }
                 state.current = try r.get()
-                if case .finished = state.current { throw AsyncFolder<State, Action>.Error.finished }
+                if case .finished = state.current { throw FinishedError() }
             case .nothing, .hasLeft, .hasRight,.finished, .errored:
                 ()
         }

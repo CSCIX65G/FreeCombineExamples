@@ -5,9 +5,66 @@
 //  Created by Van Simmons on 10/19/22.
 //
 
-public enum ConcurrentFunc<Arg: Sendable, Return: Sendable> { }
+public struct ConcurrentFunc<Arg, Return>: @unchecked Sendable, Identifiable {
+    public let id: ObjectIdentifier
+    let dispatch: ConcurrentFunc<Arg, Return>.Dispatch
+    let resumption: Resumption<Publisher<Arg>.Result>
 
-public extension ConcurrentFunc {
+    init(dispatch: ConcurrentFunc<Arg, Return>.Dispatch, resumption: Resumption<Publisher<Arg>.Result>) {
+        self.id = .init(dispatch)
+        self.dispatch = dispatch
+        self.resumption = resumption
+    }
+
+    public init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        dispatch: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return,
+        returnChannel: Channel<Next>
+    ) async {
+        var localDispatch: ConcurrentFunc<Arg, Return>.Dispatch!
+        let resumption = await withUnfailingResumption(function: function, file: file, line: line) { startup in
+            localDispatch = .init(
+                function: function,
+                file: file,
+                line: line,
+                resumption: startup,
+                asyncFunction: dispatch,
+                returnChannel: returnChannel
+            )
+        }
+        self.init(dispatch: localDispatch, resumption: resumption)
+    }
+
+    var result: Result<Return, Swift.Error> {
+        get async { await dispatch.result }
+    }
+    var value: Return {
+        get async throws { try await dispatch.value }
+    }
+
+    public func callAsFunction(arg: Arg) throws -> Void {
+        try resumption.tryResume(returning: .value(arg))
+    }
+    public func callAsFunction(error: Swift.Error) throws -> Void {
+        try resumption.tryResume(returning: .completion(.failure(error)))
+    }
+    public func callAsFunction(completion: Publishers.Completion) throws -> Void {
+        try resumption.tryResume(returning: .completion(completion))
+    }
+    public func callAsFunction(_ resultArg: Publisher<Arg>.Result) throws -> Void {
+        try resumption.tryResume(returning: resultArg)
+    }
+}
+
+public extension ConcurrentFunc where Arg == Void {
+    func callAsFunction() -> Void {
+        resumption.resume(returning: .value(()))
+    }
+}
+
+extension ConcurrentFunc {
     final class Dispatch: Identifiable, @unchecked Sendable {
         private let function: StaticString
         private let file: StaticString
@@ -41,73 +98,41 @@ public extension ConcurrentFunc {
                             throw error
                         case .value:
                             arg = try await withResumption { resumption in
-                                do { try returnChannel.tryYield(Next(
-                                    result: result,
-                                    invocation: .init(dispatch: self, resumption: resumption)
-                                ) ) }
-                                catch { resumption.resume(throwing: BufferError()) }
+                                do { try returnChannel.tryYield(
+                                    Next(result: result, invocation: .init(dispatch: self, resumption: resumption))
+                                ) }
+                                catch {
+                                    resumption.resume(throwing: StreamEnqueueError())
+                                }
                             }
                     }
                 }
                 return try result.get()
             }
         }
+        var result: Result<Return, Swift.Error> {
+            get async { await cancellable.result }
+        }
+        var value: Return {
+            get async throws { try await cancellable.value }
+        }
     }
 }
 
 public extension ConcurrentFunc {
-    struct Invocation: Sendable {
-        let dispatch: ConcurrentFunc<Arg, Return>.Dispatch
-        let resumption: Resumption<Publisher<Arg>.Result>
-        public let id: ObjectIdentifier
-
-        init(dispatch: ConcurrentFunc<Arg, Return>.Dispatch, resumption: Resumption<Publisher<Arg>.Result>) {
-            self.dispatch = dispatch
-            self.resumption = resumption
-            self.id = .init(dispatch)
-        }
-
-        public init(
-            originatingFunction: StaticString = #function,
-            file: StaticString = #file,
-            line: UInt = #line,
-            dispatch: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return,
-            returnChannel: Channel<Next>
-        ) async {
-            var localDispatch: ConcurrentFunc<Arg, Return>.Dispatch!
-            let resumption = await withUnfailingResumption(function: originatingFunction, file: file, line: line) { startup in
-                localDispatch = .init(
-                    function: originatingFunction,
-                    file: file,
-                    line: line,
-                    resumption: startup,
-                    asyncFunction: dispatch,
-                    returnChannel: returnChannel
-                )
-            }
-            self.init(dispatch: localDispatch, resumption: resumption)
-        }
-
-        public func callAsFunction(_ arg: Arg) -> Void {
-            resumption.resume(returning: .value(arg))
-        }
-        public func callAsFunction(completion: Publishers.Completion) -> Void {
-            resumption.resume(returning: .completion(completion))
-        }
-        public func callAsFunction(resultArg: Publisher<Arg>.Result) -> Void {
-            resumption.resume(returning: resultArg)
-        }
-    }
-
-    struct Next: Sendable {
+    struct Next: @unchecked Sendable {
         public var id: ObjectIdentifier { invocation.dispatch.id }
         public let result: Result<Return, Swift.Error>
-        public let invocation: Invocation
-    }
-}
+        public let invocation: ConcurrentFunc<Arg, Return>
 
-public extension ConcurrentFunc.Invocation where Arg == Void {
-    func callAsFunction() -> Void {
-        resumption.resume(returning: .value(()))
+        public func callAsFunction(arg: Arg) throws -> Void {
+            try invocation(arg: arg)
+        }
+        public func callAsFunction(completion: Publishers.Completion) throws -> Void {
+            try invocation(completion: completion)
+        }
+        public func callAsFunction(_ resultArg: Publisher<Arg>.Result) throws -> Void {
+            try invocation(resultArg)
+        }
     }
 }
