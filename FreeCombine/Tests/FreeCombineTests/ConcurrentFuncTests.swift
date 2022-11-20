@@ -103,7 +103,7 @@ final class ConcurrentFuncTests: XCTestCase {
                     returnChannel: returnChannel
                 )
                 functions[first.dispatch.id] = .init(
-                    function: first.dispatch,
+                    dispatch: first.dispatch,
                     resumption: first.resumption
                 )
             }
@@ -130,7 +130,7 @@ final class ConcurrentFuncTests: XCTestCase {
                         XCTFail("Lost function")
                         return
                     }
-                    functions[next.id] = .init(function: function, resumption: next.invocation.resumption)
+                    functions[next.id] = .init(dispatch: function, resumption: next.invocation.resumption)
                 }
             }
             // Close everything
