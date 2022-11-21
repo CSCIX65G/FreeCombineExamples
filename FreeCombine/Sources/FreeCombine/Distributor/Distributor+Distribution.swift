@@ -38,6 +38,7 @@ extension Distributor {
                     resultArg: value,
                     channel: returnChannel
                 )
+//                .successes.mapValues(\.invocation)
                 upstreamResumption.resume()
             case let .subscribe(invocation, idResumption):
                 var inv = invocation

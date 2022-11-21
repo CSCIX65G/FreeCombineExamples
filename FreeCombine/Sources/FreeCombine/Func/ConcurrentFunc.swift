@@ -10,7 +10,10 @@ public struct ConcurrentFunc<Arg, Return>: @unchecked Sendable, Identifiable {
     let dispatch: ConcurrentFunc<Arg, Return>.Dispatch
     let resumption: Resumption<Publisher<Arg>.Result>
 
-    init(dispatch: ConcurrentFunc<Arg, Return>.Dispatch, resumption: Resumption<Publisher<Arg>.Result>) {
+    init(
+        dispatch: ConcurrentFunc<Arg, Return>.Dispatch,
+        resumption: Resumption<Publisher<Arg>.Result>
+    ) {
         self.id = .init(dispatch)
         self.dispatch = dispatch
         self.resumption = resumption

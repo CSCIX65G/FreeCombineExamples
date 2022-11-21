@@ -12,7 +12,7 @@ public extension ConcurrentFunc {
         channel: Channel<ConcurrentFunc<Arg, Return>.Next>
     ) async -> [ObjectIdentifier: ConcurrentFunc<Arg, Return>] {
         var iterator = channel.stream.makeAsyncIterator()
-        var folded: [ObjectIdentifier: ConcurrentFunc<Arg, Return>] = [:]
+        var invocations: [ObjectIdentifier: ConcurrentFunc<Arg, Return>] = [:]
         downstreams.forEach { _, invocation in try! invocation(resultArg) }
         for _ in 0 ..< downstreams.count {
             guard let next = await iterator.next() else { fatalError("Invalid stream") }
@@ -23,10 +23,10 @@ public extension ConcurrentFunc {
                     _ = await invocation.dispatch.cancellable.result
                     continue
                 case .success:
-                    folded[next.id] = next.invocation
+                    invocations[next.id] = next.invocation
             }
         }
-        return folded
+        return invocations
     }
 
     struct Batch {
@@ -42,29 +42,30 @@ public extension ConcurrentFunc {
             channel: Channel<ConcurrentFunc<Arg, Return>.Next>
         ) async {
             var iterator = channel.stream.makeAsyncIterator()
-            var folded: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] = [:]
+            var nexts: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] = [:]
             downstreams.forEach { _, invocation in try! invocation(resultArg) }
             for _ in 0 ..< downstreams.count {
                 guard let next = await iterator.next() else { fatalError("Invalid stream") }
-                folded[next.id] = next
+                nexts[next.id] = next
             }
-            results = folded
+            results = nexts
         }
 
-        var successes: Self {
+        var successes: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] {
             get async {
                 var newResults: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] = [:]
                 for (id, next) in results {
+                    guard let invocation = results[id]?.invocation else { fatalError("Lost concurrent function") }
                     switch next.result {
                         case let .failure(error):
-                            try? next.invocation(error: error)
+                            try? invocation(error: error)
                             _ = await next.invocation.dispatch.cancellable.result
                             continue
                         case .success:
                             newResults[id] = next
                     }
                 }
-                return .init(results: newResults)
+                return newResults
             }
         }
     }
