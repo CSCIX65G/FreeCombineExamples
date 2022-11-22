@@ -41,7 +41,8 @@ final class ConcurrentFuncTests: XCTestCase {
         )
         let cancellable = Cancellable<Void> {
             var iterator = returnChannel.stream.makeAsyncIterator()
-            f.resumption.resume(returning: .value(14))
+            do { try f(returnChannel: returnChannel, .value(14)) }
+            catch { XCTFail("Should not have failed with error: \(error)") }
             guard let next = await iterator.next() else {
                 XCTFail("No result")
                 return
@@ -50,7 +51,8 @@ final class ConcurrentFuncTests: XCTestCase {
                 case let .success(value): XCTAssert(value == "14", "Incorrect value: \(value)")
                 case let .failure(error): XCTFail("Received error: \(error)")
             }
-            next.invocation.resumption.resume(returning: .completion(.finished))
+            do { try next.invocation(returnChannel: returnChannel, .completion(.finished)) }
+            catch { XCTFail("failed to complete") }
             returnChannel.finish()
             guard await iterator.next() == nil else {
                 XCTFail("did not complete")
@@ -71,7 +73,9 @@ final class ConcurrentFuncTests: XCTestCase {
         let cancellable = Cancellable<Void> {
             let max = 10_000
             var i = 0
-            first.resumption.resume(returning: .value(i))
+            //first.value(i))
+            do { try first(returnChannel: returnChannel, .value(i)) }
+            catch { XCTFail("Failed on first send, i = \(i)"); return }
             for await next in returnChannel.stream {
                 guard case let .success(returnValue) = next.result, returnValue == String(i) else {
                     XCTFail("incorrect value: \(next.result)")
@@ -82,7 +86,8 @@ final class ConcurrentFuncTests: XCTestCase {
                     next.invocation.resumption.resume(throwing: CancellationError())
                     returnChannel.finish()
                 } else {
-                    next.invocation.resumption.resume(returning: .value(i))
+                    do { try next.invocation(returnChannel: returnChannel, .value(i)) }
+                    catch { XCTFail("Failed sending \(i)"); return }
                 }
             }
             return
@@ -109,8 +114,9 @@ final class ConcurrentFuncTests: XCTestCase {
             }
             for i in 0 ..< numValues {
                 // Send the values
-                for (_, pair) in functions {
-                    pair.resumption.resume(returning: .value(i))
+                for (_, concurrentFunc) in functions {
+                    do { try concurrentFunc(returnChannel: returnChannel, .value(i)) }
+                    catch { XCTFail("Failed dispatching \(i)"); return }
                 }
                 // Gather the returns
                 for _ in 0 ..< numRepeaters {

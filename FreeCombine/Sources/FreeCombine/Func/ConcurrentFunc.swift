@@ -8,11 +8,11 @@
 public struct ConcurrentFunc<Arg, Return>: @unchecked Sendable, Identifiable {
     public let id: ObjectIdentifier
     let dispatch: ConcurrentFunc<Arg, Return>.Dispatch
-    let resumption: Resumption<Publisher<Arg>.Result>
+    let resumption: Resumption<(Channel<Next>, Publisher<Arg>.Result)>
 
     init(
         dispatch: ConcurrentFunc<Arg, Return>.Dispatch,
-        resumption: Resumption<Publisher<Arg>.Result>
+        resumption: Resumption<(Channel<Next>, Publisher<Arg>.Result)>
     ) {
         self.id = .init(dispatch)
         self.dispatch = dispatch
@@ -33,8 +33,7 @@ public struct ConcurrentFunc<Arg, Return>: @unchecked Sendable, Identifiable {
                 file: file,
                 line: line,
                 resumption: startup,
-                asyncFunction: dispatch,
-                returnChannel: returnChannel
+                asyncFunction: dispatch
             )
         }
         self.init(dispatch: localDispatch, resumption: resumption)
@@ -47,23 +46,23 @@ public struct ConcurrentFunc<Arg, Return>: @unchecked Sendable, Identifiable {
         get async throws { try await dispatch.value }
     }
 
-    public func callAsFunction(arg: Arg) throws -> Void {
-        try resumption.tryResume(returning: .value(arg))
+    public func callAsFunction(returnChannel: Channel<Next>, arg: Arg) throws -> Void {
+        try resumption.tryResume(returning: (returnChannel,.value(arg)))
     }
-    public func callAsFunction(error: Swift.Error) throws -> Void {
-        try resumption.tryResume(returning: .completion(.failure(error)))
+    public func callAsFunction(returnChannel: Channel<Next>, error: Swift.Error) throws -> Void {
+        try resumption.tryResume(returning: (returnChannel, .completion(.failure(error))))
     }
-    public func callAsFunction(completion: Publishers.Completion) throws -> Void {
-        try resumption.tryResume(returning: .completion(completion))
+    public func callAsFunction(returnChannel: Channel<Next>, completion: Publishers.Completion) throws -> Void {
+        try resumption.tryResume(returning: (returnChannel, .completion(completion)))
     }
-    public func callAsFunction(_ resultArg: Publisher<Arg>.Result) throws -> Void {
-        try resumption.tryResume(returning: resultArg)
+    public func callAsFunction(returnChannel: Channel<Next>, _ resultArg: Publisher<Arg>.Result) throws -> Void {
+        try resumption.tryResume(returning: (returnChannel, resultArg))
     }
 }
 
 public extension ConcurrentFunc where Arg == Void {
-    func callAsFunction() -> Void {
-        resumption.resume(returning: .value(()))
+    func callAsFunction(returnChannel: Channel<Next>) -> Void {
+        resumption.resume(returning: (returnChannel, .value(())))
     }
 }
 
@@ -80,9 +79,8 @@ extension ConcurrentFunc {
             function: StaticString = #function,
             file: StaticString = #file,
             line: UInt = #line,
-            resumption: UnfailingResumption<Resumption<Publisher<Arg>.Result>>,
-            asyncFunction: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return,
-            returnChannel: Channel<Next>
+            resumption: UnfailingResumption<Resumption<(Channel<Next>, Publisher<Arg>.Result)>>,
+            asyncFunction: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return
         ) {
             self.function = function
             self.file = file
@@ -90,7 +88,7 @@ extension ConcurrentFunc {
 
             self.asyncFunction = asyncFunction
             self.cancellable = .init {
-                var arg = try await withResumption(resumption.resume)
+                var (returnChannel, arg) = try await withResumption(resumption.resume)
                 var result = Result<Return, Swift.Error>.failure(InvocationError())
                 while true {
                     result = await Result { try await asyncFunction(arg) }
@@ -100,7 +98,7 @@ extension ConcurrentFunc {
                         case let .completion(.failure(error)):
                             throw error
                         case .value:
-                            arg = try await withResumption { resumption in
+                            (returnChannel, arg) = try await withResumption { resumption in
                                 do { try returnChannel.tryYield(
                                     Next(result: result, invocation: .init(dispatch: self, resumption: resumption))
                                 ) }
@@ -128,14 +126,14 @@ public extension ConcurrentFunc {
         public let result: Result<Return, Swift.Error>
         public let invocation: ConcurrentFunc<Arg, Return>
 
-        public func callAsFunction(arg: Arg) throws -> Void {
-            try invocation(arg: arg)
+        public func callAsFunction(returnChannel: Channel<Next>, arg: Arg) throws -> Void {
+            try invocation(returnChannel: returnChannel, arg: arg)
         }
-        public func callAsFunction(completion: Publishers.Completion) throws -> Void {
-            try invocation(completion: completion)
+        public func callAsFunction(returnChannel: Channel<Next>, completion: Publishers.Completion) throws -> Void {
+            try invocation(returnChannel: returnChannel, completion: completion)
         }
-        public func callAsFunction(_ resultArg: Publisher<Arg>.Result) throws -> Void {
-            try invocation(resultArg)
+        public func callAsFunction(returnChannel: Channel<Next>, resultArg: Publisher<Arg>.Result) throws -> Void {
+            try invocation(returnChannel: returnChannel, resultArg)
         }
     }
 }

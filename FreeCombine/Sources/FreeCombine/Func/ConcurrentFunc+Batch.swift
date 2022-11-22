@@ -13,7 +13,7 @@ public extension ConcurrentFunc {
     ) async -> [ObjectIdentifier: ConcurrentFunc<Arg, Return>] {
         var iterator = channel.stream.makeAsyncIterator()
         var invocations: [ObjectIdentifier: ConcurrentFunc<Arg, Return>] = [:]
-        downstreams.forEach { _, invocation in try! invocation(resultArg) }
+        downstreams.forEach { _, invocation in try! invocation(returnChannel: channel, resultArg) }
         for _ in 0 ..< downstreams.count {
             guard let next = await iterator.next() else { fatalError("Invalid stream") }
             guard let invocation = downstreams[next.id] else { fatalError("Lost concurrent function") }
@@ -43,7 +43,7 @@ public extension ConcurrentFunc {
         ) async {
             var iterator = channel.stream.makeAsyncIterator()
             var nexts: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] = [:]
-            downstreams.forEach { _, invocation in try! invocation(resultArg) }
+            downstreams.forEach { _, invocation in try! invocation(returnChannel: channel, resultArg) }
             for _ in 0 ..< downstreams.count {
                 guard let next = await iterator.next() else { fatalError("Invalid stream") }
                 nexts[next.id] = next
@@ -51,22 +51,22 @@ public extension ConcurrentFunc {
             results = nexts
         }
 
-        var successes: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] {
-            get async {
-                var newResults: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] = [:]
-                for (id, next) in results {
-                    guard let invocation = results[id]?.invocation else { fatalError("Lost concurrent function") }
-                    switch next.result {
-                        case let .failure(error):
-                            try? invocation(error: error)
-                            _ = await next.invocation.dispatch.cancellable.result
-                            continue
-                        case .success:
-                            newResults[id] = next
-                    }
+        func successes(
+            channel: Channel<ConcurrentFunc<Arg, Return>.Next>
+        ) async -> [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] {
+            var newResults: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] = [:]
+            for (id, next) in results {
+                guard let invocation = results[id]?.invocation else { fatalError("Lost concurrent function") }
+                switch next.result {
+                    case let .failure(error):
+                        try? invocation(returnChannel: channel, error: error)
+                        _ = await next.invocation.result
+                        continue
+                    case .success:
+                        newResults[id] = next
                 }
-                return newResults
             }
+            return newResults
         }
     }
 }

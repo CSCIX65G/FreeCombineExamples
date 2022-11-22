@@ -46,7 +46,7 @@ extension Distributor {
                     fatalError("duplicate key: \(invocation.dispatch.id)")
                 }
                 if let currentValue = state.currentValue {
-                    invocation.resumption.resume(returning: .value(currentValue))
+                    try invocation(returnChannel: returnChannel, .value(currentValue))
                     var it = returnChannel.stream.makeAsyncIterator()
                     guard let next = await it.next() else {
                         fatalError("premature stream termination")
@@ -63,13 +63,13 @@ extension Distributor {
                 guard let invocation = state.invocations.removeValue(forKey: streamId) else {
                     return .none
                 }
-                try! invocation(completion: .failure(CancellationError()))
+                try invocation(returnChannel: returnChannel, completion: .failure(CancellationError()))
                 _ = await invocation.result
             case let .unsubscribe(streamId):
                 guard let invocation = state.invocations.removeValue(forKey: streamId) else {
                     return .none
                 }
-                try! invocation.resumption.tryResume(returning: .completion(.finished))
+                try! invocation(returnChannel: returnChannel, .completion(.finished))
                 _ = await invocation.dispatch.cancellable.result
         }
         return .none
@@ -90,13 +90,16 @@ extension Distributor {
         }
     }
 
-    static func finalize(_ state: inout Distributor<Output>.DistributionState) {
+    static func finalize(
+        _ state: inout Distributor<Output>.DistributionState,
+        returnChannel: Channel<ConcurrentFunc<Output, Void>.Next>
+    ) {
         for (_, invocation) in state.invocations {
             switch state.completion {
                 case .finished:
-                    invocation.resumption.resume(returning: .completion(.finished))
+                    try? invocation(returnChannel: returnChannel, .completion(.finished))
                 case let .failure(error):
-                    invocation.resumption.resume(throwing: error)
+                    try? invocation(returnChannel: returnChannel, error: error)
                 case .none: ()
             }
         }
@@ -110,7 +113,7 @@ extension Distributor {
             initializer: {_ in .init(currentValue: currentValue) },
             reducer: { state, action in try await reduce(action: action, state: &state, returnChannel: returnChannel) },
             disposer: { action, completion in dispose(action) },
-            finalizer: { state, completion in finalize(&state) }
+            finalizer: { state, completion in finalize(&state, returnChannel: returnChannel) }
         )
     }
 }
