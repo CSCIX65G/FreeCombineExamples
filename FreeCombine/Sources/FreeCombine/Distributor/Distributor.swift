@@ -66,17 +66,12 @@ public extension Distributor {
             function: function,
             file: file,
             line: line,
-            dispatch: operation,
-            returnChannel: returnChannel
+            operation
         )
-        let subscriptionId: ObjectIdentifier = try await withResumption({ idResumption in
-            do {
-                try distributionFold.send(.subscribe(invocation, idResumption))
-            }
-            catch {
-                try? idResumption.tryResume(throwing: SubscriptionError())
-            }
-        })
+        let subscriptionId: ObjectIdentifier = try await pause { idResumption in
+            do { try distributionFold.send(.subscribe(invocation, idResumption)) }
+            catch { try? idResumption.tryResume(throwing: SubscriptionError()) }
+        }
 
         return .init(function: function, file: file, line: line) {
             try await withTaskCancellationHandler(
@@ -100,7 +95,7 @@ public extension Distributor {
     }
 
     func send(_ value: Output) async throws {
-        try await withResumption { resumption in
+        try await pause { resumption in
             do { try valueFold.send(.syncValue(.value(value), resumption)) }
             catch { resumption.resume(throwing: StreamEnqueueError()) }
         }
@@ -114,7 +109,7 @@ public extension Distributor {
     }
 
     func finish(_ completion: Publishers.Completion = .finished) async throws {
-        _ = try await withResumption { resumption in
+        _ = try await pause { resumption in
             do { try valueFold.send(.syncCompletion(completion, resumption)) }
             catch { resumption.resume(throwing: error) }
         }

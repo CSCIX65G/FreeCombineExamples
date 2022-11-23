@@ -46,7 +46,7 @@ extension AsyncContinuation {
         _ downstream: @escaping @Sendable (Output) async throws -> Return
     ) async -> Cancellable<Return> {
         var cancellable: Cancellable<Return>!
-        let _: Void = try! await withResumption { resumption in
+        let _: Void = try! await pause { resumption in
             cancellable = self(onStartup: resumption, downstream)
         }
         return cancellable

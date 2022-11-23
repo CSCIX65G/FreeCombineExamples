@@ -36,7 +36,7 @@ public extension Channel {
         using action: @escaping (Publisher<Upstream>.Result, Resumption<Void>) -> Element
     ) async -> Cancellable<Void>  {
         await publisher { upstreamValue in
-            try await withResumption(function: function, file: file, line: line) { resumption in
+            try await pause(function: function, file: file, line: line) { resumption in
                 guard !Cancellables.isCancelled else {
                     return resumption.resume(throwing: CancellationError())
                 }

@@ -53,7 +53,7 @@ extension Distributor {
                     }
                     switch next.result {
                         case let .failure(error): try! idResumption.tryResume(throwing: error)
-                        default: inv = next.invocation
+                        default: inv = next.concurrentFunc
                     }
                 }
                 state.invocations[invocation.id] = inv

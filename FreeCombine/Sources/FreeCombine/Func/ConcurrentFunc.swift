@@ -23,11 +23,10 @@ public struct ConcurrentFunc<Arg, Return>: @unchecked Sendable, Identifiable {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        dispatch: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return,
-        returnChannel: Channel<Next>
+        _ dispatch: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return
     ) async {
         var localDispatch: ConcurrentFunc<Arg, Return>.Dispatch!
-        let resumption = await withUnfailingResumption(function: function, file: file, line: line) { startup in
+        let resumption = await unfailingPause(function: function, file: file, line: line) { startup in
             localDispatch = .init(
                 function: function,
                 file: file,
@@ -72,7 +71,7 @@ extension ConcurrentFunc {
         private let file: StaticString
         private let line: UInt
 
-        let asyncFunction: @Sendable (Publisher<Arg>.Result) async throws -> Return
+        let dispatch: @Sendable (Publisher<Arg>.Result) async throws -> Return
         private(set) var cancellable: Cancellable<Return>! = .none
 
         init(
@@ -86,9 +85,9 @@ extension ConcurrentFunc {
             self.file = file
             self.line = line
 
-            self.asyncFunction = asyncFunction
+            self.dispatch = asyncFunction
             self.cancellable = .init {
-                var (returnChannel, arg) = try await withResumption(resumption.resume)
+                var (returnChannel, arg) = try await pause(resumption.resume)
                 var result = Result<Return, Swift.Error>.failure(InvocationError())
                 while true {
                     result = await Result { try await asyncFunction(arg) }
@@ -98,12 +97,12 @@ extension ConcurrentFunc {
                         case let .completion(.failure(error)):
                             throw error
                         case .value:
-                            (returnChannel, arg) = try await withResumption { resumption in
+                            (returnChannel, arg) = try await pause { resumption in
                                 do { try returnChannel.tryYield(
-                                    Next(result: result, invocation: .init(dispatch: self, resumption: resumption))
+                                    .init(result: result, concurrentFunc: .init(dispatch: self, resumption: resumption))
                                 ) }
                                 catch {
-                                    resumption.resume(throwing: StreamEnqueueError())
+                                    resumption.resume(throwing: error)
                                 }
                             }
                     }
@@ -122,18 +121,18 @@ extension ConcurrentFunc {
 
 public extension ConcurrentFunc {
     struct Next: @unchecked Sendable {
-        public var id: ObjectIdentifier { invocation.dispatch.id }
+        public var id: ObjectIdentifier { concurrentFunc.dispatch.id }
         public let result: Result<Return, Swift.Error>
-        public let invocation: ConcurrentFunc<Arg, Return>
+        public let concurrentFunc: ConcurrentFunc<Arg, Return>
 
         public func callAsFunction(returnChannel: Channel<Next>, arg: Arg) throws -> Void {
-            try invocation(returnChannel: returnChannel, arg: arg)
+            try concurrentFunc(returnChannel: returnChannel, arg: arg)
         }
         public func callAsFunction(returnChannel: Channel<Next>, completion: Publishers.Completion) throws -> Void {
-            try invocation(returnChannel: returnChannel, completion: completion)
+            try concurrentFunc(returnChannel: returnChannel, completion: completion)
         }
         public func callAsFunction(returnChannel: Channel<Next>, resultArg: Publisher<Arg>.Result) throws -> Void {
-            try invocation(returnChannel: returnChannel, resultArg)
+            try concurrentFunc(returnChannel: returnChannel, resultArg)
         }
     }
 }

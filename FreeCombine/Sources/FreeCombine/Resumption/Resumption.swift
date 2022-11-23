@@ -96,10 +96,11 @@ extension Resumption where Output == Void {
     }
 }
 
-public func withResumption<Output>(
+public func pause<Output>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
+    for: Output.Type = Output.self,
     _ resumingWith: (Resumption<Output>) -> Void
 ) async throws -> Output {
     try await withUnsafeThrowingContinuation { resumption in

@@ -15,13 +15,11 @@ public enum Promises {
 }
 
 public final class Promise<Output> {
-    typealias Status = Promises.Status
-
     private let function: StaticString
     private let file: StaticString
     private let line: UInt
 
-    private let atomicStatus = ManagedAtomic<Status>(.waiting)
+    private let atomicStatus = ManagedAtomic<Promises.Status>(.waiting)
     private let resumption: Resumption<Output>
     public let cancellable: Cancellable<Output>
 
@@ -30,19 +28,24 @@ public final class Promise<Output> {
         file: StaticString = #file,
         line: UInt = #line
     ) async {
+        var localCancellable: Cancellable<Output>!
         self.function = function
         self.file = file
         self.line = line
-        var lc: Cancellable<Output>!
-        self.resumption = try! await withResumption { outer in
-            lc = .init(function: function, file: file, line: line) { try await withResumption(outer.resume) }
+        self.resumption = try! await pause { outer in
+            localCancellable = .init(function: function, file: file, line: line) { try await pause(outer.resume) }
         }
-        self.cancellable = lc
+        self.cancellable = localCancellable
     }
 
-    /*:
-     [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
-     */
+    public static func promise(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) -> Uncancellable<Promise<Output>> {
+        .init { await .init(function: function, file: file, line: line) }
+    }
+
     deinit {
         guard atomicStatus.load(ordering: .sequentiallyConsistent) != .waiting else {
             assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self)) CREATED in \(function) @ \(file): \(line)")
@@ -52,7 +55,7 @@ public final class Promise<Output> {
         try? cancellable.cancel()
     }
 
-    private func set(status newStatus: Status) throws -> Resumption<Output> {
+    private func set(status newStatus: Promises.Status) throws -> Resumption<Output> {
         try Result<Void, Swift.Error>.success(())
             .set(atomic: atomicStatus, from: .waiting, to: newStatus)
             .get()
@@ -76,7 +79,7 @@ public extension Promise {
         try fail(CancellationError())
     }
 
-    func resolve(_ result: Result<Output, Swift.Error>) throws {
+    func fulfill(_ result: Result<Output, Swift.Error>) throws {
         switch result {
             case let .success(arg): try succeed(arg)
             case let .failure(error): try fail(error)
@@ -104,5 +107,9 @@ public extension Promise {
             resumption.resume()
             await downstream(self.result)
         } }
+    }
+
+    var publisher: Publisher<Output> {
+        future.publisher
     }
 }

@@ -33,8 +33,8 @@ public final class UnbreakablePromise<Output> {
         self.file = file
         self.line = line
         var uc: Uncancellable<Output>!
-        self.resumption = await withUnfailingResumption { outer in
-            uc = .init(function: function, file: file, line: line) { await withUnfailingResumption(outer.resume) }
+        self.resumption = await unfailingPause { outer in
+            uc = .init(function: function, file: file, line: line) { await unfailingPause(outer.resume) }
         }
         self.uncancellable = uc
     }

@@ -19,14 +19,20 @@
 //  limitations under the License.
 //
 public struct AsyncFolder<State, Action> {
+    public enum Effect {
+        case none  // Multiply by 1
+        case completion(Completion) // Multiply by 0
+        case publish((Channel<Action>) -> Void)
+    }
+    
     public typealias Completion = Publishers.Completion
-
+    
     let initializer: (Channel<Action>) async -> State
     let reducer: (inout State, Action) async throws -> Effect
     let emitter: (inout State) async throws -> Void
     let disposer: (Action, Completion) async -> Void
     let finalizer: (inout State, Completion) async -> Void
-
+    
     public init(
         initializer: @escaping (Channel<Action>) async -> State,
         reducer: @escaping (inout State, Action) async throws -> Effect,
@@ -40,23 +46,23 @@ public struct AsyncFolder<State, Action> {
         self.disposer = disposer
         self.finalizer = finalizer
     }
-
+    
     public func callAsFunction(_ channel: Channel<Action>) async -> State {
         await initializer(channel)
     }
-
+    
     public func callAsFunction(_ state: inout State, _ action: Action) async throws -> Effect {
         try await reducer(&state, action)
     }
-
+    
     public func callAsFunction(_ action: Action, _ completion: Completion) async -> Void {
         await disposer(action, completion)
     }
-
+    
     public func callAsFunction(_ state: inout State, _ completion: Completion) async -> Void {
         await finalizer(&state, completion)
     }
-
+    
     public func callAsFunction(_ state: inout State) async throws -> Void {
         try await emitter(&state)
     }

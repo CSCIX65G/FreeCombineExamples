@@ -8,37 +8,34 @@
 import XCTest
 @testable import FreeCombine
 
-final class ConcurrentFuncTests: XCTestCase {
-    typealias TestArg = Int
-    typealias TestReturn = String
+fileprivate typealias TestArg = Int
+fileprivate typealias TestReturn = String
 
+fileprivate enum TestError: Error {
+    case finished
+    case failure(Error)
+}
+
+@Sendable fileprivate func dispatch(_ result: Publisher<TestArg>.Result) async throws -> TestReturn {
+    switch result {
+        case let .value(value):
+            return .init(value)
+        case .completion(.finished):
+            throw TestError.finished
+        case .completion(.failure(let error)):
+            throw TestError.failure(error)
+    }
+}
+
+final class ConcurrentFuncTests: XCTestCase {
     override func setUpWithError() throws { }
 
     override func tearDownWithError() throws { }
 
-    enum TestError: Error {
-        case finished
-        case failure(Error)
-    }
-
-    @Sendable func dispatch(_ result: Publisher<TestArg>.Result) async throws -> TestReturn {
-        switch result {
-            case let .value(value):
-                return .init(value)
-            case .completion(.finished):
-                throw TestError.finished
-            case .completion(.failure(let error)):
-                throw TestError.failure(error)
-        }
-    }
-
     func testSimpleConcurrentFunc() async throws {
         let returnChannel = Channel<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(1))
 
-        let f = await ConcurrentFunc<TestArg, TestReturn>(
-            dispatch: self.dispatch,
-            returnChannel: returnChannel
-        )
+        let f = await ConcurrentFunc<TestArg, TestReturn>(dispatch)
         let cancellable = Cancellable<Void> {
             var iterator = returnChannel.stream.makeAsyncIterator()
             do { try f(returnChannel: returnChannel, .value(14)) }
@@ -51,7 +48,7 @@ final class ConcurrentFuncTests: XCTestCase {
                 case let .success(value): XCTAssert(value == "14", "Incorrect value: \(value)")
                 case let .failure(error): XCTFail("Received error: \(error)")
             }
-            do { try next.invocation(returnChannel: returnChannel, .completion(.finished)) }
+            do { try next.concurrentFunc(returnChannel: returnChannel, .completion(.finished)) }
             catch { XCTFail("failed to complete") }
             returnChannel.finish()
             guard await iterator.next() == nil else {
@@ -66,10 +63,7 @@ final class ConcurrentFuncTests: XCTestCase {
     func testSimpleRepeater() async throws {
         let returnChannel = Channel<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(1))
 
-        let first = await ConcurrentFunc<TestArg, TestReturn>(
-            dispatch: self.dispatch,
-            returnChannel: returnChannel
-        )
+        let first = await ConcurrentFunc(dispatch)
         let cancellable = Cancellable<Void> {
             let max = 10_000
             var i = 0
@@ -83,10 +77,10 @@ final class ConcurrentFuncTests: XCTestCase {
                 }
                 i += 1
                 if i == max {
-                    next.invocation.resumption.resume(throwing: CancellationError())
+                    next.concurrentFunc.resumption.resume(throwing: CancellationError())
                     returnChannel.finish()
                 } else {
-                    do { try next.invocation(returnChannel: returnChannel, .value(i)) }
+                    do { try next.concurrentFunc(returnChannel: returnChannel, .value(i)) }
                     catch { XCTFail("Failed sending \(i)"); return }
                 }
             }
@@ -103,11 +97,8 @@ final class ConcurrentFuncTests: XCTestCase {
             var iterator = returnChannel.stream.makeAsyncIterator()
             var functions: [ObjectIdentifier: ConcurrentFunc<TestArg, TestReturn>] = [:]
             for _ in 0 ..< numRepeaters {
-                let first = await ConcurrentFunc(
-                    dispatch: self.dispatch,
-                    returnChannel: returnChannel
-                )
-                functions[first.dispatch.id] = .init(
+                let first = await ConcurrentFunc(dispatch)
+                functions[first.id] = .init(
                     dispatch: first.dispatch,
                     resumption: first.resumption
                 )
@@ -136,7 +127,7 @@ final class ConcurrentFuncTests: XCTestCase {
                         XCTFail("Lost function")
                         return
                     }
-                    functions[next.id] = .init(dispatch: function, resumption: next.invocation.resumption)
+                    functions[next.id] = .init(dispatch: function, resumption: next.concurrentFunc.resumption)
                 }
             }
             // Close everything

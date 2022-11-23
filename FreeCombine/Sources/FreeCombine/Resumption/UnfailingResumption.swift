@@ -75,10 +75,11 @@ public extension UnfailingResumption where Output == Void {
     }
 }
 
-public func withUnfailingResumption<Output>(
+public func unfailingPause<Output>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
+    for: Output.Type = Output.self,
     _ resumingWith: (UnfailingResumption<Output>) -> Void
 ) async -> Output {
     await withUnsafeContinuation { continuation in

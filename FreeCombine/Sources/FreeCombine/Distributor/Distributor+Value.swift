@@ -26,7 +26,7 @@ extension Distributor {
                 guard !state.isFinished else { return .none }
                 switch action {
                     case let .asyncValue(output):
-                        try await withResumption { resumption in
+                        try await pause { resumption in
                             do { try mainChannel.tryYield(.value(output, resumption)) }
                             catch { state.isFinished = true; resumption.resume(throwing: error) }
                         }
@@ -34,7 +34,7 @@ extension Distributor {
                         do { try mainChannel.tryYield(.value(output, resumption)) }
                         catch { state.isFinished = true; resumption.resume(throwing: error) }
                     case let .asyncCompletion(completion):
-                        try await withResumption { resumption in
+                        try await pause { resumption in
                             do { try mainChannel.tryYield(.finish(completion, resumption)) }
                             catch { resumption.resume(throwing: error) }
                         }

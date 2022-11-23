@@ -19,11 +19,11 @@ public extension ConcurrentFunc {
             guard let invocation = downstreams[next.id] else { fatalError("Lost concurrent function") }
             switch next.result {
                 case let .failure(error):
-                    next.invocation.resumption.resume(throwing: error)
+                    next.concurrentFunc.resumption.resume(throwing: error)
                     _ = await invocation.dispatch.cancellable.result
                     continue
                 case .success:
-                    invocations[next.id] = next.invocation
+                    invocations[next.id] = next.concurrentFunc
             }
         }
         return invocations
@@ -56,11 +56,11 @@ public extension ConcurrentFunc {
         ) async -> [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] {
             var newResults: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] = [:]
             for (id, next) in results {
-                guard let invocation = results[id]?.invocation else { fatalError("Lost concurrent function") }
+                guard let invocation = results[id]?.concurrentFunc else { fatalError("Lost concurrent function") }
                 switch next.result {
                     case let .failure(error):
                         try? invocation(returnChannel: channel, error: error)
-                        _ = await next.invocation.result
+                        _ = await next.concurrentFunc.result
                         continue
                     case .success:
                         newResults[id] = next

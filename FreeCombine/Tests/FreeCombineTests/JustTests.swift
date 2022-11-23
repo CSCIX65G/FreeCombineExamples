@@ -126,7 +126,7 @@ class JustTests: XCTestCase {
         }
 
         var t: Cancellable<Void>! = .none
-        do { _ = try await withResumption { resumption in
+        do { _ = try await pause { resumption in
             t = just.sink(onStartup: resumption, { result in
                 switch result {
                     case let .value(value):

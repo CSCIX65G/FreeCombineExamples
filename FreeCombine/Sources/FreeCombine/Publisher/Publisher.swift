@@ -86,7 +86,7 @@ public extension Publisher {
         _ downstream: @escaping Downstream
     ) async -> Cancellable<Void> {
         var cancellable: Cancellable<Void>!
-        let _: Void = try! await withResumption(function: function, file: file, line: line) { resumption in
+        let _: Void = try! await pause(function: function, file: file, line: line) { resumption in
             cancellable = self(onStartup: resumption, downstream)
         }
         return cancellable

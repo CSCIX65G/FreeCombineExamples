@@ -60,7 +60,7 @@ extension Future {
         _ downstream: @escaping @Sendable (Result<Output, Swift.Error>) async -> Void
     ) async -> Cancellable<Void> {
         var cancellable: Cancellable<Void>!
-        let _: Void = try! await withResumption { resumption in
+        let _: Void = try! await pause { resumption in
             cancellable = self(onStartup: resumption, downstream)
         }
         return cancellable
