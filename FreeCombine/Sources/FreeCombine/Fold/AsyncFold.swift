@@ -29,13 +29,13 @@ public final class AsyncFold<State, Action: Sendable> {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        channel: Channel<Action>,
+        stream: Channel<Action>,
         cancellable: Cancellable<State>
     ) {
         self.function = function
         self.file = file
         self.line = line
-        self.channel = channel
+        self.channel = stream
         self.cancellable = cancellable
     }
 
@@ -102,7 +102,7 @@ extension AsyncFold {
             function: function,
             file: file,
             line: line,
-            channel: channel,
+            stream: channel,
             cancellable: .init(function: function, file: file, line: line) {
                 try await withTaskCancellationHandler(
                     operation: {
