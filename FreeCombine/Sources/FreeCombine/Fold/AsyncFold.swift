@@ -66,6 +66,9 @@ extension AsyncFold {
             .init { await downstream(self.cancellable.result) }
         }
     }
+    var publisher: Publisher<State> {
+        future.publisher
+    }
 }
 
 extension AsyncFold {
@@ -132,6 +135,8 @@ extension AsyncFold {
                 guard !Cancellables.isCancelled else { throw CancellationError() }
                 try await folder.emit(state: &state)
             }
+            channel.finish()
+            await folder.dispose(channel: channel, error: CancellationError())
             await folder.finalize(&state, .finished)
         } catch {
             await folder.dispose(channel: channel, error: error)
