@@ -31,7 +31,7 @@ class FlatMapTests: XCTestCase {
         let expectation = await Promise<Void>()
 
         let checksum = Counter()
-        let c1 = await Unfolded(0 ... 3)
+        let c1 = await UnfoldedSequence(0 ... 3)
             .map { $0 * 2 }
             .flatMap { (value) -> Publisher<Int> in
                 [Int].init(repeating: value, count: value).asyncPublisher

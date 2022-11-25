@@ -84,8 +84,8 @@ class CancellationTests: XCTestCase {
         let startup1 = await Promise<Void>()
         let startup2 = await Promise<Void>()
 
-        let publisher1 = Unfolded(0 ... 100)
-        let publisher2 = Unfolded("abcdefghijklmnopqrstuvwxyz")
+        let publisher1 = UnfoldedSequence(0 ... 100)
+        let publisher2 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
 
         let counter1 = Counter()
         let counter2 = Counter()

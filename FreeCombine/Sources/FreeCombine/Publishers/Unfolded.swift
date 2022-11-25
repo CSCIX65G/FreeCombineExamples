@@ -20,11 +20,11 @@
 //
 extension Sequence {
     public var asyncPublisher: Publisher<Element> {
-        Unfolded(self)
+        UnfoldedSequence(self)
     }
 }
 
-public func Unfolded<S: Sequence>(_ sequence: S) -> Publisher<S.Element> {
+public func UnfoldedSequence<S: Sequence>(_ sequence: S) -> Publisher<S.Element> {
     .init(sequence)
 }
 

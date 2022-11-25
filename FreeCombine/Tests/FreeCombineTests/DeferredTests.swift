@@ -32,7 +32,7 @@ class DeferTests: XCTestCase {
         let expectation2 = await Promise<Void>()
 
         let count1 = Counter()
-        let p =  Unfolded("abc")
+        let p =  UnfoldedSequence("abc")
 
         let d1 = Deferred { p }
         let d2 = Deferred { p }
@@ -100,7 +100,7 @@ class DeferTests: XCTestCase {
 
         let count1 = Counter()
         let p = Deferred {
-            Unfolded("abc")
+            UnfoldedSequence("abc")
         }
         let d1 = Deferred { p }
         let d2 = Deferred { p }

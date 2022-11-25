@@ -4,7 +4,6 @@
 //
 //  Created by Van Simmons on 9/13/22.
 //
-
 public struct AsyncContinuation<Output: Sendable, Return>: Sendable {
     private let call: @Sendable (
         Resumption<Void>,

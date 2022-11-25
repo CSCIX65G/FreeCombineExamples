@@ -204,8 +204,8 @@ class ZipTests: XCTestCase {
         let startup1 = await Promise<Void>()
         let startup2 = await Promise<Void>()
 
-        let publisher1 = Unfolded(0 ... 100)
-        let publisher2 = Unfolded("abcdefghijklmnopqrstuvwxyz")
+        let publisher1 = UnfoldedSequence(0 ... 100)
+        let publisher2 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
 
         let counter1 = Counter()
         let counter2 = Counter()
@@ -279,7 +279,7 @@ class ZipTests: XCTestCase {
         let promise = await Promise<Void>()
 
         let publisher1 = (0 ... 100).asyncPublisher
-        let publisher2 = Unfolded("abcdefghijklmnopqrstuvwxyz")
+        let publisher2 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
 
         let counter = Counter()
 
@@ -310,14 +310,14 @@ class ZipTests: XCTestCase {
     func testComplexZip() async throws {
         let promise = await Promise<Void>()
 
-        let p1 = Unfolded(0 ... 100)
-        let p2 = Unfolded("abcdefghijklmnopqrstuvwxyz")
-        let p3 = Unfolded(0 ... 100)
-        let p4 = Unfolded("abcdefghijklmnopqrstuvwxyz")
-        let p5 = Unfolded(0 ... 100)
-        let p6 = Unfolded("abcdefghijklmnopqrstuvwxyz")
-        let p7 = Unfolded(0 ... 100)
-        let p8 = Unfolded("abcdefghijklmnopqrstuvwxyz")
+        let p1 = UnfoldedSequence(0 ... 100)
+        let p2 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
+        let p3 = UnfoldedSequence(0 ... 100)
+        let p4 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
+        let p5 = UnfoldedSequence(0 ... 100)
+        let p6 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
+        let p7 = UnfoldedSequence(0 ... 100)
+        let p8 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
 
         let counter = Counter()
         let z1 = await zip(p1, p2, p3, p4, p5, p6, p7, p8)
@@ -350,14 +350,14 @@ class ZipTests: XCTestCase {
         let promise1 = await Promise<Void>()
         let promise2 = await Promise<Void>()
 
-        let p1 = Unfolded(0 ... 100)
-        let p2 = Unfolded("abcdefghijklmnopqrstuvwxyz")
-        let p3 = Unfolded(0 ... 100)
-        let p4 = Unfolded("abcdefghijklmnopqrstuvwxyz")
-        let p5 = Unfolded(0 ... 100)
-        let p6 = Unfolded("abcdefghijklmnopqrstuvwxyz")
-        let p7 = Unfolded(0 ... 100)
-        let p8 = Unfolded("abcdefghijklmnopqrstuvwxyz")
+        let p1 = UnfoldedSequence(0 ... 100)
+        let p2 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
+        let p3 = UnfoldedSequence(0 ... 100)
+        let p4 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
+        let p5 = UnfoldedSequence(0 ... 100)
+        let p6 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
+        let p7 = UnfoldedSequence(0 ... 100)
+        let p8 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
 
         let zipped = zip(p1, p2, p3, p4, p5, p6, p7, p8)
 

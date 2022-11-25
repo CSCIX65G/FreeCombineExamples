@@ -31,7 +31,7 @@ class UnfoldedTests: XCTestCase {
         let expectation1 = await Promise<Void>()
         let expectation2 = await Promise<Void>()
 
-        let unfolded = Unfolded(0 ..< 10)
+        let unfolded = UnfoldedSequence(0 ..< 10)
 
         let counter1 = Counter()
         let u1 = await unfolded.sink { (result: Publisher<Int>.Result) in
