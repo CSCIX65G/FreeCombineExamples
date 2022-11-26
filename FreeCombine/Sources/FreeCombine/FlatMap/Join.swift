@@ -5,7 +5,7 @@
 //  Created by Van Simmons on 9/21/22.
 //
 public extension Future {
-    func join<B>() -> Future<B> where Output == Future<B> {
+    func join<T>() -> Future<T> where Output == Future<T> {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in switch r {
                 case .success(let a):
@@ -18,7 +18,7 @@ public extension Future {
 }
 
 public extension Publisher {
-    func join<B>() -> Publisher<B> where Output == Publisher<B> {
+    func join<T>() -> Publisher<T> where Output == Publisher<T> {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in switch r {
                 case .value(let a):

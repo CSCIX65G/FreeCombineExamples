@@ -18,9 +18,9 @@ extension Future {
 }
 
 public extension Publisher {
-    func flatMap<B>(
-        _ transform: @escaping (Output) async -> Publisher<B>
-    ) -> Publisher<B> {
+    func flatMap<T>(
+        _ transform: @escaping (Output) async -> Publisher<T>
+    ) -> Publisher<T> {
         .init { resumption, downstream in self(onStartup: resumption) { r in switch r {
             case .value(let a):
                 return try await transform(a)(flattener(downstream)).value
@@ -47,9 +47,9 @@ extension Uncancellable {
 }
 
 extension AsyncFunc {
-    public func flatMap<C>(
-        _ transform: @escaping (B) async throws -> AsyncFunc<A, C>
-    ) -> AsyncFunc<A, C> {
+    public func flatMap<T>(
+        _ transform: @escaping (R) async throws -> AsyncFunc<A, T>
+    ) -> AsyncFunc<A, T> {
         .init { a in try await transform(call(a))(a) }
     }
 }

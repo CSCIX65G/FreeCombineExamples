@@ -4,9 +4,9 @@
 //
 //  Created by Van Simmons on 9/26/22.
 //
-func flattener<B>(
-    _ downstream: @escaping Publisher<B>.Downstream
-) -> Publisher<B>.Downstream {
+func flattener<T>(
+    _ downstream: @escaping Publisher<T>.Downstream
+) -> Publisher<T>.Downstream {
     { b in switch b {
         case .completion(.finished):
             return

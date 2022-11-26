@@ -4,27 +4,55 @@
 //
 //  Created by Van Simmons on 9/5/22.
 //
-public struct AsyncFunc<A, B> {
-    let call: (A) async throws -> B
+public struct AsyncFunc<A, R> {
+    let call: (A) async throws -> R
     public init(
-        _ call: @escaping (A) async throws -> B
+        _ call: @escaping (A) async throws -> R
     ) {
         self.call = call
     }
-    public func callAsFunction(_ a: A) async throws -> B {
+    public func callAsFunction(_ a: A) async throws -> R {
         try await call(a)
     }
 }
 
+extension AsyncFunc {
+    public func callAsFunction(continuation: AsyncStream<R>.Continuation, value: A) async throws -> Void {
+        switch try await continuation.yield(call(value)) {
+            case .enqueued: return
+            case .terminated: throw EnqueueError<R>.terminated
+            case let .dropped(r): throw EnqueueError.dropped(r)
+            @unknown default:
+                fatalError("Unimplemented enqueue case")
+        }
+    }
+    public func callAsFunction(continuation: AsyncStream<R>.Continuation) -> (A) async throws -> Void {
+        { value in try await self(continuation: continuation, value: value)}
+    }
+
+    public func callAsFunction(continuation: AsyncStream<R>.Continuation) -> AsyncFunc<A, Void> {
+        .init(self.callAsFunction(continuation: continuation))
+    }
+//    public func callAsFunction<State>(channel: Channel<R>, value: A) async throws -> AsyncFold<State, R> {
+//        switch try await continuation.yield(call(value)) {
+//            case .enqueued: return
+//            case .terminated: throw EnqueueError<R>.terminated
+//            case let .dropped(r): throw EnqueueError.dropped(r)
+//            @unknown default:
+//                fatalError("Unimplemented enqueue case")
+//        }
+//    }
+}
+
 public extension AsyncFunc {
     func map<C>(
-        _ f: @escaping (B) async -> C
+        _ f: @escaping (R) async -> C
     ) -> AsyncFunc<A, C> {
         .init { a in try await f(self(a)) }
     }
 
     func flatMap<C>(
-        _ f: @escaping (B) async -> AsyncFunc<A, C>
+        _ f: @escaping (R) async -> AsyncFunc<A, C>
     ) -> AsyncFunc<A, C> {
         .init { a in try await f(self(a))(a) }
     }

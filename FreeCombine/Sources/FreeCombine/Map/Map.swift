@@ -36,9 +36,9 @@ public extension AsyncContinuation {
 }
 
 public extension Publisher {
-    func map<B>(
-        _ transform: @escaping (Output) async -> B
-    ) -> Publisher<B> {
+    func map<T>(
+        _ transform: @escaping (Output) async -> T
+    ) -> Publisher<T> {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in switch r {
                 case .value(let a):
@@ -74,7 +74,7 @@ extension Uncancellable {
 
 extension AsyncFunc {
     public func map<C>(
-        _ transform: @escaping (B) async throws -> C
+        _ transform: @escaping (R) async throws -> C
     ) -> AsyncFunc<A, C> {
         .init { a in
             let b = try await call(a)

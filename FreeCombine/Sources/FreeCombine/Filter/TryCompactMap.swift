@@ -19,13 +19,13 @@
 //  limitations under the License.
 //
 public extension Publisher {
-    func tryCompactMap<B>(
-        _ transform: @escaping (Output) async throws -> B?
-    ) -> Publisher<B> {
+    func tryCompactMap<T>(
+        _ transform: @escaping (Output) async throws -> T?
+    ) -> Publisher<T> {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in switch r {
                 case .value(let a):
-                    var c: B? = .none
+                    var c: T? = .none
                     do { c = try await transform(a) }
                     catch { return try await downstream(.completion(.failure(error))) }
                     guard let b = c else { return }
