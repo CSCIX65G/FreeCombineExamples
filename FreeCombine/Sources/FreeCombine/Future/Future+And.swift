@@ -42,7 +42,7 @@ public struct And<Left, Right> {
         _ action: Action
     ) async -> AsyncFolder<State, Action>.Effect {
         do {
-            guard !Cancellables.isCancelled else { throw CancellationError() }
+            try Cancellables.checkCancellation()
             switch (action, state.current) {
                 case let (.left(leftResult), .nothing):
                     state.current = .hasLeft(try leftResult.get())

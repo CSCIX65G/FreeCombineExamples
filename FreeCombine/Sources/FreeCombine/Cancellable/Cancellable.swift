@@ -7,13 +7,19 @@
 @preconcurrency import Atomics
 
 public enum Cancellables {
-    @TaskLocal static var status = ManagedAtomic<Status>(.running)
+    @TaskLocal public static var status = ManagedAtomic<Status>(.running)
 
+    @inlinable
     static var isCancelled: Bool {
         status.load(ordering: .sequentiallyConsistent) == .cancelled
     }
 
-    enum Status: UInt8, Sendable, AtomicValue, Equatable {
+    @inlinable
+    static func checkCancellation() throws -> Void {
+        guard !isCancelled else { throw CancellationError() }
+    }
+
+    public enum Status: UInt8, Sendable, AtomicValue, Equatable {
         case running
         case finished
         case cancelled
