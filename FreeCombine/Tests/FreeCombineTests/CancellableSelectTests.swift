@@ -9,6 +9,7 @@ import XCTest
 
 @testable import FreeCombine
 
+@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 final class CancellableOrTests: XCTestCase {
 
     override func setUpWithError() throws {}
@@ -92,9 +93,10 @@ final class CancellableOrTests: XCTestCase {
             case rightFailure
         }
         let lVal = 13
+        let clock = ContinuousClock()
         let expectation: Promise<Void> = await .init()
         let promise1: Promise<Int> = await .init()
-        let future1 = promise1.future.delay(.seconds(1))
+        let future1 = promise1.future.delay(clock: clock, duration: .seconds(1))
         let promise2: Promise<String> = await .init()
         let future2 = promise2.future
 
@@ -124,7 +126,8 @@ final class CancellableOrTests: XCTestCase {
         let promise1: Promise<Int> = await .init()
         let future1 = promise1.future
         let promise2: Promise<String> = await .init()
-        let future2 = promise2.future.delay(.seconds(1))
+        let clock = ContinuousClock()
+        let future2 = promise2.future.delay(clock: clock, duration: .seconds(1))
 
         let cancellable = await or(future1, future2).sink { result in
             try? expectation.succeed()

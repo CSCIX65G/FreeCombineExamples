@@ -58,6 +58,23 @@ public func Heartbeat<C: Clock>(
 }
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
+public func Heartbeat<C: Clock>(
+    clock: C,
+    interval: Swift.Duration,
+    tolerance: Swift.Duration? = .none,
+    for duration:  Swift.Duration,
+    tickAtStart: Bool = false
+) -> Publisher<C.Instant> where C.Duration == Swift.Duration {
+    .init(
+        clock: clock,
+        interval: interval,
+        tolerance: tolerance,
+        until: clock.now.advanced(by: duration),
+        tickAtStart: tickAtStart
+    )
+}
+
+@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 extension Swift.Duration {
     static let oneQuintillion: Int64 = 1_000_000_000_000_000_000
     static let oneBillion: Int64 = 1_000_000_000
@@ -83,7 +100,6 @@ extension Publisher {
         self = Publisher<C.Instant> { resumption, downstream in
                 .init {
                     let start = clock.now
-                    Swift.print("\(start), \(until)")
                     var ticks: Int64 = .zero
                     let components = interval.components
                     resumption.resume()

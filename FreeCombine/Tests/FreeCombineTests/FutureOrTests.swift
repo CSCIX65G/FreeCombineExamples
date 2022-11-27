@@ -9,6 +9,7 @@ import XCTest
 
 @testable import FreeCombine
 
+@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 final class FutureOrTests: XCTestCase {
 
     override func setUpWithError() throws {}
@@ -107,7 +108,8 @@ final class FutureOrTests: XCTestCase {
         let lVal = 13
         let expectation: Promise<Void> = await .init()
         let promise1: Promise<Int> = await .init()
-        let future1 = promise1.future.delay(.seconds(1))
+        let clock = ContinuousClock()
+        let future1 = promise1.future.delay(clock: clock, duration: .seconds(1))
         let promise2: Promise<String> = await .init()
         let future2 = promise2.future
 
@@ -137,7 +139,8 @@ final class FutureOrTests: XCTestCase {
         let promise1: Promise<Int> = await .init()
         let future1 = promise1.future
         let promise2: Promise<String> = await .init()
-        let future2 = promise2.future.delay(.seconds(1))
+        let clock = ContinuousClock()
+        let future2 = promise2.future.delay(clock: clock, duration: .seconds(1))
 
         let cancellable = await or(future1, future2).sink { result in
             try? expectation.succeed()
@@ -160,7 +163,8 @@ final class FutureOrTests: XCTestCase {
         enum Error: Swift.Error { case iFailed }
 
         let toDo = await Promise<Int>()
-        let timeout = Failed(Never.self, error: Error.iFailed).delay(.milliseconds(10))
+        let clock = ContinuousClock()
+        let timeout = Failed(Never.self, error: Error.iFailed).delay(clock: clock, duration: .milliseconds(10))
         let toDoFuture = toDo.future
         let orFuture = or(toDoFuture, timeout)
         let cancellable = await orFuture.sink { resultEitherIntVoid in
@@ -184,8 +188,9 @@ final class FutureOrTests: XCTestCase {
     func testFailAfterTimeout() async throws {
         enum Error: Swift.Error { case iFailed }
 
-        let toDo = Succeeded(13).delay(.milliseconds(100))
-        let timeout = Failed(Never.self, error: Error.iFailed).delay(.milliseconds(5))
+        let clock = ContinuousClock()
+        let toDo = Succeeded(13).delay(clock: clock, duration: .milliseconds(100))
+        let timeout = Failed(Never.self, error: Error.iFailed).delay(clock: clock, duration: .milliseconds(5))
         let orFuture = or(toDo, timeout)
         let cancellable = await orFuture.sink { resultEitherIntVoid in
             guard case .failure(let error) = resultEitherIntVoid else {
