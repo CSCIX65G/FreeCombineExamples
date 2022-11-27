@@ -24,7 +24,7 @@ let package = Package(
         .target(
             name: "FreeCombine",
             dependencies: [
-                .product(name: "Atomics", package: "swift-atomics")
+                .product(name: "Atomics", package: "swift-atomics"),
             ]
         ),
         .testTarget(

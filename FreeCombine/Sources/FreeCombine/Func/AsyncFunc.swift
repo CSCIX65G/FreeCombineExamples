@@ -26,22 +26,14 @@ extension AsyncFunc {
                 fatalError("Unimplemented enqueue case")
         }
     }
-    public func callAsFunction(continuation: AsyncStream<R>.Continuation) -> (A) async throws -> Void {
-        { value in try await self(continuation: continuation, value: value)}
+
+    public func stream(into continuation: AsyncStream<R>.Continuation) -> (A) async throws -> Void {
+        { value in try await self(continuation: continuation, value: value) }
     }
 
-    public func callAsFunction(continuation: AsyncStream<R>.Continuation) -> AsyncFunc<A, Void> {
-        .init(self.callAsFunction(continuation: continuation))
+    public func stream(into continuation: AsyncStream<R>.Continuation) -> AsyncFunc<A, Void> {
+        .init(stream(into: continuation))
     }
-//    public func callAsFunction<State>(channel: Channel<R>, value: A) async throws -> AsyncFold<State, R> {
-//        switch try await continuation.yield(call(value)) {
-//            case .enqueued: return
-//            case .terminated: throw EnqueueError<R>.terminated
-//            case let .dropped(r): throw EnqueueError.dropped(r)
-//            @unknown default:
-//                fatalError("Unimplemented enqueue case")
-//        }
-//    }
 }
 
 public extension AsyncFunc {

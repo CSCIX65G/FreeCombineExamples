@@ -14,7 +14,7 @@ public enum Promises {
     }
 }
 
-public final class Promise<Output> {
+public final class Promise<Output>: Identifiable {
     private let function: StaticString
     private let file: StaticString
     private let line: UInt
@@ -22,6 +22,8 @@ public final class Promise<Output> {
     private let atomicStatus = ManagedAtomic<Promises.Status>(.waiting)
     private let resumption: Resumption<Output>
     public let cancellable: Cancellable<Output>
+
+    public private(set) var id: ObjectIdentifier! = .none
 
     public init(
         function: StaticString = #function,
@@ -36,6 +38,7 @@ public final class Promise<Output> {
             localCancellable = .init(function: function, file: file, line: line) { try await pause(outer.resume) }
         }
         self.cancellable = localCancellable
+        self.id = ObjectIdentifier(self)
     }
 
     public static func promise(

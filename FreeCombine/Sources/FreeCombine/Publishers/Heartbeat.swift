@@ -45,60 +45,68 @@ extension Publisher where Output == UInt64 {
     }
 }
 
-#if swift(>=5.8)
-    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-    public func Heartbeat<C: Clock>(
-        clock: C,
-        interval: C.Instant.Duration,
-        tolerance: C.Instant.Duration? = .none
-    ) -> Publisher<C.Instant> {
-        .init(clock: clock, interval: interval, tolerance: tolerance)
-    }
+#if swift(>=5.7)
+@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
+public func Heartbeat<C: Clock>(
+    clock: C,
+    interval: Swift.Duration,
+    tolerance: Swift.Duration? = .none,
+    until:  C.Instant,
+    tickAtStart: Bool = false
+) -> Publisher<C.Instant> where C.Duration == Swift.Duration {
+    .init(clock: clock, interval: interval, tolerance: tolerance, until: until, tickAtStart: tickAtStart)
+}
 
-    extension Publisher {
-        @available(macOS 14.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-        public init<C: Clock>(
-            clock: C,
-            interval: C.Instant.Duration,
-            tolerance: C.Instant.Duration? = .none,
-            maxTicks: Int = Int.max,
-            tickAtStart: Bool = false
-        ) where Output == C.Instant {
-            self = Publisher<C.Instant> { resumption, downstream in
+@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
+extension Swift.Duration {
+    static let oneQuintillion: Int64 = 1_000_000_000_000_000_000
+    static let oneBillion: Int64 = 1_000_000_000
+    static let oneMillion: Int64 = 1_000_000
+    static func componentMultiply(_ components: (seconds: Int64, attoseconds: Int64), _ ticks: Int64) -> Self {
+        let dattoseconds = Double(components.attoseconds) * Double(ticks) / 1_000_000_000_000_000_000.0
+        let dseconds = Double(components.seconds) * Double(ticks)
+        let newAttoseconds = Int64(dattoseconds.truncatingRemainder(dividingBy: 1) * 1_000_000_000_000_000_000.0)
+        let newSeconds = Int64(dseconds + floor(dattoseconds))
+        return .init(secondsComponent: newSeconds, attosecondsComponent: newAttoseconds)
+    }
+}
+
+extension Publisher {
+    @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
+    public init<C: Clock>(
+        clock: C,
+        interval: Swift.Duration,
+        tolerance: Swift.Duration? = .none,
+        until:  C.Instant,
+        tickAtStart: Bool = false
+    ) where Output == C.Instant, C.Duration == Swift.Duration {
+        self = Publisher<C.Instant> { resumption, downstream in
                 .init {
                     let start = clock.now
-                    var ticks: Int = .zero
+                    Swift.print("\(start), \(until)")
+                    var ticks: Int64 = .zero
+                    let components = interval.components
                     resumption.resume()
-                    var maxTicks = maxTicks
                     do {
-                        var current = start
                         if tickAtStart {
-                            maxTicks -= 1
-                            guard try await downstream(.value(current)) != .done else {
-                                throw Publishers.Error.done
-                            }
+                            try await downstream(.value(clock.now))
                         }
-                        while ticks < maxTicks {
-                            guard !Cancellables.isCancelled else {
-                                return try await handleCancellation(of: downstream)
-                            }
+                        while clock.now < until {
                             ticks += 1
-                            let next = start.advanced(by: interval * ticks)
-                            current = clock.now
-                            if current > next { continue }
+                            let fromStart = Swift.Duration.componentMultiply(components, ticks)
+                            let next = start.advanced(by: fromStart)
                             try await clock.sleep(until: next, tolerance: tolerance)
-                            current = clock.now
-                            guard try await downstream(.value(current)) != .done else {
+                            guard !Cancellables.isCancelled else {
+                                _ = try await downstream(.completion(.finished))
                                 throw Publishers.Error.done
                             }
+                            _ = try await downstream(.value(next))
                         }
-                        _ = try await downstream(.completion(.finished))
                     } catch {
                         throw error
                     }
-                    throw Publishers.Error.done
                 }
-            }
         }
     }
+}
 #endif
