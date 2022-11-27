@@ -19,25 +19,30 @@ final class HeartbeatTests: XCTestCase {
         let clock = TestClock()
         let end = clock.now.advanced(by: .seconds(1))
         let counter = Counter()
-        let heartbeat = Heartbeat(clock: clock, interval: .milliseconds(100), until: end)
-        let cancellable = await heartbeat.sink { instant in
+        let heartbeat = Heartbeat(clock: clock, interval: .milliseconds(100), deadline: end)
+        let cancellable = await heartbeat.sink { result in
+            guard case .value = result else { return }
+            clock.advance(by: .milliseconds(100))
             counter.increment()
         }
-        for _ in 0 ..< 100 { await clock.advance(by: .milliseconds(100)) }
-        await clock.runToCompletion()
+        clock.advance(by: .milliseconds(100))
         _ = await cancellable.result
+        await clock.runToCompletion()
         XCTAssert(counter.count == 10, "Failed due to count = \(counter.count)")
     }
+    
     func testHeartbeatFor() async throws {
         let clock = TestClock()
         let counter = Counter()
         let heartbeat = Heartbeat(clock: clock, interval: .milliseconds(100), for: .seconds(1))
-        let cancellable = await heartbeat.sink { instant in
+        let cancellable = await heartbeat.sink { result in
+            guard case .value = result else { return }
+            clock.advance(by: .milliseconds(100))
             counter.increment()
         }
-        for _ in 0 ..< 100 { await clock.advance(by: .milliseconds(100)) }
-        await clock.runToCompletion()
+        clock.advance(by: .milliseconds(100))
         _ = await cancellable.result
+        await clock.runToCompletion()
         XCTAssert(counter.count == 10, "Failed due to count = \(counter.count)")
     }
 }

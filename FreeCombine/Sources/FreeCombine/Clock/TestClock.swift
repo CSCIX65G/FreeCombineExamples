@@ -13,7 +13,6 @@
 //
 #if swift(>=5.7)
 import Atomics
-import Foundation
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 public final class TestClock: Clock, @unchecked Sendable {
@@ -40,141 +39,152 @@ public final class TestClock: Clock, @unchecked Sendable {
 
     public struct Suspension: Identifiable {
         let deadline: Instant
-        let promise: Promise<Void>
-        public var id: ObjectIdentifier { promise.id }
+        let resumption: Resumption<Void>
+        public var id: ObjectIdentifier { resumption.id }
     }
 
     final class State: AtomicReference, Identifiable {
         private(set) var id: ObjectIdentifier! = .none
         let now: Instant
-        let suspensions: [Suspension]
-        init(now: Instant, suspensions: [Suspension] = []) {
+        let pendingSuspensions: [Suspension]
+        init(now: Instant, pendingSuspensions: [Suspension] = []) {
             self.now = now
-            self.suspensions = suspensions
+            self.pendingSuspensions = pendingSuspensions
             self.id = .init(self)
+        }
+    }
+
+    enum Action {
+        case removeSuspensions(for: ObjectIdentifier)
+        case removeAllSuspensions
+        case sleepUntil(deadline: Instant, resumption: Resumption<Void>)
+        case advanceTo(deadline: Instant)
+        case runToCompletion(resumption: Resumption<Void>)
+    }
+
+    private func reduce(_ action: Action) {
+        switch action {
+            case let .removeSuspensions(for: id):
+                removeSuspensions(id).forEach { $0.resumption.resume() }
+            case .removeAllSuspensions:
+                removeAllSuspensions().forEach { $0.resumption.resume() }
+            case let .sleepUntil(deadline: deadline, resumption: resumption):
+                guard deadline > self.now, !Cancellables.isCancelled else {
+                    resumption.resume()
+                    return
+                }
+                addSuspension(.init(deadline: deadline, resumption: resumption))
+            case let .advanceTo(deadline: deadline):
+                guard deadline > self.now else { return }
+                advanceTo(deadline: deadline).forEach { $0.resumption.resume() }
+            case let .runToCompletion(resumption: resumption):
+                let pendingSuspensions = removeAllSuspensions()
+                guard !pendingSuspensions.isEmpty else {
+                    resumption.resume()
+                    return
+                }
+                let error = SuspensionError()
+                pendingSuspensions.forEach { $0.resumption.resume(throwing: error) }
+                resumption.resume(throwing: error)
         }
     }
 
     public let minimumResolution: Duration = .zero
     private let atomicState: ManagedAtomic<State>
+    private var cancellable: Cancellable<Void>! = .none
+    private var channel: Channel<Action>! = .none
 
-    public var now: Instant {
-        atomicState.load(ordering: .sequentiallyConsistent).now
+    public init(now: Instant = .init(), pendingSuspensions: [Suspension] = []) {
+        let localChannel = Channel<Action>.init(buffering: .unbounded)
+        let localAtomicState = ManagedAtomic<State>(.init(now: now, pendingSuspensions: pendingSuspensions))
+
+        self.atomicState = localAtomicState
+        self.channel = localChannel
+        self.cancellable = .init {
+            for await action in localChannel.stream { self.reduce(action) }
+            self.state.pendingSuspensions.forEach {
+                $0.resumption.resume(throwing: SuspensionError())
+            }
+        }
+    }
+
+    public convenience init() {
+        self.init(now: .init())
     }
 
     var state: State {
         atomicState.load(ordering: .sequentiallyConsistent)
     }
 
-    private func addSuspension(_ suspension: Suspension) -> Void {
+    public var now: Instant {
+        state.now
+    }
+
+    @discardableResult
+    private func updateState(using next: (State) -> (State, [Suspension])) -> [Suspension] {
         var localState = state
+        var releasableSuspensions = [Suspension]()
         while true {
-            let newState = State(
-                now: localState.now,
-                suspensions: localState.suspensions + [suspension]
-            )
+            let (newState, newReleasedSuspensions) = next(localState)
             let (success, newLocalState) = atomicState.compareExchange(
                 expected: localState,
                 desired: newState,
                 ordering: .sequentiallyConsistent
             )
-            if success { break }
+            if success {
+                releasableSuspensions = newReleasedSuspensions
+                break
+            }
             localState = newLocalState
+        }
+        return releasableSuspensions
+    }
+
+    private func addSuspension(_ suspension: Suspension) -> Void {
+        updateState { state in
+            return (.init(now: state.now, pendingSuspensions: state.pendingSuspensions + [suspension]), [])
         }
     }
 
-    private func removeSuspensions(_ id: ObjectIdentifier) -> Void {
-        var localState = state
-        while true {
-            let newState = State(
-                now: localState.now,
-                suspensions: localState.suspensions.filter { $0.id != id }
-            )
-            let (success, newLocalState) = atomicState.compareExchange(
-                expected: localState,
-                desired: newState,
-                ordering: .sequentiallyConsistent
-            )
-            if success { break }
-            localState = newLocalState
+    private func removeSuspensions(_ id: ObjectIdentifier) -> [Suspension] {
+        updateState { state in
+            let newPending = state.pendingSuspensions.filter { $0.id != id }
+            let newReleased = state.pendingSuspensions.filter { $0.id == id }
+            return (.init(now: state.now, pendingSuspensions: newPending), newReleased)
         }
     }
 
     private func removeAllSuspensions() -> [Suspension] {
-        var localState = state
-        while true {
-            let newState = State(
-                now: localState.now,
-                suspensions: []
-            )
-            let (success, newLocalState) = atomicState.compareExchange(
-                expected: localState,
-                desired: newState,
-                ordering: .sequentiallyConsistent
-            )
-            if success { return localState.suspensions }
-            localState = newLocalState
+        updateState { state in
+            let newReleased = state.pendingSuspensions
+            return (.init(now: state.now, pendingSuspensions: []), newReleased)
         }
     }
 
-    public init(now: Instant = .init(), suspensions: [Suspension] = []) {
-        self.atomicState = .init(.init(now: now, suspensions: suspensions))
+    private func advanceTo(deadline: Instant) -> [Suspension] {
+        updateState { state in
+            let sortedSuspensions = state.pendingSuspensions.sorted { $0.deadline < $1.deadline }
+            let newPending = sortedSuspensions.filter { $0.deadline > deadline }
+            let newReleased = sortedSuspensions.filter { $0.deadline <= deadline }
+            return (.init(now: deadline, pendingSuspensions: newPending), newReleased)
+        }
     }
 
     public func sleep(until deadline: Instant, tolerance: Duration? = nil) async throws {
-        guard deadline >= self.now else { return }
+        guard deadline > self.now else { return }
         try Cancellables.checkCancellation()
-        let promise = await Promise<Void>()
-        do {
-            addSuspension(.init(deadline: deadline, promise: promise))
-            _ = await promise.result
-            try Cancellables.checkCancellation()
-        } catch is CancellationError {
-            removeSuspensions(promise.id)
-            throw CancellationError()
-        } catch {
-            throw error
+        _ = try await pause { resumption in
+            self.channel.continuation.yield(.sleepUntil(deadline: deadline, resumption: resumption))
         }
     }
 
-    public func checkSuspension() async throws {
-        await Task.megaYield()
-        guard state.suspensions.isEmpty else { throw SuspensionError() }
+    public func advance(by duration: Duration = .zero) {
+        advance(to: state.now.advanced(by: duration))
     }
 
-    public func advance(by duration: Duration = .zero) async {
-        while true {
-            do { try await tryAdvance(to: state.now.advanced(by: duration)); return }
-            catch { }
-        }
-    }
-    public func advance(to deadline: Instant) async throws {
-        while true {
-            do { try await tryAdvance(to: deadline); return }
-            catch { }
-        }
-    }
-
-    private func tryAdvance(to deadline: Instant) async throws {
+    func advance(to deadline: Instant) {
         guard deadline >= self.now else { return }
-        await Task.megaYield()
-        let localState = state
-        let sortedSuspensions = localState.suspensions.sorted { $0.deadline < $1.deadline }
-        let newSuspensions = sortedSuspensions.filter { $0.deadline > deadline }
-        let suspensionsToFulfill = sortedSuspensions.filter { $0.deadline <= deadline }
-
-        let newState = State(
-            now: deadline,
-            suspensions: newSuspensions
-        )
-        let (success, _) = atomicState.compareExchange(
-            expected: localState,
-            desired: newState,
-            ordering: .sequentiallyConsistent
-        )
-        guard success else { throw SuspensionError() }
-        suspensionsToFulfill.forEach { try? $0.promise.succeed() }
-        await Task.megaYield()
+        self.channel.continuation.yield(.advanceTo(deadline: deadline))
     }
 
     public func runToCompletion(
@@ -182,37 +192,22 @@ public final class TestClock: Clock, @unchecked Sendable {
         file: StaticString = #file,
         line: UInt = #line
     ) async {
-        let suspensions = removeAllSuspensions()
-        guard !suspensions.isEmpty else { return }
-        let error = SuspensionError()
-        suspensions.forEach { try? $0.promise.fail(error) }
-        Assertion.assertionFailure(
-            """
-            Expected all sleeps to finish, but some are still suspended.
-            
-            This could mean you are not advancing the test clock far \
-            enough for your feature to execute its logic, or there could be a bug in your feature's \
-            timing.
-            """
-        )
-    }
-}
+        do {
+            _ = try await pause { resumption in
+                self.channel.continuation.yield(.runToCompletion(resumption: resumption))
+            }
+        } catch {
+            Assertion.assertionFailure(
+                """
+                Expected all sleeps to finish, but some are still suspended.
 
-@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
-extension TestClock {
-    public convenience init() {
-        self.init(now: .init())
+                This could mean you are not advancing the test clock far \
+                enough for your feature to execute its logic, or there could be a bug in your feature's \
+                timing.
+                """
+            )
+        }
     }
 }
 #endif
 
-extension Task where Success == Failure, Failure == Never {
-    // NB: We would love if this was not necessary, but due to a lack of async testing tools in Swift
-    //     we're not sure if there is an alternative. See this forum post for more information:
-    //     https://forums.swift.org/t/reliably-testing-code-that-adopts-swift-concurrency/57304
-    static func megaYield(count: Int = 10) async {
-        for _ in 1...count {
-            await Task<Void, Never>.detached(priority: .background) { await Task.yield() }.value
-        }
-    }
-}

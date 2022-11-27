@@ -51,10 +51,10 @@ public func Heartbeat<C: Clock>(
     clock: C,
     interval: Swift.Duration,
     tolerance: Swift.Duration? = .none,
-    until:  C.Instant,
+    deadline:  C.Instant,
     tickAtStart: Bool = false
 ) -> Publisher<C.Instant> where C.Duration == Swift.Duration {
-    .init(clock: clock, interval: interval, tolerance: tolerance, until: until, tickAtStart: tickAtStart)
+    .init(clock: clock, interval: interval, tolerance: tolerance, deadline: deadline, tickAtStart: tickAtStart)
 }
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
@@ -69,7 +69,7 @@ public func Heartbeat<C: Clock>(
         clock: clock,
         interval: interval,
         tolerance: tolerance,
-        until: clock.now.advanced(by: duration),
+        deadline: clock.now.advanced(by: duration),
         tickAtStart: tickAtStart
     )
 }
@@ -94,7 +94,7 @@ extension Publisher {
         clock: C,
         interval: Swift.Duration,
         tolerance: Swift.Duration? = .none,
-        until:  C.Instant,
+        deadline:  C.Instant,
         tickAtStart: Bool = false
     ) where Output == C.Instant, C.Duration == Swift.Duration {
         self = Publisher<C.Instant> { resumption, downstream in
@@ -104,20 +104,21 @@ extension Publisher {
                     let components = interval.components
                     resumption.resume()
                     do {
-                        if tickAtStart {
-                            try await downstream(.value(clock.now))
-                        }
-                        while clock.now < until {
+                        if tickAtStart { try await downstream(.value(clock.now)) }
+                        while clock.now < deadline {
                             ticks += 1
                             let fromStart = Swift.Duration.componentMultiply(components, ticks)
-                            let next = start.advanced(by: fromStart)
-                            try await clock.sleep(until: next, tolerance: tolerance)
+                            try await clock.sleep(
+                                until: start.advanced(by: fromStart),
+                                tolerance: tolerance
+                            )
                             guard !Cancellables.isCancelled else {
                                 _ = try await downstream(.completion(.finished))
                                 throw Publishers.Error.done
                             }
-                            _ = try await downstream(.value(next))
+                            _ = try await downstream(.value(clock.now))
                         }
+                        _ = try await downstream(.completion(.finished))
                     } catch {
                         throw error
                     }
