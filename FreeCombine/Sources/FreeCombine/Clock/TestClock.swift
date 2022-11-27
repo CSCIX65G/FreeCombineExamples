@@ -11,11 +11,13 @@
 //  4. No Foundation
 //  4. Uses composability tools from FreeCombine
 //
-#if swift(>=5.7) && (canImport(RegexBuilder) || !os(macOS) && !targetEnvironment(macCatalyst))
+#if swift(>=5.7)
+import Atomics
 import Foundation
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
-public final class TestClock<Duration: DurationProtocol & Hashable>: Clock, @unchecked Sendable {
+public final class TestClock: Clock, @unchecked Sendable {
+    public typealias Duration = Swift.Duration
     public struct Instant: InstantProtocol {
         public var offset: Duration
 
@@ -36,155 +38,175 @@ public final class TestClock<Duration: DurationProtocol & Hashable>: Clock, @unc
         }
     }
 
-    public var minimumResolution: Duration = .zero
-    public private(set) var now: Instant
+    public struct Suspension: Identifiable {
+        let deadline: Instant
+        let promise: Promise<Void>
+        public var id: ObjectIdentifier { promise.id }
+    }
 
-    private let lock = NSRecursiveLock()
-    private var suspensions:
-    [(
-        id: UUID,
-        deadline: Instant,
-        continuation: AsyncThrowingStream<Never, Error>.Continuation
-    )] = []
+    final class State: AtomicReference, Identifiable {
+        private(set) var id: ObjectIdentifier! = .none
+        let now: Instant
+        let suspensions: [Suspension]
+        init(now: Instant, suspensions: [Suspension] = []) {
+            self.now = now
+            self.suspensions = suspensions
+            self.id = .init(self)
+        }
+    }
 
-    public init(now: Instant = .init()) {
-        self.now = .init()
+    public let minimumResolution: Duration = .zero
+    private let atomicState: ManagedAtomic<State>
+
+    public var now: Instant {
+        atomicState.load(ordering: .sequentiallyConsistent).now
+    }
+
+    var state: State {
+        atomicState.load(ordering: .sequentiallyConsistent)
+    }
+
+    private func addSuspension(_ suspension: Suspension) -> Void {
+        var localState = state
+        while true {
+            let newState = State(
+                now: localState.now,
+                suspensions: localState.suspensions + [suspension]
+            )
+            let (success, newLocalState) = atomicState.compareExchange(
+                expected: localState,
+                desired: newState,
+                ordering: .sequentiallyConsistent
+            )
+            if success { break }
+            localState = newLocalState
+        }
+    }
+
+    private func removeSuspensions(_ id: ObjectIdentifier) -> Void {
+        var localState = state
+        while true {
+            let newState = State(
+                now: localState.now,
+                suspensions: localState.suspensions.filter { $0.id != id }
+            )
+            let (success, newLocalState) = atomicState.compareExchange(
+                expected: localState,
+                desired: newState,
+                ordering: .sequentiallyConsistent
+            )
+            if success { break }
+            localState = newLocalState
+        }
+    }
+
+    private func removeAllSuspensions() -> [Suspension] {
+        var localState = state
+        while true {
+            let newState = State(
+                now: localState.now,
+                suspensions: []
+            )
+            let (success, newLocalState) = atomicState.compareExchange(
+                expected: localState,
+                desired: newState,
+                ordering: .sequentiallyConsistent
+            )
+            if success { return localState.suspensions }
+            localState = newLocalState
+        }
+    }
+
+    public init(now: Instant = .init(), suspensions: [Suspension] = []) {
+        self.atomicState = .init(.init(now: now, suspensions: suspensions))
     }
 
     public func sleep(until deadline: Instant, tolerance: Duration? = nil) async throws {
-        try Task.checkCancellation()
-        let id = UUID()
+        guard deadline >= self.now else { return }
+        try Cancellables.checkCancellation()
+        let promise = await Promise<Void>()
         do {
-            let stream: AsyncThrowingStream<Never, Error>? = self.lock.sync {
-                guard deadline >= self.now
-                else {
-                    return nil
-                }
-                return AsyncThrowingStream<Never, Error> { continuation in
-                    self.suspensions.append((id: id, deadline: deadline, continuation: continuation))
-                }
-            }
-            guard let stream = stream
-            else { return }
-            for try await _ in stream {}
-            try Task.checkCancellation()
+            addSuspension(.init(deadline: deadline, promise: promise))
+            _ = await promise.result
+            try Cancellables.checkCancellation()
         } catch is CancellationError {
-            self.lock.sync { self.suspensions.removeAll(where: { $0.id == id }) }
+            removeSuspensions(promise.id)
             throw CancellationError()
         } catch {
             throw error
         }
     }
+
     public func checkSuspension() async throws {
         await Task.megaYield()
-        guard self.lock.sync(operation: { self.suspensions.isEmpty })
-        else { throw SuspensionError() }
+        guard state.suspensions.isEmpty else { throw SuspensionError() }
     }
 
     public func advance(by duration: Duration = .zero) async {
-        await self.advance(to: self.lock.sync(operation: { self.now.advanced(by: duration) }))
+        while true {
+            do { try await tryAdvance(to: state.now.advanced(by: duration)); return }
+            catch { }
+        }
+    }
+    public func advance(to deadline: Instant) async throws {
+        while true {
+            do { try await tryAdvance(to: deadline); return }
+            catch { }
+        }
     }
 
-    public func advance(to deadline: Instant) async {
-        while self.lock.sync(operation: { self.now <= deadline }) {
-            await Task.megaYield()
-            let `return` = {
-                self.lock.lock()
-                self.suspensions.sort { $0.deadline < $1.deadline }
+    private func tryAdvance(to deadline: Instant) async throws {
+        guard deadline >= self.now else { return }
+        await Task.megaYield()
+        let localState = state
+        let sortedSuspensions = localState.suspensions.sorted { $0.deadline < $1.deadline }
+        let newSuspensions = sortedSuspensions.filter { $0.deadline > deadline }
+        let suspensionsToFulfill = sortedSuspensions.filter { $0.deadline <= deadline }
 
-                guard
-                    let next = self.suspensions.first,
-                    deadline >= next.deadline
-                else {
-                    self.now = deadline
-                    self.lock.unlock()
-                    return true
-                }
-
-                self.now = next.deadline
-                self.suspensions.removeFirst()
-                self.lock.unlock()
-                next.continuation.finish()
-                return false
-            }()
-
-            if `return` {
-                await Task.megaYield()
-                return
-            }
-        }
+        let newState = State(
+            now: deadline,
+            suspensions: newSuspensions
+        )
+        let (success, _) = atomicState.compareExchange(
+            expected: localState,
+            desired: newState,
+            ordering: .sequentiallyConsistent
+        )
+        guard success else { throw SuspensionError() }
+        suspensionsToFulfill.forEach { try? $0.promise.succeed() }
         await Task.megaYield()
     }
 
-    public func run(
-        timeout duration: Swift.Duration = .milliseconds(500),
+    public func runToCompletion(
+        function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line
     ) async {
-        do {
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask {
-                    try await Task.sleep(until: .now.advanced(by: duration), clock: .continuous)
-                    for suspension in self.suspensions {
-                        suspension.continuation.finish(throwing: CancellationError())
-                    }
-                    throw CancellationError()
-                }
-                group.addTask {
-                    await Task.megaYield()
-                    while let deadline = self.lock.sync(operation: { self.suspensions.first?.deadline }) {
-                        try Task.checkCancellation()
-                        await self.advance(by: self.lock.sync(operation: { self.now.duration(to: deadline) }))
-                    }
-                }
-                try await group.next()
-                group.cancelAll()
-            }
-        } catch {
-            Assertion.assertionFailure(
-                """
-                Expected all sleeps to finish, but some are still suspending after \(duration).
-
-                There are sleeps suspending. This could mean you are not advancing the test clock far \
-                enough for your feature to execute its logic, or there could be a bug in your feature's \
-                logic.
-
-                You can also increase the timeout of 'run' to be greater than \(duration).
-                """
-            )
-        }
+        let suspensions = removeAllSuspensions()
+        guard !suspensions.isEmpty else { return }
+        let error = SuspensionError()
+        suspensions.forEach { try? $0.promise.fail(error) }
+        Assertion.assertionFailure(
+            """
+            Expected all sleeps to finish, but some are still suspended.
+            
+            This could mean you are not advancing the test clock far \
+            enough for your feature to execute its logic, or there could be a bug in your feature's \
+            timing.
+            """
+        )
     }
 }
 
 public struct SuspensionError: Error {}
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
-extension TestClock where Duration == Swift.Duration {
+extension TestClock {
     public convenience init() {
         self.init(now: .init())
     }
 }
 #endif
-
-extension NSLock {
-    @inlinable
-    @discardableResult
-    func sync<R>(operation: () -> R) -> R {
-        self.lock()
-        defer { self.unlock() }
-        return operation()
-    }
-}
-
-extension NSRecursiveLock {
-    @inlinable
-    @discardableResult
-    func sync<R>(operation: () -> R) -> R {
-        self.lock()
-        defer { self.unlock() }
-        return operation()
-    }
-}
 
 extension Task where Success == Failure, Failure == Never {
     // NB: We would love if this was not necessary, but due to a lack of async testing tools in Swift

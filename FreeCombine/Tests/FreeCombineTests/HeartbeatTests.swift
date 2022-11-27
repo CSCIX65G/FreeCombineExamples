@@ -24,7 +24,7 @@ final class HeartbeatTests: XCTestCase {
             counter.increment()
         }
         for _ in 0 ..< 100 { await clock.advance(by: .milliseconds(100)) }
-        await clock.run()
+        await clock.runToCompletion()
         _ = await cancellable.result
         XCTAssert(counter.count == 10, "Failed due to count = \(counter.count)")
     }
@@ -36,7 +36,7 @@ final class HeartbeatTests: XCTestCase {
             counter.increment()
         }
         for _ in 0 ..< 100 { await clock.advance(by: .milliseconds(100)) }
-        await clock.run()
+        await clock.runToCompletion()
         _ = await cancellable.result
         XCTAssert(counter.count == 10, "Failed due to count = \(counter.count)")
     }
