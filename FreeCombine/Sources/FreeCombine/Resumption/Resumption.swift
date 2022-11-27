@@ -86,13 +86,29 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
     }
 }
 
-extension Resumption where Output == Void {
-    public func resume() -> Void {
+public extension Resumption where Output == Void {
+    func resume() -> Void {
         resume(returning: ())
     }
 
-    public func tryResume() throws -> Void {
+    func tryResume() throws -> Void {
         try tryResume(returning: ())
+    }
+}
+
+extension Resumption: Identifiable {
+    public var id: ObjectIdentifier { .init(self) }
+}
+
+extension Resumption: Equatable {
+    public static func == (lhs: Resumption<Output>, rhs: Resumption<Output>) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+extension Resumption: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self)
     }
 }
 
