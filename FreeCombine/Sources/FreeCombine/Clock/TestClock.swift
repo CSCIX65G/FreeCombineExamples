@@ -198,8 +198,6 @@ public final class TestClock: Clock, @unchecked Sendable {
     }
 }
 
-public struct SuspensionError: Error {}
-
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 extension TestClock {
     public convenience init() {
