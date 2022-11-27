@@ -1,5 +1,5 @@
 //
-//  StreamedFunc.swift
+//  Channel+Func.swift
 //  
 //
 //  Created by Van Simmons on 11/25/22.
@@ -27,6 +27,11 @@ extension Channel {
     ) -> AsyncFunc<A, Void> {
         self.continuation.consume(f)
     }
+    func consume<A>(
+        _ f: AsyncFunc<A, Element>
+    ) -> AsyncFunc<A, Void> {
+        self.continuation.consume(f.call)
+    }
 }
 
 extension AsyncStream.Continuation {
@@ -46,6 +51,12 @@ extension AsyncStream.Continuation {
         _ f: @escaping (A) async throws -> Element
     ) -> AsyncFunc<A, Void> {
         .init(self.consume(f))
+    }
+
+    func consume<A>(
+        _ f: AsyncFunc<A, Element>
+    ) -> AsyncFunc<A, Void> {
+        .init(self.consume(f.call))
     }
 }
 
@@ -75,4 +86,3 @@ extension IdentifiedAsyncFunc {
         .init(self.callAsFunction(continuation: channel.continuation))
     }
 }
-
