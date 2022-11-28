@@ -8,7 +8,7 @@
 //  1. Lock-free
 //  2. No "megaYield"
 //  3. No AsyncStream<Never>
-//  4. No Foundation
+//  4. No Foundation, uses Atomics instead
 //  4. Uses composability tools from FreeCombine
 //
 #if swift(>=5.7)
@@ -43,50 +43,19 @@ public final class TestClock: Clock, @unchecked Sendable {
         public var id: ObjectIdentifier { resumption.id }
     }
 
-    final class State: AtomicReference, Identifiable {
-        private(set) var id: ObjectIdentifier! = .none
+    final class State: AtomicReference {
         let now: Instant
         let pendingSuspensions: [Suspension]
         init(now: Instant, pendingSuspensions: [Suspension] = []) {
             self.now = now
             self.pendingSuspensions = pendingSuspensions
-            self.id = .init(self)
         }
     }
 
     enum Action {
-        case removeSuspensions(for: ObjectIdentifier)
-        case removeAllSuspensions
-        case sleepUntil(deadline: Instant, resumption: Resumption<Void>)
         case advanceTo(deadline: Instant)
+        case sleepUntil(deadline: Instant, resumption: Resumption<Void>)
         case runToCompletion(resumption: Resumption<Void>)
-    }
-
-    private func reduce(_ action: Action) {
-        switch action {
-            case let .removeSuspensions(for: id):
-                removeSuspensions(id).forEach { $0.resumption.resume() }
-            case .removeAllSuspensions:
-                removeAllSuspensions().forEach { $0.resumption.resume() }
-            case let .sleepUntil(deadline: deadline, resumption: resumption):
-                guard deadline > self.now, !Cancellables.isCancelled else {
-                    resumption.resume()
-                    return
-                }
-                addSuspension(.init(deadline: deadline, resumption: resumption))
-            case let .advanceTo(deadline: deadline):
-                guard deadline > self.now else { return }
-                advanceTo(deadline: deadline).forEach { $0.resumption.resume() }
-            case let .runToCompletion(resumption: resumption):
-                let pendingSuspensions = removeAllSuspensions()
-                guard !pendingSuspensions.isEmpty else {
-                    resumption.resume()
-                    return
-                }
-                let error = SuspensionError()
-                pendingSuspensions.forEach { $0.resumption.resume(throwing: error) }
-                resumption.resume(throwing: error)
-        }
     }
 
     public let minimumResolution: Duration = .zero
@@ -146,14 +115,6 @@ public final class TestClock: Clock, @unchecked Sendable {
         }
     }
 
-    private func removeSuspensions(_ id: ObjectIdentifier) -> [Suspension] {
-        updateState { state in
-            let newPending = state.pendingSuspensions.filter { $0.id != id }
-            let newReleased = state.pendingSuspensions.filter { $0.id == id }
-            return (.init(now: state.now, pendingSuspensions: newPending), newReleased)
-        }
-    }
-
     private func removeAllSuspensions() -> [Suspension] {
         updateState { state in
             let newReleased = state.pendingSuspensions
@@ -170,11 +131,26 @@ public final class TestClock: Clock, @unchecked Sendable {
         }
     }
 
-    public func sleep(until deadline: Instant, tolerance: Duration? = nil) async throws {
-        guard deadline > self.now else { return }
-        try Cancellables.checkCancellation()
-        _ = try await pause { resumption in
-            self.channel.continuation.yield(.sleepUntil(deadline: deadline, resumption: resumption))
+    private func reduce(_ action: Action) {
+        switch action {
+            case let .sleepUntil(deadline: deadline, resumption: resumption):
+                guard deadline > self.now, !Cancellables.isCancelled else {
+                    resumption.resume()
+                    return
+                }
+                addSuspension(.init(deadline: deadline, resumption: resumption))
+            case let .advanceTo(deadline: deadline):
+                guard deadline > self.now else { return }
+                advanceTo(deadline: deadline).forEach { $0.resumption.resume() }
+            case let .runToCompletion(resumption: resumption):
+                let pendingSuspensions = removeAllSuspensions()
+                guard !pendingSuspensions.isEmpty else {
+                    resumption.resume()
+                    return
+                }
+                let error = SuspensionError()
+                pendingSuspensions.forEach { $0.resumption.resume(throwing: error) }
+                resumption.resume(throwing: error)
         }
     }
 
@@ -185,6 +161,14 @@ public final class TestClock: Clock, @unchecked Sendable {
     func advance(to deadline: Instant) {
         guard deadline >= self.now else { return }
         self.channel.continuation.yield(.advanceTo(deadline: deadline))
+    }
+
+    public func sleep(until deadline: Instant, tolerance: Duration? = nil) async throws {
+        guard deadline > self.now else { return }
+        try Cancellables.checkCancellation()
+        _ = try await pause { resumption in
+            self.channel.continuation.yield(.sleepUntil(deadline: deadline, resumption: resumption))
+        }
     }
 
     public func runToCompletion(
@@ -199,7 +183,9 @@ public final class TestClock: Clock, @unchecked Sendable {
         } catch {
             Assertion.assertionFailure(
                 """
-                Expected all sleeps to finish, but some are still suspended.
+                Expected all sleeps to finish, but some are still suspended.  Invoked from:
+
+                \(function): \(file)@\(line)
 
                 This could mean you are not advancing the test clock far \
                 enough for your feature to execute its logic, or there could be a bug in your feature's \
@@ -210,4 +196,3 @@ public final class TestClock: Clock, @unchecked Sendable {
     }
 }
 #endif
-

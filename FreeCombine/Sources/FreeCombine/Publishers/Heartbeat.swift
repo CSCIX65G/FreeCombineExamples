@@ -82,8 +82,9 @@ extension Swift.Duration {
     static func componentMultiply(_ components: (seconds: Int64, attoseconds: Int64), _ ticks: Int64) -> Self {
         let dattoseconds = Double(components.attoseconds) * Double(ticks) / 1_000_000_000_000_000_000.0
         let dseconds = Double(components.seconds) * Double(ticks)
-        let newAttoseconds = Int64(dattoseconds.truncatingRemainder(dividingBy: 1) * 1_000_000_000_000_000_000.0)
         let newSeconds = Int64(dseconds + floor(dattoseconds))
+        let newDAttoseconds = (((dattoseconds - floor(dattoseconds)) * 1_000_000_000.0).rounded() * 1_000_000_000.0)
+        let newAttoseconds = Int64(newDAttoseconds)
         return .init(secondsComponent: newSeconds, attosecondsComponent: newAttoseconds)
     }
 }
@@ -108,6 +109,7 @@ extension Publisher {
                         while clock.now < deadline {
                             ticks += 1
                             let fromStart = Swift.Duration.componentMultiply(components, ticks)
+//                            Swift.print(fromStart)
                             try await clock.sleep(
                                 until: start.advanced(by: fromStart),
                                 tolerance: tolerance
