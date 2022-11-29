@@ -31,7 +31,7 @@ import Atomics
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 public final class TestClock: Clock, @unchecked Sendable {
     public typealias Duration = Swift.Duration
-    public struct Instant: InstantProtocol {
+    public struct Instant: InstantProtocol, Sendable, Equatable, Hashable {
         public var offset: Duration
 
         public init(offset: Duration = .zero) {
@@ -51,13 +51,14 @@ public final class TestClock: Clock, @unchecked Sendable {
         }
     }
 
-    public struct Suspension: Identifiable {
+    public struct Suspension: Identifiable, Sendable, Hashable, Equatable {
         let deadline: Instant
         let resumption: Resumption<Void>
         public var id: ObjectIdentifier { resumption.id }
+        public func release() -> Void { resumption.resume() }
     }
 
-    final class State: AtomicReference {
+    final class State: AtomicReference, Sendable  {
         let now: Instant
         let pendingSuspensions: [Suspension]
         init(now: Instant, pendingSuspensions: [Suspension] = []) {
@@ -157,18 +158,18 @@ public final class TestClock: Clock, @unchecked Sendable {
                 }
                 addSuspension(.init(deadline: deadline, resumption: resumption))
             case let .advanceBy(duration: duration):
-                advanceTo(deadline: state.now.advanced(by: duration)).forEach { $0.resumption.resume() }
+                advanceTo(deadline: state.now.advanced(by: duration)).forEach { $0.release() }
             case let .advanceTo(deadline: deadline):
                 guard deadline > self.now else { return }
-                advanceTo(deadline: deadline).forEach { $0.resumption.resume() }
+                advanceTo(deadline: deadline).forEach { $0.release() }
             case let .runToCompletion(resumption: resumption):
-                let pendingSuspensions = removeAllSuspensions()
-                guard !pendingSuspensions.isEmpty else {
+                let releasedSuspensions = removeAllSuspensions()
+                guard !releasedSuspensions.isEmpty else {
                     resumption.resume()
                     return
                 }
                 let error = SuspensionError()
-                pendingSuspensions.forEach { $0.resumption.resume(throwing: error) }
+                releasedSuspensions.forEach { $0.resumption.resume(throwing: error) }
                 resumption.resume(throwing: error)
         }
     }
