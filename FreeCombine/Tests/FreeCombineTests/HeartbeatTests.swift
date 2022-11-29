@@ -20,15 +20,21 @@ final class HeartbeatTests: XCTestCase {
         let end = clock.now.advanced(by: .seconds(5))
         let counter = Counter()
         let heartbeat = Heartbeat(clock: clock, interval: .milliseconds(100), deadline: end)
+
+        let ticker: ValueRef<Resumption<Void>?> = .init(value: .none)
         let cancellable = await heartbeat.sink { result in
             guard case .value = result else { return }
             counter.increment()
-            clock.advance(by: .milliseconds(100))
+            guard let t = ticker.value else { XCTFail("No ticker!"); return }
+            ticker.set(value: .none)
+            t.resume()
         }
-        clock.advance(by: .milliseconds(100))
+        while clock.now < end {
+            await clock.advance(by: .milliseconds(100), waiter: { ticker.set(value: $0) })
+        }
         _ = await cancellable.result
         await clock.runToCompletion()
-        XCTAssert([49, 50].contains(counter.count), "Failed \(#function) due to count = \(counter.count)")
+        XCTAssert(counter.count == 50, "Failed \(#function) due to count = \(counter.count)")
     }
     
     func testHeartbeatFor() async throws {
@@ -38,11 +44,11 @@ final class HeartbeatTests: XCTestCase {
         let cancellable = await heartbeat.sink { result in
             guard case .value = result else { return }
             counter.increment()
-            clock.advance(by: .milliseconds(100))
+            Task { await clock.advance(by: .milliseconds(100)) }
         }
-        clock.advance(by: .milliseconds(100))
+        await clock.advance(by: .milliseconds(100))
         _ = await cancellable.result
         await clock.runToCompletion()
-        XCTAssert([9, 10].contains(counter.count), "Failed \(#function) due to count = \(counter.count)")
+        XCTAssert(counter.count == 10, "Failed \(#function) due to count = \(counter.count)")
     }
 }

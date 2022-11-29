@@ -20,44 +20,44 @@
 //
 import Dispatch
 
-public func Heartbeat(interval: Duration) -> Publisher<UInt64> {
-    .init(interval: interval)
-}
-
-extension Publisher where Output == UInt64 {
-    public init(interval: Duration, maxTicks: Int = Int.max, tickAtStart: Bool = false) {
-        self = .init { resumption, downstream in
-            .init {
-                resumption.resume()
-                let maxTicks = tickAtStart ? maxTicks - 1 : maxTicks
-                let start = DispatchTime.now().uptimeNanoseconds
-                var ticks: UInt64 = 0
-                var current = start
-                do {
-                    if tickAtStart {
-                        _ = try await downstream(.value(current))
-                    }
-                    while ticks < maxTicks {
-                        guard !Cancellables.isCancelled else {
-                            return try await handleCancellation(of: downstream)
-                        }
-                        ticks += 1
-                        let next = start + (ticks * interval.inNanoseconds)
-                        current = DispatchTime.now().uptimeNanoseconds
-                        if current > next { continue }
-                        try? await Task.sleep(nanoseconds: next - current)
-                        current = DispatchTime.now().uptimeNanoseconds
-                        _ = try await downstream(.value(current))
-                    }
-                    _ = try await downstream(.completion(.finished))
-                } catch {
-                    throw error
-                }
-                throw Publishers.Error.done
-            }
-        }
-    }
-}
+//public func Heartbeat(interval: Duration) -> Publisher<UInt64> {
+//    .init(interval: interval)
+//}
+//
+//extension Publisher where Output == UInt64 {
+//    public init(interval: Duration, maxTicks: Int = Int.max, tickAtStart: Bool = false) {
+//        self = .init { resumption, downstream in
+//            .init {
+//                resumption.resume()
+//                let maxTicks = tickAtStart ? maxTicks - 1 : maxTicks
+//                let start = DispatchTime.now().uptimeNanoseconds
+//                var ticks: UInt64 = 0
+//                var current = start
+//                do {
+//                    if tickAtStart {
+//                        _ = try await downstream(.value(current))
+//                    }
+//                    while ticks < maxTicks {
+//                        guard !Cancellables.isCancelled else {
+//                            return try await handleCancellation(of: downstream)
+//                        }
+//                        ticks += 1
+//                        let next = start + (ticks * interval.inNanoseconds)
+//                        current = DispatchTime.now().uptimeNanoseconds
+//                        if current > next { continue }
+//                        try? await Task.sleep(nanoseconds: next - current)
+//                        current = DispatchTime.now().uptimeNanoseconds
+//                        _ = try await downstream(.value(current))
+//                    }
+//                    _ = try await downstream(.completion(.finished))
+//                } catch {
+//                    throw error
+//                }
+//                throw Publishers.Error.done
+//            }
+//        }
+//    }
+//}
 
 #if swift(>=5.7)
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
@@ -113,32 +113,31 @@ extension Publisher {
         tickAtStart: Bool = false
     ) where Output == C.Instant, C.Duration == Swift.Duration {
         self = Publisher<C.Instant> { resumption, downstream in
-                .init {
-                    let start = clock.now
-                    var ticks: Int64 = .zero
-                    let components = interval.components
-                    resumption.resume()
-                    do {
-                        if tickAtStart { try await downstream(.value(clock.now)) }
-                        while clock.now < deadline {
-                            ticks += 1
-                            let fromStart = Swift.Duration.componentMultiply(components, ticks)
-//                            Swift.print(fromStart)
-                            try await clock.sleep(
-                                until: start.advanced(by: fromStart),
-                                tolerance: tolerance
-                            )
-                            guard !Cancellables.isCancelled else {
-                                _ = try await downstream(.completion(.finished))
-                                throw Publishers.Error.done
-                            }
-                            _ = try await downstream(.value(clock.now))
+            .init {
+                let start = clock.now
+                var ticks: Int64 = .zero
+                let components = interval.components
+                resumption.resume()
+                do {
+                    if tickAtStart { try await downstream(.value(clock.now)) }
+                    while clock.now < deadline {
+                        ticks += 1
+                        let fromStart = Swift.Duration.componentMultiply(components, ticks)
+                        try await clock.sleep(
+                            until: start.advanced(by: fromStart),
+                            tolerance: tolerance
+                        )
+                        guard !Cancellables.isCancelled else {
+                            _ = try await downstream(.completion(.finished))
+                            throw Publishers.Error.done
                         }
-                        _ = try await downstream(.completion(.finished))
-                    } catch {
-                        throw error
+                        _ = try await downstream(.value(clock.now))
                     }
+                    _ = try await downstream(.completion(.finished))
+                } catch {
+                    throw error
                 }
+            }
         }
     }
 }

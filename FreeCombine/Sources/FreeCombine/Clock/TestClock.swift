@@ -23,7 +23,7 @@
   2. No "megaYield"
   3. No AsyncStream<Never>
   4. No Foundation, uses Atomics instead
-  4. Uses composability tools from FreeCombine
+  4. Uses Cancellable and Resumption from FreeCombine to avoid races
  */
 #if swift(>=5.7)
 import Atomics
@@ -168,13 +168,15 @@ public final class TestClock: Clock, @unchecked Sendable {
         }
     }
 
-    public func advance(by duration: Duration = .zero) {
-        advance(to: state.now.advanced(by: duration))
+    public func advance(by duration: Duration = .zero, waiter: ((Resumption<Void>) -> Void)? = .none) async -> Void {
+        await advance(to: state.now.advanced(by: duration), waiter: waiter)
     }
 
-    func advance(to deadline: Instant) {
+    func advance(to deadline: Instant, waiter: ((Resumption<Void>) -> Void)? = .none) async -> Void {
         guard deadline >= self.now else { return }
         self.channel.continuation.yield(.advanceTo(deadline: deadline))
+        guard let waiter = waiter else { return }
+        _ = try? await pause(waiter)
     }
 
     public func sleep(until deadline: Instant, tolerance: Duration? = nil) async throws {
