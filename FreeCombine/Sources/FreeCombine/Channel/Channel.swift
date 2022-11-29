@@ -8,17 +8,10 @@
 import Atomics
 
 public final class Channel<Value> {
-    public struct WrapperError: Error { }
-
-    final class Wrapper: AtomicReference, Identifiable, Hashable, Equatable {
-        static func == (lhs: Channel<Value>.Wrapper, rhs: Channel<Value>.Wrapper) -> Bool {
-            lhs.id == rhs.id
-        }
-
+    private final class Wrapper: AtomicReference, Identifiable, Hashable, Equatable {
         let value: Result<Value?, Error>
         let readers: Set<Resumption<Value>>
         let writers: Set<Resumption<Void>>
-        var id: ObjectIdentifier { .init(self) }
 
         init(
             _ value: Value?,
@@ -40,12 +33,12 @@ public final class Channel<Value> {
             self.writers = writers
         }
 
-        func hash(into hasher: inout Hasher) {
-            hasher.combine(self)
-        }
+        static func == (lhs: Channel<Value>.Wrapper, rhs: Channel<Value>.Wrapper) -> Bool { lhs.id == rhs.id }
+        var id: ObjectIdentifier { .init(self) }
+        func hash(into hasher: inout Hasher) { hasher.combine(self) }
     }
 
-    let wrapped: ManagedAtomic<Wrapper>
+    private let wrapped: ManagedAtomic<Wrapper>
 
     public func cancel(with error: Error = CancellationError()) throws -> Void {
         var localVar = wrapped.load(ordering: .sequentiallyConsistent)
@@ -93,7 +86,7 @@ public final class Channel<Value> {
                             if success { return }
                             else {
                                 localVar = newLocalVar
-                                resumption.resume(throwing: WrapperError())
+                                resumption.resume(throwing: ChannelError())
                             }
                         }
                         return
@@ -131,7 +124,7 @@ public final class Channel<Value> {
                                 }
                                 else {
                                     localVar = newLocalVar
-                                    resumption.resume(throwing: WrapperError())
+                                    resumption.resume(throwing: ChannelError())
                                 }
                             }
                             return
@@ -177,7 +170,7 @@ public final class Channel<Value> {
                             }
                             else {
                                 localVar = newLocalVar
-                                resumption.resume(throwing: WrapperError())
+                                resumption.resume(throwing: ChannelError())
                             }
                         }
                         return value

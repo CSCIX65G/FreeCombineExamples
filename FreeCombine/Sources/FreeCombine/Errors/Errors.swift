@@ -34,6 +34,7 @@ public struct InvocationError: Swift.Error, Sendable, Equatable { }
 public struct InternalError: Swift.Error, Sendable, Equatable { }
 public struct FinishedError: Swift.Error { }
 public struct SuspensionError: Error {}
+public struct ChannelError: Error { }
 
 public enum AtomicError<R: AtomicValue>: Error {
     case failedTransition(from: R, to: R, current: R)
