@@ -18,7 +18,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-public extension Channel {
+public extension Queue {
     func consume<Upstream>(
         function: StaticString = #function,
         file: StaticString = #file,

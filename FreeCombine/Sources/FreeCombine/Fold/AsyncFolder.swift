@@ -22,19 +22,19 @@ public struct AsyncFolder<State, Action> {
     public enum Effect {
         case none  // Multiply by 1
         case completion(Completion) // Multiply by 0
-        case publish((Channel<Action>) -> Void)
+        case publish((Queue<Action>) -> Void)
     }
     
     public typealias Completion = Publishers.Completion
     
-    let initializer: (Channel<Action>) async -> State
+    let initializer: (Queue<Action>) async -> State
     let reducer: (inout State, Action) async throws -> Effect
     let emitter: (inout State) async throws -> Void
     let disposer: (Action, Completion) async -> Void
     let finalizer: (inout State, Completion) async -> Void
     
     public init(
-        initializer: @escaping (Channel<Action>) async -> State,
+        initializer: @escaping (Queue<Action>) async -> State,
         reducer: @escaping (inout State, Action) async throws -> Effect,
         emitter: @escaping (inout State) async throws -> Void = { _ in },
         disposer: @escaping (Action, Completion) async -> Void = { _, _ in },
@@ -47,7 +47,7 @@ public struct AsyncFolder<State, Action> {
         self.finalizer = finalizer
     }
     
-    public func callAsFunction(_ channel: Channel<Action>) async -> State {
+    public func callAsFunction(_ channel: Queue<Action>) async -> State {
         await initializer(channel)
     }
     
@@ -69,7 +69,7 @@ public struct AsyncFolder<State, Action> {
 }
 
 extension AsyncFolder {
-    func initialize(channel: Channel<Action>) async -> State {
+    func initialize(channel: Queue<Action>) async -> State {
         await self(channel)
     }
 
@@ -79,7 +79,7 @@ extension AsyncFolder {
 
     func handle(
         effect: Effect,
-        channel: Channel<Action>,
+        channel: Queue<Action>,
         state: inout State,
         action: Action
     ) async throws -> Void {
@@ -102,7 +102,7 @@ extension AsyncFolder {
     }
 
     func dispose(
-        channel: Channel<Action>,
+        channel: Queue<Action>,
         error: Swift.Error
     ) async -> Void {
         channel.finish()

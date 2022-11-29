@@ -74,7 +74,7 @@ public struct Merge<Value> {
     static func initialize(
         upstreams: [Publisher<Value>],
         downstream: @escaping @Sendable (Publisher<Value>.Result) async throws -> Void
-    ) -> (Channel<Action>) async -> State {
+    ) -> (Queue<Action>) async -> State {
         { channel in
             var cancellables = [Int: Cancellable<Void>]()
             cancellables.reserveCapacity(upstreams.count)

@@ -38,7 +38,7 @@ public func zip<Left, Right>(
     _ right: Publisher<Right>
 ) -> Publisher<(Left, Right)> {
     .init { resumption, downstream in
-        let cancellable = Channel<Zip<Left, Right>.Action>(buffering: .bufferingOldest(2))
+        let cancellable = Queue<Zip<Left, Right>.Action>(buffering: .bufferingOldest(2))
             .fold(
                 onStartup: resumption,
                 into: Zip<Left, Right>.folder(left: left, right: right, downstream: downstream)

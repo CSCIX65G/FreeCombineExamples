@@ -41,7 +41,7 @@ public struct And<Left, Right> {
     static func initialize(
         left: Future<Left>,
         right: Future<Right>
-    ) -> (Channel<Action>) async -> State {
+    ) -> (Queue<Action>) async -> State {
         { channel in
             await .init(
                 leftCancellable: channel.consume(future: left, using: Action.left),

@@ -36,7 +36,7 @@ extension Distributor {
     static func reduce(
         action: Distributor<Output>.DistributionAction,
         state: inout Distributor<Output>.DistributionState,
-        returnChannel: Channel<ConcurrentFunc<Output, Void>.Next>
+        returnChannel: Queue<ConcurrentFunc<Output, Void>.Next>
     ) async throws -> AsyncFolder<Distributor<Output>.DistributionState, Distributor<Output>.DistributionAction>.Effect {
         switch action {
             case let .finish(completion, resumption):
@@ -106,7 +106,7 @@ extension Distributor {
 
     static func finalize(
         _ state: inout Distributor<Output>.DistributionState,
-        returnChannel: Channel<ConcurrentFunc<Output, Void>.Next>
+        returnChannel: Queue<ConcurrentFunc<Output, Void>.Next>
     ) {
         for (_, invocation) in state.invocations {
             switch state.completion {
@@ -121,7 +121,7 @@ extension Distributor {
 
     static func distributionFolder(
         currentValue: Output? = .none,
-        returnChannel: Channel<ConcurrentFunc<Output, Void>.Next>
+        returnChannel: Queue<ConcurrentFunc<Output, Void>.Next>
     ) -> AsyncFolder<DistributionState, DistributionAction> {
         .init(
             initializer: {_ in .init(currentValue: currentValue) },

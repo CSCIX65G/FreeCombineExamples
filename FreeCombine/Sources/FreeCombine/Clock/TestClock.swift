@@ -77,10 +77,10 @@ public final class TestClock: Clock, @unchecked Sendable {
     public let minimumResolution: Duration = .zero
     private let atomicState: ManagedAtomic<State>
     private var cancellable: Cancellable<Void>! = .none
-    private var channel: Channel<Action>! = .none
+    private var channel: Queue<Action>! = .none
 
     public init(now: Instant = .init(), pendingSuspensions: [Suspension] = []) {
-        let localChannel = Channel<Action>.init(buffering: .unbounded)
+        let localChannel = Queue<Action>.init(buffering: .unbounded)
         let localAtomicState = ManagedAtomic<State>(.init(now: now, pendingSuspensions: pendingSuspensions))
 
         self.atomicState = localAtomicState

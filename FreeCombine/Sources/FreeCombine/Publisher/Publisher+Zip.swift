@@ -56,7 +56,7 @@ public struct Zip<Left, Right> {
         left: Publisher<Left>,
         right: Publisher<Right>,
         downstream: @escaping @Sendable (Publisher<(Left, Right)>.Result) async throws -> Void
-    ) -> (Channel<Action>) async -> State {
+    ) -> (Queue<Action>) async -> State {
         { channel in
             await .init(
                 leftCancellable:  channel.consume(publisher: left, using: Action.left),

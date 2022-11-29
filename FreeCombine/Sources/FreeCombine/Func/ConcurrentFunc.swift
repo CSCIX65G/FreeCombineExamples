@@ -21,11 +21,11 @@
 public struct ConcurrentFunc<Arg, Return>: @unchecked Sendable, Identifiable {
     public let id: ObjectIdentifier
     let dispatch: ConcurrentFunc<Arg, Return>.Dispatch
-    let resumption: Resumption<(Channel<Next>, Publisher<Arg>.Result)>
+    let resumption: Resumption<(Queue<Next>, Publisher<Arg>.Result)>
 
     init(
         dispatch: ConcurrentFunc<Arg, Return>.Dispatch,
-        resumption: Resumption<(Channel<Next>, Publisher<Arg>.Result)>
+        resumption: Resumption<(Queue<Next>, Publisher<Arg>.Result)>
     ) {
         self.id = .init(dispatch)
         self.dispatch = dispatch
@@ -58,22 +58,22 @@ public struct ConcurrentFunc<Arg, Return>: @unchecked Sendable, Identifiable {
         get async throws { try await dispatch.value }
     }
 
-    public func callAsFunction(returnChannel: Channel<Next>, arg: Arg) throws -> Void {
+    public func callAsFunction(returnChannel: Queue<Next>, arg: Arg) throws -> Void {
         try resumption.tryResume(returning: (returnChannel,.value(arg)))
     }
-    public func callAsFunction(returnChannel: Channel<Next>, error: Swift.Error) throws -> Void {
+    public func callAsFunction(returnChannel: Queue<Next>, error: Swift.Error) throws -> Void {
         try resumption.tryResume(returning: (returnChannel, .completion(.failure(error))))
     }
-    public func callAsFunction(returnChannel: Channel<Next>, completion: Publishers.Completion) throws -> Void {
+    public func callAsFunction(returnChannel: Queue<Next>, completion: Publishers.Completion) throws -> Void {
         try resumption.tryResume(returning: (returnChannel, .completion(completion)))
     }
-    public func callAsFunction(returnChannel: Channel<Next>, _ resultArg: Publisher<Arg>.Result) throws -> Void {
+    public func callAsFunction(returnChannel: Queue<Next>, _ resultArg: Publisher<Arg>.Result) throws -> Void {
         try resumption.tryResume(returning: (returnChannel, resultArg))
     }
 }
 
 public extension ConcurrentFunc where Arg == Void {
-    func callAsFunction(returnChannel: Channel<Next>) -> Void {
+    func callAsFunction(returnChannel: Queue<Next>) -> Void {
         resumption.resume(returning: (returnChannel, .value(())))
     }
 }
@@ -91,7 +91,7 @@ extension ConcurrentFunc {
             function: StaticString = #function,
             file: StaticString = #file,
             line: UInt = #line,
-            resumption: UnfailingResumption<Resumption<(Channel<Next>, Publisher<Arg>.Result)>>,
+            resumption: UnfailingResumption<Resumption<(Queue<Next>, Publisher<Arg>.Result)>>,
             asyncFunction: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return
         ) {
             self.function = function
@@ -138,13 +138,13 @@ public extension ConcurrentFunc {
         public let result: Result<Return, Swift.Error>
         public let concurrentFunc: ConcurrentFunc<Arg, Return>
 
-        public func callAsFunction(returnChannel: Channel<Next>, arg: Arg) throws -> Void {
+        public func callAsFunction(returnChannel: Queue<Next>, arg: Arg) throws -> Void {
             try concurrentFunc(returnChannel: returnChannel, arg: arg)
         }
-        public func callAsFunction(returnChannel: Channel<Next>, completion: Publishers.Completion) throws -> Void {
+        public func callAsFunction(returnChannel: Queue<Next>, completion: Publishers.Completion) throws -> Void {
             try concurrentFunc(returnChannel: returnChannel, completion: completion)
         }
-        public func callAsFunction(returnChannel: Channel<Next>, resultArg: Publisher<Arg>.Result) throws -> Void {
+        public func callAsFunction(returnChannel: Queue<Next>, resultArg: Publisher<Arg>.Result) throws -> Void {
             try concurrentFunc(returnChannel: returnChannel, resultArg)
         }
     }

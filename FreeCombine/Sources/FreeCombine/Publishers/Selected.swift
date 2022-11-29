@@ -38,7 +38,7 @@ public func select<Left, Right>(
     _ right: Publisher<Right>
 ) -> Publisher<Either<Left, Right>> {
     .init { resumption, downstream in
-        let cancellable = Channel<Select<Left, Right>.Action>(buffering: .bufferingOldest(2))
+        let cancellable = Queue<Select<Left, Right>.Action>(buffering: .bufferingOldest(2))
             .fold(
                 onStartup: resumption,
                 into: Select<Left, Right>.folder(left: left, right: right, downstream: downstream)

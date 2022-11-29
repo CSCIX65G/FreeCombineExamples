@@ -18,7 +18,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-public struct Channel<Element: Sendable>: Sendable {
+public struct Queue<Element: Sendable>: Sendable {
     let continuation: AsyncStream<Element>.Continuation
     let stream: AsyncStream<Element>
 
@@ -67,14 +67,14 @@ public extension AsyncStream.Continuation {
     }
 }
 
-extension Channel: AsyncSequence {
+extension Queue: AsyncSequence {
     public typealias AsyncIterator = AsyncStream<Element>.AsyncIterator
     public func makeAsyncIterator() -> AsyncStream<Element>.AsyncIterator {
         stream.makeAsyncIterator()
     }
 }
 
-public extension Channel {
+public extension Queue {
     @Sendable func tryYield(_ value: Element) throws -> Void {
         switch continuation.yield(value) {
             case .enqueued: return
@@ -93,7 +93,7 @@ public extension Channel {
     }
 }
 
-public extension Channel where Element == Void {
+public extension Queue where Element == Void {
     @inlinable @Sendable func tryYield() throws -> Void {
         try tryYield(())
     }

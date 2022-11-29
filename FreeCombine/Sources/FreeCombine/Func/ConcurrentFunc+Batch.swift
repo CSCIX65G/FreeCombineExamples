@@ -22,7 +22,7 @@ public extension ConcurrentFunc {
     static func batch(
         downstreams: [ObjectIdentifier: ConcurrentFunc<Arg, Return>],
         resultArg: Publisher<Arg>.Result,
-        channel: Channel<ConcurrentFunc<Arg, Return>.Next>
+        channel: Queue<ConcurrentFunc<Arg, Return>.Next>
     ) async -> [ObjectIdentifier: ConcurrentFunc<Arg, Return>] {
         var iterator = channel.stream.makeAsyncIterator()
         var invocations: [ObjectIdentifier: ConcurrentFunc<Arg, Return>] = [:]
@@ -52,7 +52,7 @@ public extension ConcurrentFunc {
         public init(
             downstreams: [ObjectIdentifier: ConcurrentFunc<Arg, Return>],
             resultArg: Publisher<Arg>.Result,
-            channel: Channel<ConcurrentFunc<Arg, Return>.Next>
+            channel: Queue<ConcurrentFunc<Arg, Return>.Next>
         ) async {
             var iterator = channel.stream.makeAsyncIterator()
             var nexts: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] = [:]
@@ -65,7 +65,7 @@ public extension ConcurrentFunc {
         }
 
         func successes(
-            channel: Channel<ConcurrentFunc<Arg, Return>.Next>
+            channel: Queue<ConcurrentFunc<Arg, Return>.Next>
         ) async -> [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] {
             var newResults: [ObjectIdentifier: ConcurrentFunc<Arg, Return>.Next] = [:]
             for (id, next) in results {

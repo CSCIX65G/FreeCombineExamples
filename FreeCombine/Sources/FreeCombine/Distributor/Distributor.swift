@@ -23,7 +23,7 @@ public final class Distributor<Output: Sendable> {
     private let file: StaticString
     private let line: UInt
 
-    let returnChannel: Channel<ConcurrentFunc<Output, Void>.Next>
+    let returnChannel: Queue<ConcurrentFunc<Output, Void>.Next>
     let valueFold: AsyncFold<ValueState, ValueAction>
     let distributionFold: AsyncFold<DistributionState, DistributionAction>
 
@@ -38,9 +38,9 @@ public final class Distributor<Output: Sendable> {
         self.file = file
         self.line = line
 
-        returnChannel = Channel<ConcurrentFunc<Output, Void>.Next>(buffering: .unbounded)
+        returnChannel = Queue<ConcurrentFunc<Output, Void>.Next>(buffering: .unbounded)
 
-        distributionFold = Channel<DistributionAction>.init(buffering: .unbounded)
+        distributionFold = Queue<DistributionAction>.init(buffering: .unbounded)
             .fold(
                 function: function,
                 file: file,
@@ -48,7 +48,7 @@ public final class Distributor<Output: Sendable> {
                 into: Self.distributionFolder(currentValue: initialValue, returnChannel: returnChannel)
             )
         
-        valueFold = Channel<ValueAction>.init(buffering: buffering)
+        valueFold = Queue<ValueAction>.init(buffering: buffering)
             .fold(
                 function: function,
                 file: file,

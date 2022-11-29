@@ -30,7 +30,7 @@ public func consume<A, R>(
     } } }
 }
 
-extension Channel {
+extension Queue {
     func consume<A>(
         _ f: @escaping (A) async throws -> Element
     ) -> (A) async throws -> Void {
@@ -90,13 +90,13 @@ extension IdentifiedAsyncFunc {
     func callAsFunction(continuation: AsyncStream<(ObjectIdentifier, R)>.Continuation) -> AsyncFunc<A, Void> {
         .init(self.callAsFunction(continuation: continuation))
     }
-    func callAsFunction(channel: Channel<(ObjectIdentifier, R)>, value: A) async throws -> Void {
+    func callAsFunction(channel: Queue<(ObjectIdentifier, R)>, value: A) async throws -> Void {
         try await self(continuation: channel.continuation, value: value)
     }
-    func callAsFunction(channel: Channel<(ObjectIdentifier, R)>) -> (A) async throws -> Void {
+    func callAsFunction(channel: Queue<(ObjectIdentifier, R)>) -> (A) async throws -> Void {
         { value in try await self(continuation: channel.continuation, value: value)}
     }
-    func callAsFunction(channel: Channel<(ObjectIdentifier, R)>) -> AsyncFunc<A, Void> {
+    func callAsFunction(channel: Queue<(ObjectIdentifier, R)>) -> AsyncFunc<A, Void> {
         .init(self.callAsFunction(continuation: channel.continuation))
     }
 }

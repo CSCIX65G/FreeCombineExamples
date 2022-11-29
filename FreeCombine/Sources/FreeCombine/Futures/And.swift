@@ -24,7 +24,7 @@ public func and<Left, Right>(
 ) -> Future<(Left, Right)> {
     .init { resumption, downstream in
         .init {
-            let fold = Channel(buffering: .bufferingOldest(2))
+            let fold = Queue(buffering: .bufferingOldest(2))
                 .fold(
                     onStartup: resumption,
                     into: And<Left, Right>.folder(left: left, right: right)

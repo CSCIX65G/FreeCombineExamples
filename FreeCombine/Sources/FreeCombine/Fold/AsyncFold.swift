@@ -22,14 +22,14 @@ public final class AsyncFold<State, Action: Sendable> {
     private let file: StaticString
     private let line: UInt
 
-    let channel: Channel<Action>
+    let channel: Queue<Action>
     public let cancellable: Cancellable<State>
 
     init(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        stream: Channel<Action>,
+        stream: Queue<Action>,
         cancellable: Cancellable<State>
     ) {
         self.function = function
@@ -76,7 +76,7 @@ extension AsyncFold {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        channel: Channel<Action>,
+        channel: Queue<Action>,
         folder: AsyncFolder<State, Action>
     ) async -> Self {
         var fold: Self!
@@ -98,7 +98,7 @@ extension AsyncFold {
         file: StaticString = #file,
         line: UInt = #line,
         onStartup: Resumption<Void>? = .none,
-        channel: Channel<Action>,
+        channel: Queue<Action>,
         folder: AsyncFolder<State, Action>
     ) {
         self.init(
@@ -119,7 +119,7 @@ extension AsyncFold {
 
     private static func runloop(
         onStartup: Resumption<Void>? = .none,
-        channel: Channel<Action>,
+        channel: Queue<Action>,
         folder: AsyncFolder<State, Action>
     ) async throws -> State {
         var state = await folder.initialize(channel: channel)

@@ -57,7 +57,7 @@ public func merge<Output, S: Sequence>(
     _ otherUpstreams: S
 ) -> Publisher<Output> where S.Element == Publisher<Output> {
     .init { resumption, downstream in
-        let cancellable = Channel<Merge<Output>.Action>(buffering: .bufferingOldest(2 + otherUpstreams.underestimatedCount))
+        let cancellable = Queue<Merge<Output>.Action>(buffering: .bufferingOldest(2 + otherUpstreams.underestimatedCount))
             .fold(
                 onStartup: resumption,
                 into: Merge<Output>.folder(

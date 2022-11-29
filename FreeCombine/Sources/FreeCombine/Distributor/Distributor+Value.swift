@@ -31,7 +31,7 @@ extension Distributor {
     }
 
     static func valueFolder(
-        mainChannel: Channel<DistributionAction>
+        mainChannel: Queue<DistributionAction>
     ) -> AsyncFolder<ValueState, ValueAction> {
         .init(
             initializer: { _ in .init() },

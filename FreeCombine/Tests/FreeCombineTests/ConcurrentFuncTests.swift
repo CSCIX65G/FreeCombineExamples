@@ -33,7 +33,7 @@ final class ConcurrentFuncTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleConcurrentFunc() async throws {
-        let returnChannel = Channel<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(1))
+        let returnChannel = Queue<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(1))
 
         let f = await ConcurrentFunc<TestArg, TestReturn>(dispatch)
         let cancellable = Cancellable<Void> {
@@ -61,7 +61,7 @@ final class ConcurrentFuncTests: XCTestCase {
     }
 
     func testSimpleRepeater() async throws {
-        let returnChannel = Channel<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(1))
+        let returnChannel = Queue<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(1))
 
         let first = await ConcurrentFunc(dispatch)
         let cancellable = Cancellable<Void> {
@@ -92,7 +92,7 @@ final class ConcurrentFuncTests: XCTestCase {
 
     func testMultipleRepeaters() async throws {
         let numRepeaters = 100, numValues = 100
-        let returnChannel = Channel<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(numRepeaters))
+        let returnChannel = Queue<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(numRepeaters))
         let cancellable: Cancellable<Void> = .init {
             var iterator = returnChannel.stream.makeAsyncIterator()
             var functions: [ObjectIdentifier: ConcurrentFunc<TestArg, TestReturn>] = [:]

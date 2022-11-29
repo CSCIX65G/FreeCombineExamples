@@ -19,7 +19,7 @@ final class FutureAndTests: XCTestCase {
         typealias Z2 = And<Int, String>
         let left = Succeeded(13)
         let right = Succeeded("hello, world!")
-        let channel: Channel<Z2.Action> = .init(buffering: .bufferingOldest(2))
+        let channel: Queue<Z2.Action> = .init(buffering: .bufferingOldest(2))
         let f = Z2.initialize(left: left, right: right)
         let state = await f(channel)
         _ = await state.leftCancellable?.result

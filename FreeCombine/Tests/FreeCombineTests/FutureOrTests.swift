@@ -20,7 +20,7 @@ final class FutureOrTests: XCTestCase {
         typealias S = Or<Int, String>
         let left = Succeeded(13)
         let right = Succeeded("hello, world!")
-        let channel: Channel<S.Action> = .init(buffering: .bufferingOldest(2))
+        let channel: Queue<S.Action> = .init(buffering: .bufferingOldest(2))
         let f = S.initialize(left: left, right: right)
         let state = await f(channel)
         _ = await state.leftCancellable?.result

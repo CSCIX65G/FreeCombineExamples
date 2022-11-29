@@ -23,7 +23,7 @@ public func or<Left, Right>(
     _ right: Future<Right>
 ) -> Future<Either<Left, Right>> {
     .init { resumption, downstream in .init {
-        let fold = Channel(buffering: .bufferingOldest(2))
+        let fold = Queue(buffering: .bufferingOldest(2))
             .fold(
                 onStartup: resumption,
                 into: Or<Left, Right>.folder(left: left, right: right)
