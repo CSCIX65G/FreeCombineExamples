@@ -71,6 +71,10 @@ public final class MVar<Value> {
         self.wrapped = ManagedAtomic(Wrapper(value))
     }
 
+    public func write() async throws -> Void where Value == Void {
+        try await write(())
+    }
+
     public func write(_ value: Value) async throws -> Void {
         var localVar = wrapped.load(ordering: .sequentiallyConsistent)
         while true {
@@ -122,7 +126,9 @@ public final class MVar<Value> {
                                     desired: newVar,
                                     ordering: .sequentiallyConsistent
                                 )
-                                if success { return }
+                                if success {
+                                    return
+                                }
                                 else {
                                     localVar = newLocalVar
                                     resumption.resume(throwing: WrapperError())
@@ -142,7 +148,7 @@ public final class MVar<Value> {
             switch try localVar.value.get() {
                 case let .some(value):
                     var writers = localVar.writers
-                    let writer = writers.removeFirst()
+                    let writer: Resumption<Void>? = writers.isEmpty ? .none : writers.removeFirst()
                     let newVar = Wrapper(.none, readers: localVar.readers, writers: writers)
                     let (success, newLocalVar) = wrapped.compareExchange(
                         expected: localVar,
@@ -150,7 +156,7 @@ public final class MVar<Value> {
                         ordering: .sequentiallyConsistent
                     )
                     if success {
-                        writer.resume()
+                        writer?.resume()
                         return value
                     } else {
                         localVar = newLocalVar
@@ -166,7 +172,9 @@ public final class MVar<Value> {
                                 desired: newVar,
                                 ordering: .sequentiallyConsistent
                             )
-                            if success { return }
+                            if success {
+                                return
+                            }
                             else {
                                 localVar = newLocalVar
                                 resumption.resume(throwing: WrapperError())

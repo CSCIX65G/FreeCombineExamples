@@ -21,16 +21,20 @@ final class HeartbeatTests: XCTestCase {
         let counter = Counter()
         let heartbeat = Heartbeat(clock: clock, interval: .milliseconds(100), deadline: end)
 
-        let ticker: ValueRef<Resumption<Void>?> = .init(value: .none)
+        let ticker: MVar<Void> = .init()
         let cancellable = await heartbeat.sink { result in
-            guard case .value = result else { return }
+            guard case .value = result else {
+                try? ticker.cancel()
+                return
+            }
             counter.increment()
-            guard let t = ticker.value else { XCTFail("No ticker!"); return }
-            ticker.set(value: .none)
-            t.resume()
+            try await ticker.write()
         }
         while clock.now < end {
-            await clock.advance(by: .milliseconds(100), waiter: { ticker.set(value: $0) })
+            for _ in 0 ..< 10 {
+                try clock.advance(by: .milliseconds(10))
+            }
+            try? await ticker.read()
         }
         _ = await cancellable.result
         await clock.runToCompletion()
@@ -40,15 +44,26 @@ final class HeartbeatTests: XCTestCase {
     func testHeartbeatFor() async throws {
         let clock = TestClock()
         let counter = Counter()
-        let heartbeat = Heartbeat(clock: clock, interval: .milliseconds(100), for: .seconds(1))
+        let end = Swift.Duration.seconds(5)
+        let endInstant = clock.now.advanced(by: .seconds(5))
+        let heartbeat = Heartbeat(clock: clock, interval: .milliseconds(100), for: end)
+        
+        let ticker: MVar<Void> = .init()
         let cancellable = await heartbeat.sink { result in
-            guard case .value = result else { return }
+            guard case .value = result else {
+                try? ticker.cancel()
+                return
+            }
             counter.increment()
-            Task { await clock.advance(by: .milliseconds(100)) }
+            try await ticker.write()
         }
-        await clock.advance(by: .milliseconds(100))
+        while clock.now < endInstant {
+            try clock.advance(by: .milliseconds(50))
+            try clock.advance(by: .milliseconds(50))
+            try? await ticker.read()
+        }
         _ = await cancellable.result
         await clock.runToCompletion()
-        XCTAssert(counter.count == 10, "Failed \(#function) due to count = \(counter.count)")
+        XCTAssert(counter.count == 50, "Failed \(#function) due to count = \(counter.count)")
     }
 }

@@ -67,6 +67,7 @@ public final class TestClock: Clock, @unchecked Sendable {
     }
 
     enum Action {
+        case advanceBy(duration: Swift.Duration)
         case advanceTo(deadline: Instant)
         case sleepUntil(deadline: Instant, resumption: Resumption<Void>)
         case runToCompletion(resumption: Resumption<Void>)
@@ -84,7 +85,9 @@ public final class TestClock: Clock, @unchecked Sendable {
         self.atomicState = localAtomicState
         self.channel = localChannel
         self.cancellable = .init {
-            for await action in localChannel.stream { self.reduce(action) }
+            for await action in localChannel.stream {
+                self.reduce(action)
+            }
             self.state.pendingSuspensions.forEach {
                 $0.resumption.resume(throwing: SuspensionError())
             }
@@ -153,6 +156,8 @@ public final class TestClock: Clock, @unchecked Sendable {
                     return
                 }
                 addSuspension(.init(deadline: deadline, resumption: resumption))
+            case let .advanceBy(duration: duration):
+                advanceTo(deadline: state.now.advanced(by: duration)).forEach { $0.resumption.resume() }
             case let .advanceTo(deadline: deadline):
                 guard deadline > self.now else { return }
                 advanceTo(deadline: deadline).forEach { $0.resumption.resume() }
@@ -168,15 +173,13 @@ public final class TestClock: Clock, @unchecked Sendable {
         }
     }
 
-    public func advance(by duration: Duration = .zero, waiter: ((Resumption<Void>) -> Void)? = .none) async -> Void {
-        await advance(to: state.now.advanced(by: duration), waiter: waiter)
+    public func advance(by duration: Duration = .zero) throws -> Void {
+        self.channel.continuation.yield(.advanceBy(duration: duration))
     }
 
-    func advance(to deadline: Instant, waiter: ((Resumption<Void>) -> Void)? = .none) async -> Void {
+    func advance(to deadline: Instant) -> Void {
         guard deadline >= self.now else { return }
         self.channel.continuation.yield(.advanceTo(deadline: deadline))
-        guard let waiter = waiter else { return }
-        _ = try? await pause(waiter)
     }
 
     public func sleep(until deadline: Instant, tolerance: Duration? = nil) async throws {

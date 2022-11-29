@@ -19,46 +19,6 @@
 //  limitations under the License.
 //
 import Dispatch
-
-//public func Heartbeat(interval: Duration) -> Publisher<UInt64> {
-//    .init(interval: interval)
-//}
-//
-//extension Publisher where Output == UInt64 {
-//    public init(interval: Duration, maxTicks: Int = Int.max, tickAtStart: Bool = false) {
-//        self = .init { resumption, downstream in
-//            .init {
-//                resumption.resume()
-//                let maxTicks = tickAtStart ? maxTicks - 1 : maxTicks
-//                let start = DispatchTime.now().uptimeNanoseconds
-//                var ticks: UInt64 = 0
-//                var current = start
-//                do {
-//                    if tickAtStart {
-//                        _ = try await downstream(.value(current))
-//                    }
-//                    while ticks < maxTicks {
-//                        guard !Cancellables.isCancelled else {
-//                            return try await handleCancellation(of: downstream)
-//                        }
-//                        ticks += 1
-//                        let next = start + (ticks * interval.inNanoseconds)
-//                        current = DispatchTime.now().uptimeNanoseconds
-//                        if current > next { continue }
-//                        try? await Task.sleep(nanoseconds: next - current)
-//                        current = DispatchTime.now().uptimeNanoseconds
-//                        _ = try await downstream(.value(current))
-//                    }
-//                    _ = try await downstream(.completion(.finished))
-//                } catch {
-//                    throw error
-//                }
-//                throw Publishers.Error.done
-//            }
-//        }
-//    }
-//}
-
 #if swift(>=5.7)
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 public func Heartbeat<C: Clock>(
