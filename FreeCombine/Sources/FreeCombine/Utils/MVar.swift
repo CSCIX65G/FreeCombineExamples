@@ -30,11 +30,42 @@ public final class MVar<Value> {
             self.writers = writers
         }
 
+        init(
+            result: Result<Value?, Error>,
+            readers: Set<Resumption<Value>> = [],
+            writers: Set<Resumption<Void>> = []
+        ) {
+            self.value = result
+            self.readers = readers
+            self.writers = writers
+        }
+
         func hash(into hasher: inout Hasher) {
             hasher.combine(self)
         }
     }
+
     let wrapped: ManagedAtomic<Wrapper>
+
+    public func cancel(with error: Error = CancellationError()) throws -> Void {
+        var localVar = wrapped.load(ordering: .sequentiallyConsistent)
+        while true {
+            _ = try localVar.value.get()
+            let readers = localVar.readers
+            let writers = localVar.writers
+            let (success, newLocalVar) = wrapped.compareExchange(
+                expected: localVar,
+                desired: .init(result: .failure(error), readers: [], writers: []),
+                ordering: .sequentiallyConsistent
+            )
+            if success {
+                readers.forEach { $0.resume(throwing: error) }
+                writers.forEach { $0.resume(throwing: error) }
+            } else {
+                localVar = newLocalVar
+            }
+        }
+    }
 
     public init(_ value: Value? = .none) {
         self.wrapped = ManagedAtomic(Wrapper(value))
