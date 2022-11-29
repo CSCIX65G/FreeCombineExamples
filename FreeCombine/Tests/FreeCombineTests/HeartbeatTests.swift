@@ -21,7 +21,7 @@ final class HeartbeatTests: XCTestCase {
         let counter = Counter()
         let heartbeat = Heartbeat(clock: clock, interval: .milliseconds(100), deadline: end)
 
-        let ticker: MVar<Void> = .init()
+        let ticker: Channel<Void> = .init()
         let cancellable = await heartbeat.sink { result in
             guard case .value = result else {
                 try? ticker.cancel()
@@ -48,7 +48,7 @@ final class HeartbeatTests: XCTestCase {
         let endInstant = clock.now.advanced(by: .seconds(5))
         let heartbeat = Heartbeat(clock: clock, interval: .milliseconds(100), for: end)
         
-        let ticker: MVar<Void> = .init()
+        let ticker: Channel<Void> = .init()
         let cancellable = await heartbeat.sink { result in
             guard case .value = result else {
                 try? ticker.cancel()

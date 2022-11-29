@@ -8,14 +8,14 @@
 import XCTest
 @testable import FreeCombine
 
-final class MVarTests: XCTestCase {
+final class ChannelTests: XCTestCase {
 
     override func setUpWithError() throws { }
 
     override func tearDownWithError() throws { }
 
     func testSimpleMVar() async throws {
-        let mvar: MVar<Int> = .init(.none)
+        let mvar: Channel<Int> = .init(.none)
 
         let reader = Cancellable<Void> {
             for i in 0 ..< 100 {
@@ -41,7 +41,7 @@ final class MVarTests: XCTestCase {
     func testMVarCancel() async throws {
         struct TestError: Error { }
 
-        let mvar: MVar<Int> = .init(.none)
+        let mvar: Channel<Int> = .init(.none)
 
         let reader = Cancellable<Void> {
             for i in 0 ..< 100 {

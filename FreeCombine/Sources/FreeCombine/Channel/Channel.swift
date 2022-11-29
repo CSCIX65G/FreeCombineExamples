@@ -7,11 +7,11 @@
 
 import Atomics
 
-public final class MVar<Value> {
+public final class Channel<Value> {
     public struct WrapperError: Error { }
 
     final class Wrapper: AtomicReference, Identifiable, Hashable, Equatable {
-        static func == (lhs: MVar<Value>.Wrapper, rhs: MVar<Value>.Wrapper) -> Bool {
+        static func == (lhs: Channel<Value>.Wrapper, rhs: Channel<Value>.Wrapper) -> Bool {
             lhs.id == rhs.id
         }
 
