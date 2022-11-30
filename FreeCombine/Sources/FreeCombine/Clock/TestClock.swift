@@ -23,10 +23,24 @@
   2. No "megaYield"
   3. No AsyncStream<Never>
   4. No Foundation, uses Atomics instead
-  4. Uses Cancellable and Resumption from FreeCombine to avoid races
+  5. Uses Cancellable and Resumption from FreeCombine to avoid races
+  6. Optionally allows each suspension to signal that the clock can tick again
+  7. Gathers performance information at advances
+  8.
  */
 #if swift(>=5.7)
 import Atomics
+
+@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
+extension [TestClock.Suspension] {
+    func release() async -> Void {
+        forEach { $0.release() }
+    }
+    func fail(with error: Error) async -> Self {
+        forEach { $0.resumption.resume(throwing: error) }
+        return self
+    }
+}
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 public final class TestClock: Clock, @unchecked Sendable {
@@ -56,6 +70,7 @@ public final class TestClock: Clock, @unchecked Sendable {
         let resumption: Resumption<Void>
         public var id: ObjectIdentifier { resumption.id }
         public func release() -> Void { resumption.resume() }
+        public func fail(with error: Error) -> Void { resumption.resume(throwing: error) }
     }
 
     final class State: AtomicReference, Sendable  {
@@ -68,8 +83,8 @@ public final class TestClock: Clock, @unchecked Sendable {
     }
 
     enum Action {
-        case advanceBy(duration: Swift.Duration)
-        case advanceTo(deadline: Instant)
+        case advanceBy(duration: Swift.Duration, resumption: Resumption<Instant>)
+        case advanceTo(deadline: Instant, resumption: Resumption<Void>)
         case sleepUntil(deadline: Instant, resumption: Resumption<Void>)
         case runToCompletion(resumption: Resumption<Void>)
     }
@@ -87,7 +102,7 @@ public final class TestClock: Clock, @unchecked Sendable {
         self.channel = localChannel
         self.cancellable = .init {
             for await action in localChannel.stream {
-                self.reduce(action)
+                await self.reduce(action)
             }
             self.state.pendingSuspensions.forEach {
                 $0.resumption.resume(throwing: SuspensionError())
@@ -149,7 +164,7 @@ public final class TestClock: Clock, @unchecked Sendable {
         }
     }
 
-    private func reduce(_ action: Action) {
+    private func reduce(_ action: Action) async {
         switch action {
             case let .sleepUntil(deadline: deadline, resumption: resumption):
                 guard deadline > self.now, !Cancellables.isCancelled else {
@@ -157,33 +172,37 @@ public final class TestClock: Clock, @unchecked Sendable {
                     return
                 }
                 addSuspension(.init(deadline: deadline, resumption: resumption))
-            case let .advanceBy(duration: duration):
-                advanceTo(deadline: state.now.advanced(by: duration)).forEach { $0.release() }
-            case let .advanceTo(deadline: deadline):
+            case let .advanceBy(duration: duration, resumption: resumption):
+                await advanceTo(deadline: state.now.advanced(by: duration)).release()
+                resumption.resume(returning: state.now)
+            case let .advanceTo(deadline: deadline, resumption: resumption):
                 guard deadline > self.now else { return }
-                advanceTo(deadline: deadline).forEach { $0.release() }
+                await advanceTo(deadline: deadline).release()
+                resumption.resume()
             case let .runToCompletion(resumption: resumption):
-                let releasedSuspensions = removeAllSuspensions()
-                guard !releasedSuspensions.isEmpty else {
+                guard await !removeAllSuspensions().fail(with: SuspensionError()).isEmpty else {
                     resumption.resume()
                     return
                 }
-                let error = SuspensionError()
-                releasedSuspensions.forEach { $0.resumption.resume(throwing: error) }
-                resumption.resume(throwing: error)
+                resumption.resume(throwing: SuspensionError())
         }
     }
 
-    public func advance(by duration: Duration = .zero) throws -> Void {
-        self.channel.continuation.yield(.advanceBy(duration: duration))
+    @discardableResult
+    public func advance(by duration: Duration = .zero) async throws -> Instant {
+        try await pause { resumption in
+            self.channel.continuation.yield(.advanceBy(duration: duration, resumption: resumption))
+        }
     }
 
-    func advance(to deadline: Instant) -> Void {
+    func advance(to deadline: Instant) async throws -> Void {
         guard deadline >= self.now else { return }
-        self.channel.continuation.yield(.advanceTo(deadline: deadline))
+        try await pause { resumption in
+            self.channel.continuation.yield(.advanceTo(deadline: deadline, resumption: resumption))
+        }
     }
 
-    public func sleep(until deadline: Instant, tolerance: Duration? = nil) async throws {
+    public func sleep(until deadline: Instant, tolerance: Duration? = nil) async throws -> Void {
         guard deadline > self.now else { return }
         try Cancellables.checkCancellation()
         _ = try await pause { resumption in

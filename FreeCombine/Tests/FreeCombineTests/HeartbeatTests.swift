@@ -32,7 +32,7 @@ final class HeartbeatTests: XCTestCase {
         }
         while clock.now < end {
             for _ in 0 ..< 10 {
-                try clock.advance(by: .milliseconds(10))
+                try await clock.advance(by: .milliseconds(10))
             }
             try? await ticker.read()
         }
@@ -58,8 +58,8 @@ final class HeartbeatTests: XCTestCase {
             try await ticker.write()
         }
         while clock.now < endInstant {
-            try clock.advance(by: .milliseconds(50))
-            try clock.advance(by: .milliseconds(50))
+            try await clock.advance(by: .milliseconds(50))
+            try await clock.advance(by: .milliseconds(50))
             try? await ticker.read()
         }
         _ = await cancellable.result

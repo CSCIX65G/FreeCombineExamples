@@ -48,21 +48,6 @@ public func Heartbeat<C: Clock>(
     )
 }
 
-@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
-extension Swift.Duration {
-    static let oneQuintillion: Int64 = 1_000_000_000_000_000_000
-    static let oneBillion: Int64 = 1_000_000_000
-    static let oneMillion: Int64 = 1_000_000
-    static func componentMultiply(_ components: (seconds: Int64, attoseconds: Int64), _ ticks: Int64) -> Self {
-        let dattoseconds = Double(components.attoseconds) * Double(ticks) / 1_000_000_000_000_000_000.0
-        let dseconds = Double(components.seconds) * Double(ticks)
-        let newSeconds = Int64(dseconds + floor(dattoseconds))
-        let newDAttoseconds = (((dattoseconds - floor(dattoseconds)) * 1_000_000_000.0).rounded() * 1_000_000_000.0)
-        let newAttoseconds = Int64(newDAttoseconds)
-        return .init(secondsComponent: newSeconds, attosecondsComponent: newAttoseconds)
-    }
-}
-
 extension Publisher {
     @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
     public init<C: Clock>(
