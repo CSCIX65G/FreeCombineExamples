@@ -63,8 +63,8 @@ extension Future {
                             _ = await downstream(.failure(CancellationError()))
                             return
                         }
-                        _ = await downstream(.success(clock.now))
                     }
+                    _ = await downstream(.success(clock.now))
                 } catch {
                     throw error
                 }
