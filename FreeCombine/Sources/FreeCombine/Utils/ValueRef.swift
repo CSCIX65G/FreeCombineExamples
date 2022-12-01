@@ -18,7 +18,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-public class ValueRef<Value> {
+import Atomics
+public final class ValueRef<Value>: AtomicReference {
     enum Error: Swift.Error {
         case occupied
     }

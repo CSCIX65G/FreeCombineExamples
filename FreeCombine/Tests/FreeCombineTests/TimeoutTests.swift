@@ -55,10 +55,9 @@ final class TimeoutTests: XCTestCase {
 
     func testOredTimeout2() async throws {
         let clock = TestClock()
-        let leftTimeout = Timeout(clock: clock, after: .seconds(10))
-        let rightTimeout = Timeout(clock: clock, after: .milliseconds(10001))
 
-        let ored = leftTimeout || rightTimeout
+        let ored = Timeout(clock: clock, after: .seconds(10))
+            || Timeout(clock: clock, after: .milliseconds(10001))
 
         let cancellable = await ored.sink { result in
             guard case .success(.left) = result else {

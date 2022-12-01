@@ -56,9 +56,13 @@ public struct Or<Left, Right> {
             try Cancellables.checkCancellation()
             switch (action, state.current) {
                 case let (.left(leftResult), .nothing):
+                    try? state.rightCancellable?.cancel()
+                    state.rightCancellable = .none
                     state.current = try .complete(.left(leftResult.get()))
                     return .completion(.finished)
                 case let (.right(rightResult), .nothing):
+                    try? state.leftCancellable?.cancel()
+                    state.leftCancellable = .none
                     state.current = try .complete(.right(rightResult.get()))
                     return .completion(.finished)
                 default:
