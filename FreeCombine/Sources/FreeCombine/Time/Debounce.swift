@@ -31,8 +31,9 @@ extension Publisher {
             let atomicErrorRef = ManagedAtomic<ValueRef<Error>?>(.none)
 
             return self(onStartup: resumption) { r in
-                if let timeout = timeout.value {
-                    try? timeout.cancel()
+                let previousTimeout = timeout.value
+                if previousTimeout != nil {
+                    try? previousTimeout!.cancel()
                 }
                 if let errorRef = atomicErrorRef.load(ordering: .sequentiallyConsistent) {
                     throw errorRef.value
@@ -42,6 +43,7 @@ extension Publisher {
                         return try await downstream(r)
                     case .value:
                         let newTimeout = await Timeout(clock: clock, after: duration).sink { instant in
+                            if previousTimeout != nil { _ = await previousTimeout!.result }
                             guard case .success = instant else { return }
                             do {
                                 if let errorRef = atomicErrorRef.load(ordering: .sequentiallyConsistent) {
