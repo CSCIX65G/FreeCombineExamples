@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import Channel
 @testable import FreeCombine
 
 final class ChannelTests: XCTestCase {
@@ -14,7 +15,7 @@ final class ChannelTests: XCTestCase {
 
     override func tearDownWithError() throws { }
 
-    func testSimpleMVar() async throws {
+    func testSimpleChannel() async throws {
         let mvar: Channel<Int> = .init(.none)
 
         let reader = Cancellable<Void> {

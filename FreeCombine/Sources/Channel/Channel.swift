@@ -6,6 +6,7 @@
 //
 
 import Atomics
+import FreeCombine
 
 public final class Channel<Value> {
     private struct ChannelError: Error {
@@ -85,7 +86,7 @@ public final class Channel<Value> {
         }
     }
 
-    func read() async throws -> Value {
+    public func read() async throws -> Value {
         var localWrapped = wrapped.load(ordering: .sequentiallyConsistent)
         while true {
             switch try localWrapped.value.get() {

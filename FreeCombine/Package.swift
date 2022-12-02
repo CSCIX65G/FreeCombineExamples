@@ -13,12 +13,16 @@ let package = Package(
     products: [
         .library(
             name: "FreeCombine",
-            targets: ["FreeCombine"]
+            targets: [
+                "FreeCombine",
+                "Channel"
+            ]
         ),
     ],
     dependencies: [
         .package(url: "https://github.com/CSCIX65G/swift-atomics.git", branch: "CSCIX65G/playgrounds"),
-//        .package(url: "https://github.com/apple/swift-atomics.git", .upToNextMajor(from: "1.0.2")),
+        //        .package(url: "https://github.com/apple/swift-atomics.git", .upToNextMajor(from: "1.0.2")),
+        .package(url: "https://github.com/apple/swift-collections.git", .upToNextMajor(from: "1.0.3")),
     ],
     targets: [
         .target(
@@ -29,7 +33,18 @@ let package = Package(
         ),
         .testTarget(
             name: "FreeCombineTests",
-            dependencies: ["FreeCombine"]
+            dependencies: [
+                "FreeCombine",
+                "Channel"
+            ]
         ),
+        .target(
+            name: "Channel",
+            dependencies: [
+                "FreeCombine",
+                .product(name: "Atomics", package: "swift-atomics"),
+                .product(name: "DequeModule", package: "swift-collections"),
+            ]
+        )
     ]
 )
