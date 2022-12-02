@@ -84,7 +84,7 @@ class DebounceTests: XCTestCase {
             })
 
         for i in (0 ..< 15) {
-            try subject.yield(i)
+            try await subject.send(i)
             let num = i % 2 == 0 ? 5 : 11
             for _ in 0 ..< num { try await clock.advance(by: .milliseconds(10)) }
         }

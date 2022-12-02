@@ -22,49 +22,44 @@ import Atomics
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 extension Publisher {
+    private struct DebounceStep {
+        let inner: Cancellable<Void>
+        let outer: Cancellable<Void>
+        let promise: Promise<Void>
+    }
+
     func debounce<C: Clock>(
         clock: C,
         duration: Swift.Duration
     ) -> Self where C.Duration == Swift.Duration {
         .init { resumption, downstream in
-            let timeout: ValueRef<Cancellable<Void>?> = .init(value: .none)
-            let atomicErrorRef = ManagedAtomic<ValueRef<Error>?>(.none)
+            let timeouts: ValueRef<DebounceStep?> = .init(value: .none)
 
             return self(onStartup: resumption) { r in
-                let previousTimeout = timeout.value
-                if previousTimeout != nil {
-                    try? previousTimeout!.cancel()
+                if timeouts.value != nil {
+                    do {
+                        try timeouts.value!.inner.cancel()
+                        try? timeouts.value!.promise.fail(CancellationError())
+                    } catch { }
+                    _ = try await timeouts.value!.outer.value
                 }
-                if let errorRef = atomicErrorRef.load(ordering: .sequentiallyConsistent) {
-                    throw errorRef.value
-                }
+
                 switch r {
                     case .completion:
                         return try await downstream(r)
                     case .value:
-                        let newTimeout = await Timeout(clock: clock, after: duration).sink { instant in
-                            if previousTimeout != nil { _ = await previousTimeout!.result }
-                            guard case .success = instant else { return }
-                            do {
-                                if let errorRef = atomicErrorRef.load(ordering: .sequentiallyConsistent) {
-                                    throw errorRef.value
-                                }
-                                try await downstream(r)
-                            }
-                            catch {
-                                guard atomicErrorRef.compareExchange(
-                                    expected: .none,
-                                    desired: .init(value: error),
-                                    ordering: .sequentiallyConsistent
-                                ).0 else {
-                                    Assertion.assertionFailure(
-                                        "Should not be able to set debounce error multiple times"
-                                    )
-                                    return
-                                }
+                        let promise = await Promise<Void>()
+                        let newInner = await Timeout(clock: clock, after: duration).sink { result in
+                            switch result {
+                                case .success: try? promise.succeed()
+                                case let .failure(error): try? promise.fail(error)
                             }
                         }
-                        timeout.set(value: newTimeout)
+                        let newOuter = Cancellable<Void> {
+                            guard case .success = await promise.result else { return }
+                            try await downstream(r)
+                        }
+                        timeouts.set(value: .init(inner: newInner, outer: newOuter, promise: promise))
                 }
             }
         }
