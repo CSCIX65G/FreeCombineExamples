@@ -20,13 +20,13 @@
 /*:  Inspired the PointFree version of the same.
   Differences:
   1. Lock-free
-  2. No "megaYield"
-  3. No AsyncStream<Never>
-  4. No Foundation, uses Atomics instead
+  2. Corollary: No import Foundation, uses Atomics instead
+  3. No "megaYield"
+  4. Uses Resumption<Void> instead of AsyncStream<Never>
   5. Uses Cancellable and Resumption from FreeCombine to avoid races
-  6. Optionally allows each suspension to signal that the clock can tick again
+  6. Optionally allows each suspension to signal that the clock can now tick again
   7. Gathers performance information at advances
-  8.
+  8. Follows real clock behavior of not allowing sleeping in cancelled tasks
  */
 #if swift(>=5.7)
 import Atomics
