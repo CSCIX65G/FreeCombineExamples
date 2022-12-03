@@ -51,16 +51,15 @@ class DebounceTests: XCTestCase {
         _ = await subject.result
         _ = await t.result
 
-        let count = counter.count
-        XCTAssert(count <= 1, "Got wrong count = \(count)")
-
         let inputCount = inputCounter.count
         XCTAssert(inputCount == 2, "Got wrong count = \(inputCount)")
 
-        let vals = values.value
-        XCTAssert(vals == [1] || vals == [], "Incorrect values: \(vals)")
-    }
+        let count = counter.count
+        XCTAssert(count == 1, "Got wrong count = \(count)")
 
+        let vals = values.value
+        XCTAssert(vals == [1], "Incorrect values: \(vals)")
+    }
 
     func testSimpleDebounce() async throws {
         let clock = TestClock()
@@ -95,14 +94,14 @@ class DebounceTests: XCTestCase {
         _ = await subject.result
         _ = await t.result
 
-        let count = counter.count
-        XCTAssert(count <= 1, "Got wrong count = \(count)")
-
         let inputCount = inputCounter.count
         XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
 
+        let count = counter.count
+        XCTAssert(count == 1, "Got wrong count = \(count)")
+
         let vals = values.value
-        XCTAssert(vals == [14] || vals == [], "Incorrect values: \(vals)")
+        XCTAssert(vals == [14], "Incorrect values: \(vals)")
     }
 
     func testMoreComplexDebounce() async throws {
@@ -111,12 +110,10 @@ class DebounceTests: XCTestCase {
         let inputCounter = Counter()
         let counter = Counter()
         let subject = try await PassthroughSubject(Int.self, buffering: .unbounded)
-        let ticker = Channel<Void>()
 
         let t = await subject.asyncPublisher
-            .handleEvents(receiveOutput: { _ in
+            .handleEvents(receiveOutput: { value in
                 inputCounter.increment()
-                try? await ticker.write()
             })
             .debounce(clock: clock, duration: .milliseconds(100))
             .sink({ value in
@@ -135,23 +132,25 @@ class DebounceTests: XCTestCase {
             })
 
         for i in (0 ..< 15) {
-            try subject.yield(i)
-            try? await ticker.read()
+            try await subject.send(i)
             let num = i % 2 == 0 ? 5 : 11
+            if [1, 3, 5, 7, 9, 11, 13, 14].contains(i) {
+                try? await Task.sleep(for: .microseconds(10))
+            }
             for _ in 0 ..< num { try await clock.advance(by: .milliseconds(10)) }
         }
+
         try await clock.advance(by: .milliseconds(100))
         try await subject.finish()
         _ = await subject.result
+        _ = await t.result
         await clock.runToCompletion()
-
-        let count = counter.count
-        XCTAssert(count <= 8, "Got wrong count = \(count)")
 
         let inputCount = inputCounter.count
         XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
 
-        _ = await t.result
+        let count = counter.count
+        XCTAssert(count <= 8 && count >= 1, "Got wrong count = \(count)")
     }
 
     func testRapidfireDebounce() async throws {
@@ -198,14 +197,13 @@ class DebounceTests: XCTestCase {
         _ = await subject.result
         try await clock.advance(by: .seconds(1000))
         await clock.runToCompletion()
-
-        let count = counter.count
-        XCTAssert(count <= 8, "Got wrong count = \(count)")
+        _ = await t.result
 
         let inputCount = inputCounter.count
         XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
 
-        _ = await t.result
+        let count = counter.count
+        XCTAssert(count <= 8 && count >= 1, "Got wrong count = \(count)")
     }
 
     func testDebounceBreak() async throws {

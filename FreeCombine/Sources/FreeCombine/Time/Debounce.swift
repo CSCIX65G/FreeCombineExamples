@@ -22,43 +22,65 @@ import Atomics
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 extension Publisher {
-    private struct DebounceStep {
-        let inner: Cancellable<Void>
-        let outer: Cancellable<Void>
-        let promise: Promise<Void>
-    }
-
+    typealias DebounceFold = AsyncFold<Swift.Result<Void, Swift.Error>, Publisher<Output>.Result>
     func debounce<C: Clock>(
         clock: C,
         duration: Swift.Duration
     ) -> Self where C.Duration == Swift.Duration {
         .init { resumption, downstream in
-            let timeouts: ValueRef<DebounceStep?> = .init(value: .none)
+            let atomic = ManagedAtomic<Bool>.init(true)
+            let timeouts = ValueRef<Cancellable<Void>?>(value: .none)
+            let foldRef = ValueRef<DebounceFold?>.init(value: .none)
+            let queue = Queue<Publisher<Output>.Result>.init(buffering: .unbounded)
 
             return self(onStartup: resumption) { r in
-                if timeouts.value != nil {
-                    do {
-                        try timeouts.value!.inner.cancel()
-                    } catch { }
-                    _ = try await timeouts.value!.outer.value
+                if foldRef.value == nil {
+                    let f = await queue.fold(into: .init(
+                        initializer: { _ in Swift.Result<Void, Swift.Error>.success(()) },
+                        reducer: { lastReturn, r in
+                            let thisReturn = lastReturn
+                            switch thisReturn {
+                                case let .failure(error): throw error
+                                case .success:
+                                    lastReturn = await Swift.Result { try await downstream(r) }
+                                    if case .failure = lastReturn {
+                                        _ = atomic.exchange(false, ordering: .sequentiallyConsistent)
+                                        queue.finish()
+                                    }
+                            }
+                            return .none
+                        }
+                    ) )
+                    foldRef.set(value: f)
+                }
+                let fold = foldRef.value!
+
+                guard atomic.load(ordering: .sequentiallyConsistent) else {
+                    _ = try await fold.value
+                    return
                 }
 
+                let currentTimeout = timeouts.value
                 switch r {
                     case .completion:
-                        return try await downstream(r)
+                        _ = await currentTimeout?.result
+                        queue.finish()
+                        switch await fold.result {
+                            case .success: return try await downstream(r)
+                            case let .failure(error): throw error
+                        }
+
                     case .value:
-                        let promise = await Promise<Void>()
-                        let newInner = await Timeout(clock: clock, after: duration).sink { result in
+                        try? currentTimeout?.cancel()
+                        let newTimeout = await Timeout(clock: clock, after: duration).sink { result in
                             switch result {
-                                case .success: try? promise.succeed()
-                                case let .failure(error): try? promise.fail(error)
+                                case .success:
+                                    queue.continuation.yield(r)
+                                case .failure:
+                                    ()
                             }
                         }
-                        let newOuter = Cancellable<Void> {
-                            guard case .success = await promise.result else { return }
-                            try await downstream(r)
-                        }
-                        timeouts.set(value: .init(inner: newInner, outer: newOuter, promise: promise))
+                        timeouts.set(value: newTimeout)
                 }
             }
         }
