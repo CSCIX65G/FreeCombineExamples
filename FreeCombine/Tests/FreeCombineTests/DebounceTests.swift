@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import Clock
 @testable import FreeCombine
 
 struct DebounceTestError: Error { }

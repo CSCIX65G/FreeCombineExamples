@@ -9,7 +9,7 @@ public enum Assertion { }
 extension Assertion {
     static var runningTests = false
 
-    static func assert(
+    public static func assert(
         _ condition: @autoclosure () -> Bool,
         _ message: @autoclosure () -> String = String(),
         file: StaticString = #file,
@@ -20,7 +20,7 @@ extension Assertion {
         }
     }
 
-    static func assertionFailure(
+    public static func assertionFailure(
         _ message: @autoclosure () -> String = String(),
         file: StaticString = #file,
         line: UInt = #line

@@ -24,12 +24,12 @@ public enum Cancellables {
     @TaskLocal public static var status = ManagedAtomic<Status>(.running)
 
     @inlinable
-    static var isCancelled: Bool {
+    public static var isCancelled: Bool {
         status.load(ordering: .sequentiallyConsistent) == .cancelled
     }
 
     @inlinable
-    static func checkCancellation() throws -> Void {
+    public static func checkCancellation() throws -> Void {
         guard !isCancelled else { throw CancellationError() }
     }
 

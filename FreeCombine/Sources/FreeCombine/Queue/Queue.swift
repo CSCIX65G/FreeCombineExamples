@@ -19,8 +19,8 @@
 //  limitations under the License.
 //
 public struct Queue<Element: Sendable>: Sendable {
-    let continuation: AsyncStream<Element>.Continuation
-    let stream: AsyncStream<Element>
+    public let continuation: AsyncStream<Element>.Continuation
+    public let stream: AsyncStream<Element>
 
     public init(
         _: Element.Type = Element.self,

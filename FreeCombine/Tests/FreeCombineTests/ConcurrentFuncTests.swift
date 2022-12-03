@@ -33,12 +33,12 @@ final class ConcurrentFuncTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleConcurrentFunc() async throws {
-        let returnChannel = Queue<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(1))
+        let returnQueue = Queue<ConcurrentFunc<TestArg, TestReturn>.Next>.init(buffering: .bufferingOldest(1))
 
         let f = await ConcurrentFunc<TestArg, TestReturn>(dispatch)
         let cancellable = Cancellable<Void> {
-            var iterator = returnChannel.stream.makeAsyncIterator()
-            do { try f(returnChannel: returnChannel, .value(14)) }
+            var iterator = returnQueue.stream.makeAsyncIterator()
+            do { try f(returnChannel: returnQueue, .value(14)) }
             catch { XCTFail("Should not have failed with error: \(error)") }
             guard let next = await iterator.next() else {
                 XCTFail("No result")
@@ -48,9 +48,9 @@ final class ConcurrentFuncTests: XCTestCase {
                 case let .success(value): XCTAssert(value == "14", "Incorrect value: \(value)")
                 case let .failure(error): XCTFail("Received error: \(error)")
             }
-            do { try next.concurrentFunc(returnChannel: returnChannel, .completion(.finished)) }
+            do { try next.concurrentFunc(returnChannel: returnQueue, .completion(.finished)) }
             catch { XCTFail("failed to complete") }
-            returnChannel.finish()
+            returnQueue.finish()
             guard await iterator.next() == nil else {
                 XCTFail("did not complete")
                 return

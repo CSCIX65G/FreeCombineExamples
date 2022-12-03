@@ -6,6 +6,8 @@
 //
 
 import XCTest
+import Channel
+import Clock
 @testable import FreeCombine
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
@@ -36,6 +38,7 @@ final class TimeoutTests: XCTestCase {
         let clock = TestClock()
         let promise = await Promise<Void>()
         let timeout = Timeout(clock: clock, after: .seconds(10))
+        let ticker: Channel<Void> = .init()
 
         let ored = promise.future || timeout
 
@@ -44,9 +47,13 @@ final class TimeoutTests: XCTestCase {
                 XCTFail("Timeout failed")
                 return
             }
+            do { try await ticker.write() }
+            catch { XCTFail("Failed writing ticker") }
         }
 
-        try await clock.advance(by: .milliseconds(10001))
+        try await clock.advance(by: .seconds(10))
+        try? await ticker.read()
+        try await clock.advance(by: .milliseconds(1))
         try promise.succeed()
 
         _ = await cancellable.result
@@ -55,6 +62,7 @@ final class TimeoutTests: XCTestCase {
 
     func testOredTimeout2() async throws {
         let clock = TestClock()
+        let ticker: Channel<Void> = .init()
 
         let ored = Timeout(clock: clock, after: .seconds(10))
             || Timeout(clock: clock, after: .milliseconds(10001))
@@ -64,9 +72,13 @@ final class TimeoutTests: XCTestCase {
                 XCTFail("Timeout failed")
                 return
             }
+            do { try await ticker.write() }
+            catch { XCTFail("Failed writing ticker") }
         }
 
-        try await clock.advance(by: .milliseconds(10001))
+        try await clock.advance(by: .seconds(10))
+        try? await ticker.read()
+        try await clock.advance(by: .milliseconds(1))
 
         _ = await cancellable.result
         await clock.runToCompletion()

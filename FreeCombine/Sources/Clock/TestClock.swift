@@ -30,14 +30,22 @@
  */
 #if swift(>=5.7)
 import Atomics
+import FreeCombine
+import Channel
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 extension [TestClock.Suspension] {
     func release() async -> Void {
-        forEach { $0.release() }
+        forEach {
+            $0.release()
+        }
     }
+
+    @discardableResult
     func fail(with error: Error) async -> Self {
-        forEach { $0.resumption.resume(throwing: error) }
+        forEach {
+            $0.resumption.resume(throwing: error)
+        }
         return self
     }
 }
@@ -46,7 +54,7 @@ extension [TestClock.Suspension] {
 public final class TestClock: Clock, @unchecked Sendable {
     public typealias Duration = Swift.Duration
     public struct Instant: InstantProtocol, Sendable, Equatable, Hashable {
-        public var offset: Duration
+        public private(set) var offset: Duration
 
         public init(offset: Duration = .zero) {
             self.offset = offset
@@ -68,9 +76,16 @@ public final class TestClock: Clock, @unchecked Sendable {
     public struct Suspension: Identifiable, Sendable, Hashable, Equatable {
         let deadline: Instant
         let resumption: Resumption<Void>
-        public var id: ObjectIdentifier { resumption.id }
-        public func release() -> Void { resumption.resume() }
-        public func fail(with error: Error) -> Void { resumption.resume(throwing: error) }
+
+        public var id: ObjectIdentifier {
+            resumption.id
+        }
+        public func release() -> Void {
+            resumption.resume()
+        }
+        public func fail(with error: Error) -> Void {
+            resumption.resume(throwing: error)
+        }
     }
 
     final class State: AtomicReference, Sendable  {
@@ -86,13 +101,15 @@ public final class TestClock: Clock, @unchecked Sendable {
         case advanceBy(duration: Swift.Duration, resumption: Resumption<Instant>)
         case advanceTo(deadline: Instant, resumption: Resumption<Void>)
         case sleepUntil(deadline: Instant, resumption: Resumption<Void>)
+        case cancelSleep(resumption: Resumption<Void>)
         case runToCompletion(resumption: Resumption<Void>)
     }
 
     public let minimumResolution: Duration = .zero
+
     private let atomicState: ManagedAtomic<State>
+    private let channel: Queue<Action>
     private var cancellable: Cancellable<Void>! = .none
-    private var channel: Queue<Action>! = .none
 
     public init(now: Instant = .init(), pendingSuspensions: [Suspension] = []) {
         let localChannel = Queue<Action>.init(buffering: .unbounded)
@@ -164,6 +181,15 @@ public final class TestClock: Clock, @unchecked Sendable {
         }
     }
 
+    private func cancel(resumption: Resumption<Void>) -> [Suspension] {
+        updateState { state in
+            let sortedSuspensions = state.pendingSuspensions.sorted { $0.deadline < $1.deadline }
+            let newPending = sortedSuspensions.filter { $0.resumption != resumption }
+            let newReleased = sortedSuspensions.filter { $0.resumption == resumption }
+            return (.init(now: now, pendingSuspensions: newPending), newReleased)
+        }
+    }
+
     private func reduce(_ action: Action) async {
         switch action {
             case let .sleepUntil(deadline: deadline, resumption: resumption):
@@ -179,6 +205,8 @@ public final class TestClock: Clock, @unchecked Sendable {
                 guard deadline > self.now else { return }
                 await advanceTo(deadline: deadline).release()
                 resumption.resume()
+            case let .cancelSleep(resumption: resumption):
+                await cancel(resumption: resumption).fail(with: CancellationError())
             case let .runToCompletion(resumption: resumption):
                 guard await !removeAllSuspensions().fail(with: SuspensionError()).isEmpty else {
                     resumption.resume()
@@ -202,12 +230,32 @@ public final class TestClock: Clock, @unchecked Sendable {
         }
     }
 
+    public func sleep(for duration: Duration, tolerance: Duration? = nil) async throws -> Void {
+        try await sleep(until: now.advanced(by: duration), tolerance: tolerance)
+    }
+
     public func sleep(until deadline: Instant, tolerance: Duration? = nil) async throws -> Void {
         guard deadline > self.now else { return }
         try Cancellables.checkCancellation()
-        _ = try await pause { resumption in
-            self.channel.continuation.yield(.sleepUntil(deadline: deadline, resumption: resumption))
-        }
+        let promise = await Promise<Resumption<Void>>()
+        try await withTaskCancellationHandler(
+            operation: {
+                try await pause { resumption in
+                    self.channel.continuation.yield(.sleepUntil(deadline: deadline, resumption: resumption))
+                    do { try promise.succeed(resumption) }
+                    catch { fatalError("Promise should never fail here") }
+                }
+            },
+            onCancel: {
+                try? Uncancellable<Void> {
+                    guard case let .success(resumption) = await promise.result else {
+                        return
+                    }
+                    self.channel.continuation.yield(.cancelSleep(resumption: resumption))
+                }.release()
+            }
+        )
+        _ = await promise.result
     }
 
     public func runToCompletion(
