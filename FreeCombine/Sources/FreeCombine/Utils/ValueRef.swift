@@ -34,6 +34,13 @@ public final class ValueRef<Value>: AtomicReference {
         return tmp
     }
 
+    @discardableResult
+    public func set(value: () async -> Value) async -> Value {
+        let tmp = self.value
+        self.value = await value()
+        return tmp
+    }
+
     public func get() -> Value {
         return self.value
     }
