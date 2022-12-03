@@ -66,7 +66,7 @@ extension Future {
                     }
                     _ = await downstream(.success(clock.now))
                 } catch {
-                    throw error
+                    await downstream(.failure(error))
                 }
             }
         }

@@ -17,6 +17,51 @@ class DebounceTests: XCTestCase {
     override func setUpWithError() throws {  }
     override func tearDownWithError() throws { }
 
+    func testSingleDebounce() async throws {
+        let clock = TestClock()
+        let values = ValueRef<[Int]>.init(value: [])
+        let inputCounter = Counter()
+        let counter = Counter()
+        let subject = try await PassthroughSubject(Int.self)
+
+        let t = await subject.asyncPublisher
+            .handleEvents(receiveOutput: { _ in inputCounter.increment() })
+            .debounce(clock: clock, duration: .milliseconds(100))
+            .sink({ value in
+                switch value {
+                    case .value(let value):
+                        let vals = values.value
+                        values.set(value: vals + [value])
+                        counter.increment()
+                        return
+                    case let .completion(.failure(error)):
+                        XCTFail("Got unexpected failure: \(error)")
+                        return
+                    case .completion(.finished):
+                        return
+                }
+            })
+
+        for i in (0 ..< 2) {
+            try await subject.send(i)
+            for _ in 0 ..< 5 { try await clock.advance(by: .milliseconds(10)) }
+        }
+        try await clock.advance(by: .milliseconds(100))
+        try await subject.finish()
+        _ = await subject.result
+        _ = await t.result
+
+        let count = counter.count
+        XCTAssert(count <= 1, "Got wrong count = \(count)")
+
+        let inputCount = inputCounter.count
+        XCTAssert(inputCount == 2, "Got wrong count = \(inputCount)")
+
+        let vals = values.value
+        XCTAssert(vals == [1] || vals == [], "Incorrect values: \(vals)")
+    }
+
+
     func testSimpleDebounce() async throws {
         let clock = TestClock()
         let values = ValueRef<[Int]>.init(value: [])
@@ -101,7 +146,7 @@ class DebounceTests: XCTestCase {
         await clock.runToCompletion()
 
         let count = counter.count
-        XCTAssert(count > 0 && count <= 8, "Got wrong count = \(count)")
+        XCTAssert(count <= 8, "Got wrong count = \(count)")
 
         let inputCount = inputCounter.count
         XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
@@ -151,10 +196,11 @@ class DebounceTests: XCTestCase {
         try await clock.advance(by: .milliseconds(100))
         try await subject.finish()
         _ = await subject.result
+        try await clock.advance(by: .seconds(1000))
         await clock.runToCompletion()
 
         let count = counter.count
-        XCTAssert(count <= 8 && count >= 0, "Got wrong count = \(count)")
+        XCTAssert(count <= 8, "Got wrong count = \(count)")
 
         let inputCount = inputCounter.count
         XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
@@ -212,7 +258,7 @@ class DebounceTests: XCTestCase {
         await clock.runToCompletion()
 
         let count = counter.count
-        XCTAssert(count > 0 && count <= 5, "Got wrong count = \(count)")
+        XCTAssert(count <= 5, "Got wrong count = \(count)")
 
         let inputCount = inputCounter.count
         XCTAssert(inputCount >= 10, "Got wrong count = \(inputCount)")

@@ -39,7 +39,6 @@ extension Publisher {
                 if timeouts.value != nil {
                     do {
                         try timeouts.value!.inner.cancel()
-                        try? timeouts.value!.promise.fail(CancellationError())
                     } catch { }
                     _ = try await timeouts.value!.outer.value
                 }
