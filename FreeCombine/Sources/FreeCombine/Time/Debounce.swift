@@ -27,41 +27,36 @@ extension Publisher {
         duration: Swift.Duration
     ) -> Self where C.Duration == Swift.Duration {
         .init { resumption, downstream in
-            let downstreamIsSendable = ManagedAtomic<Bool>.init(true)
-            let timeouts = ValueRef<Cancellable<Void>?>(value: .none)
-            let foldRef = ValueRef<TimerFold?>.init(value: .none)
-            let queue = Queue<Publisher<Output>.Result>.init(buffering: .unbounded)
+            let isDispatchable = ManagedAtomic<ValueRef<DownstreamState>>.init(.init(value: .init()))
+            let previousValueTimeout = ValueRef<Cancellable<Void>?>(value: .none)
+            let downstreamFolderRef = ValueRef<DownstreamFold?>.init(value: .none)
+            let downstreamQueue = Queue<Publisher<Output>.Result>.init(buffering: .unbounded)
 
             return self(onStartup: resumption) { r in
-                guard downstreamIsSendable.load(ordering: .sequentiallyConsistent) else {
-                    _ = try await foldRef.value?.value
-                    return
-                }
-
-                if foldRef.value == nil, case .value = r {
-                    foldRef.set(value: await createTimerFold(
-                        downstreamIsSendable: downstreamIsSendable,
-                        queue: queue,
-                        downstream: downstream
-                    ) )
+                let dispatchError = isDispatchable.load(ordering: .sequentiallyConsistent).value.errored
+                guard dispatchError == nil else { throw dispatchError! }
+                
+                if downstreamFolderRef.value == nil, case .value = r {
+                    downstreamFolderRef.set(
+                        value: await createDownstreamFold(isDispatchable, downstreamQueue, downstream)
+                    )
                 }
 
                 switch r {
                     case .completion:
-                        _ = await timeouts.value?.result
-                        queue.finish()
-                        switch await foldRef.value?.result {
-                            case .success, .none: return try await downstream(r)
+                        _ = await previousValueTimeout.value?.result
+                        downstreamQueue.continuation.yield(r)
+                        downstreamQueue.finish()
+                        switch await downstreamFolderRef.value?.result {
+                            case .success, .none: return
                             case let .failure(error): throw error
                         }
 
                     case .value:
-                        try? timeouts.value?.cancel()
-                        await timeouts.set(value: Timeout(clock: clock, after: duration).sink { result in
-                            switch result {
-                                case .success:  queue.continuation.yield(r)
-                                case .failure: ()
-                            }
+                        try? previousValueTimeout.value?.cancel()
+                        await previousValueTimeout.set(value: Timeout(clock: clock, after: duration).sink { result in
+                            guard case .success = result else { return }
+                            downstreamQueue.continuation.yield(r)
                         })
                 }
             }
