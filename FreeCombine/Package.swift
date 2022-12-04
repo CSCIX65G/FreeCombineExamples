@@ -33,16 +33,9 @@ let package = Package(
             ]
         ),
         .target(
-            name: "FreeCombine",
-            dependencies: [
-                "Core",
-                .product(name: "Atomics", package: "swift-atomics"),
-            ]
-        ),
-        .target(
             name: "Channel",
             dependencies: [
-                "FreeCombine",
+                "Core",
                 .product(name: "Atomics", package: "swift-atomics"),
                 .product(name: "DequeModule", package: "swift-collections"),
             ]
@@ -53,6 +46,29 @@ let package = Package(
                 "FreeCombine",
                 "Channel",
                 .product(name: "Atomics", package: "swift-atomics")
+            ]
+        ),
+        .target(
+            name: "Future",
+            dependencies: [
+                "Core",
+                .product(name: "Atomics", package: "swift-atomics"),
+            ]
+        ),
+        .target(
+            name: "Publisher",
+            dependencies: [
+                "Core",
+                "Channel",
+                "Future",
+                .product(name: "Atomics", package: "swift-atomics"),
+            ]
+        ),
+        .target(
+            name: "FreeCombine",
+            dependencies: [
+                "Core",
+                .product(name: "Atomics", package: "swift-atomics"),
             ]
         ),
         .testTarget(

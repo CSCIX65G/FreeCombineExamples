@@ -1,8 +1,7 @@
 //
-//  Core.swift
+//  Publishers.swift
 //  
 //
 //  Created by Van Simmons on 12/4/22.
 //
-
-enum Core { }
+public enum Publishers { }
