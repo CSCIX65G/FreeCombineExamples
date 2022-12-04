@@ -19,6 +19,7 @@
 //  limitations under the License.
 //
 import XCTest
+@testable import Core
 @testable import FreeCombine
 
 class JustTests: XCTestCase {

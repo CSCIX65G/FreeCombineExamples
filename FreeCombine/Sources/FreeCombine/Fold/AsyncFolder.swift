@@ -18,6 +18,10 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+import Core
+
+public struct FinishedError: Swift.Error, Sendable, Equatable { }
+
 public struct AsyncFolder<State, Action> {
     public enum Effect {
         case none  // Multiply by 1

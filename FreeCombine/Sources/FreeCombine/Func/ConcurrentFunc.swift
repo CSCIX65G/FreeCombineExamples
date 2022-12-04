@@ -18,6 +18,10 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+import Core
+
+public struct InvocationError: Swift.Error, Sendable, Equatable { }
+
 public struct ConcurrentFunc<Arg, Return>: @unchecked Sendable, Identifiable {
     public let id: ObjectIdentifier
     let dispatch: ConcurrentFunc<Arg, Return>.Dispatch
@@ -103,7 +107,7 @@ extension ConcurrentFunc {
                 var (returnChannel, arg) = try await pause(resumption.resume)
                 var result = Result<Return, Swift.Error>.failure(InvocationError())
                 while true {
-                    result = await Result { try await asyncFunction(arg) }
+                    result = await Swift.Result { try await asyncFunction(arg) }
                     switch arg {
                         case .completion(.finished):
                             throw CompletionError(completion: .finished)

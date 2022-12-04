@@ -18,6 +18,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+import Core
+
 extension Future {
     func flatMap<T>(
         _ transform: @escaping (Output) async -> Future<T>

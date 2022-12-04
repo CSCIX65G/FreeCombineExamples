@@ -1,5 +1,5 @@
 //
-//  Channel.swift
+//  Queue.swift
 //
 //
 //  Created by Van Simmons on 9/5/22.
@@ -18,6 +18,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+public enum EnqueueError<Element: Sendable>: Error {
+    case dropped(Element)
+    case terminated
+}
+
 public struct Queue<Element: Sendable>: Sendable {
     public let continuation: AsyncStream<Element>.Continuation
     public let stream: AsyncStream<Element>

@@ -30,8 +30,9 @@
  */
 #if swift(>=5.7)
 import Atomics
-import FreeCombine
+import Core
 import Channel
+import FreeCombine
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 extension [TestClock.Suspension] {

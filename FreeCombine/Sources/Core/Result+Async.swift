@@ -20,7 +20,7 @@
 //
 import Atomics
 
-extension Result {
+public extension Result {
     init(catching: () async throws -> Success) async where Failure == Swift.Error {
         do { self = try await .success(catching()) }
         catch { self = .failure(error) }

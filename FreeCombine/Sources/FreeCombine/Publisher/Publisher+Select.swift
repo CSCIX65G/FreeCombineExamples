@@ -18,6 +18,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+import Core
+
 public struct Select<Left, Right> {
     enum Current {
         case nothing
@@ -165,16 +167,18 @@ public struct Select<Left, Right> {
     ) async throws -> Void {
         switch valuePair(state.current) {
             case let .some((value, resumption)):
-                state.current = try await Result<Void, Swift.Error> { try await state.downstream(.value(value)) }
-                    .map {
-                        resumption.resume()
-                        return Select<Left, Right>.Current.nothing
-                    }
-                    .mapError {
-                        resumption.resume(throwing: $0)
-                        return $0
-                    }
-                    .get()
+                state.current = try await Result<Void, Swift.Error> {
+                    try await state.downstream(.value(value))
+                }
+                .map {
+                    resumption.resume()
+                    return Select<Left, Right>.Current.nothing
+                }
+                .mapError {
+                    resumption.resume(throwing: $0)
+                    return $0
+                }
+                .get()
                 if case .finished = state.current { throw FinishedError() }
             default:
                 ()

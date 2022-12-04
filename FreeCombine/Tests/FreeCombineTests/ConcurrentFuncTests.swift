@@ -6,6 +6,7 @@
 //
 
 import XCTest
+@testable import Core
 @testable import FreeCombine
 
 fileprivate typealias TestArg = Int

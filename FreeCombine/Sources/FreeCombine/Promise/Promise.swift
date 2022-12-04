@@ -19,6 +19,7 @@
 //  limitations under the License.
 //
 import Atomics
+import Core
 
 public enum Promises {
     enum Status: UInt8, Equatable, AtomicValue {

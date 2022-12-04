@@ -6,7 +6,7 @@
 //
 
 import Atomics
-import FreeCombine
+import Core
 
 public final class Channel<Value> {
     private struct ChannelError: Error {

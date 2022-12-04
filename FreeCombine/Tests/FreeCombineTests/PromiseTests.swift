@@ -6,6 +6,7 @@
 //
 
 import XCTest
+@testable import Core
 @testable import FreeCombine
 
 final class PromiseTests: XCTestCase {

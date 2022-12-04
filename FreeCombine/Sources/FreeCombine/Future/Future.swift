@@ -30,6 +30,8 @@
  call accepts a Result and the consumer is responsible for responding appropriately
  to that.
  */
+import Core
+
 public struct Future<Output: Sendable>: Sendable {
     private let call: @Sendable (
         Resumption<Void>,

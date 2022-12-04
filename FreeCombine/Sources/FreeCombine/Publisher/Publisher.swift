@@ -18,6 +18,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+import Core
+public struct CompletionError: Swift.Error, Sendable {
+    let completion: Publishers.Completion
+}
+
 public struct Publisher<Output: Sendable>: Sendable {
     private let call: @Sendable (Resumption<Void>, @escaping Downstream) -> Cancellable<Void>
 

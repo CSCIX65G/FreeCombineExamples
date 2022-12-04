@@ -18,6 +18,10 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+import Core
+
+public struct SubscriptionError: Swift.Error, Sendable, Equatable { }
+
 public final class Distributor<Output: Sendable> {
     private let function: StaticString
     private let file: StaticString
@@ -111,7 +115,7 @@ public extension Distributor {
     func send(_ value: Output) async throws {
         try await pause { resumption in
             do { try valueFold.send(.syncValue(.value(value), resumption)) }
-            catch { resumption.resume(throwing: StreamEnqueueError()) }
+            catch { resumption.resume(throwing: error) }
         }
     }
 

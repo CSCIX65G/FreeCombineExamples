@@ -18,6 +18,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+import Core
+
 public enum Merges {
     public enum Error: Swift.Error {
         case failure(index: Int, error: Swift.Error)
