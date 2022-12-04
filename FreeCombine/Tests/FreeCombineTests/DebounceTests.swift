@@ -19,7 +19,7 @@ class DebounceTests: XCTestCase {
 
     func testSingleDebounce() async throws {
         let clock = TestClock()
-        let values = ValueRef<[Int]>.init(value: [])
+        let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
         let subject = try await PassthroughSubject(Int.self)
@@ -63,7 +63,7 @@ class DebounceTests: XCTestCase {
 
     func testSimpleDebounce() async throws {
         let clock = TestClock()
-        let values = ValueRef<[Int]>.init(value: [])
+        let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
         let subject = try await PassthroughSubject(Int.self)
@@ -106,7 +106,7 @@ class DebounceTests: XCTestCase {
 
     func testMoreComplexDebounce() async throws {
         let clock = TestClock()
-        let values = ValueRef<[Int]>.init(value: [])
+        let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
         let subject = try await PassthroughSubject(Int.self, buffering: .unbounded)
@@ -155,7 +155,7 @@ class DebounceTests: XCTestCase {
 
     func testRapidfireDebounce() async throws {
         let clock = TestClock()
-        let values = ValueRef<[Int]>.init(value: [])
+        let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
         let subject = try await PassthroughSubject(Int.self, buffering: .unbounded)
@@ -208,7 +208,7 @@ class DebounceTests: XCTestCase {
 
     func testDebounceBreak() async throws {
         let clock = TestClock()
-        let values = ValueRef<[Int]>.init(value: [])
+        let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
         let subject = try await PassthroughSubject(Int.self, buffering: .unbounded)

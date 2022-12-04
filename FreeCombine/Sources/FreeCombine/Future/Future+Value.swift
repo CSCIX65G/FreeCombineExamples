@@ -30,7 +30,7 @@ extension Future {
     var futureValue: Cancellable<Output> {
         get {
             .init {
-                let ref: ValueRef<Result<Output, Swift.Error>?> = .init(value: .none)
+                let ref: MutableBox<Result<Output, Swift.Error>?> = .init(value: .none)
                 let z: Cancellable<Void> = await self.sink { ref.set(value: $0) }
                 return try await withTaskCancellationHandler(
                     operation: {

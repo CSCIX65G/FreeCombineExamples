@@ -1,0 +1,136 @@
+//
+//  ThrottleTests.swift
+//  
+//
+//  Created by Van Simmons on 12/4/22.
+//
+
+import XCTest
+import Clock
+@testable import FreeCombine
+
+@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
+final class ThrottleTests: XCTestCase {
+    override func setUpWithError() throws { }
+    override func tearDownWithError() throws { }
+
+    func xtestSimpleThrottle() async throws {
+        let clock = TestClock()
+        let inputCounter = Counter()
+        let counter = Counter()
+        let t = await (1 ... 15).asyncPublisher
+            .handleEvents(receiveOutput: { _ in inputCounter.increment() })
+            .throttle(clock: clock, interval: .milliseconds(100), latest: false)
+            .sink({ value in
+                switch value {
+                    case .value(_):
+                        counter.increment()
+                        return
+                    case let .completion(.failure(error)):
+                        XCTFail("Got unexpected failure: \(error)")
+                        return
+                    case .completion(.finished):
+                        return
+                }
+            })
+        for _ in 0 ..< 20 {
+            try await clock.advance(by: .milliseconds(10))
+        }
+
+        _ = await t.result
+        await clock.runToCompletion()
+        let count = counter.count
+        let inputCount = inputCounter.count
+        XCTAssert(count == 1, "Got wrong count = \(count)")
+        XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
+    }
+
+    func xtestSimpleSubjectThrottle() async throws {
+        let clock = TestClock()
+        let values = MutableBox<[Int]>.init(value: [])
+        let inputCounter = Counter()
+        let counter = Counter()
+        let subject = try await PassthroughSubject(Int.self)
+        let t = await subject.asyncPublisher
+            .handleEvents(receiveOutput: { _ in inputCounter.increment() })
+            .throttle(clock: clock, interval: .milliseconds(100), latest: false)
+            .sink({ value in
+                switch value {
+                    case .value(let value):
+                        let vals = values.value
+                        values.set(value: vals + [value])
+                        counter.increment()
+                        return
+                    case let .completion(.failure(error)):
+                        XCTFail("Got unexpected failure: \(error)")
+                        return
+                    case .completion(.finished):
+                        return
+                }
+            })
+
+        for i in (0 ..< 15) {
+            try await subject.send(i)
+            try await clock.advance(by: .milliseconds(9))
+        }
+        try await subject.finish()
+
+        _ = await t.result
+        _ = await subject.result
+
+        let count = counter.count
+        XCTAssert(count == 2, "Got wrong count = \(count)")
+
+        let inputCount = inputCounter.count
+        XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
+
+        let vals = values.value
+        XCTAssert(
+            vals == [0, 8] || vals == [0, 9] || vals == [0, 10] || vals == [0, 11],
+            "Incorrect values: \(vals)"
+        )
+    }
+
+    func xtestSimpleSubjectThrottleLatest() async throws {
+        let clock = TestClock()
+        let values = MutableBox<[Int]>.init(value: [])
+        let inputCounter = Counter()
+        let counter = Counter()
+        let subject = try await PassthroughSubject(Int.self)
+        let t = await subject.asyncPublisher
+            .handleEvents(receiveOutput: { _ in inputCounter.increment() })
+            .throttle(clock: clock, interval: .milliseconds(100), latest: true)
+            .sink({ value in
+                switch value {
+                    case .value(let value):
+                        let vals = values.value
+                        values.set(value: vals + [value])
+                        counter.increment()
+                        return
+                    case let .completion(.failure(error)):
+                        XCTFail("Got unexpected failure: \(error)")
+                        return
+                    case .completion(.finished):
+                        return
+                }
+            })
+
+        for i in (0 ..< 15) {
+            try await subject.send(i)
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        try await subject.finish()
+
+        _ = await t.result
+        _ = await subject.result
+
+        let count = counter.count
+        XCTAssert(count == 2, "Got wrong count = \(count)")
+
+        let inputCount = inputCounter.count
+        XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
+
+        let vals = values.value
+        XCTAssert(vals == [9, 14] || vals == [8, 14] || vals == [7, 14] , "Incorrect values: \(vals)")
+    }
+}

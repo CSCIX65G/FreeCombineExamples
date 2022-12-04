@@ -12,8 +12,13 @@ extension Publisher {
     typealias DownstreamQueue = Queue<Publisher<Output>.Result>
     typealias DownstreamFold = AsyncFold<DownstreamState, Publisher<Output>.Result>
 
-    func createDownstreamFold(
-        _ isDispatchable: ManagedAtomic<ValueRef<DownstreamState>>,
+    static func check(_ isDispatchable: ManagedAtomic<Box<DownstreamState>>) throws -> Void {
+        let dispatchError = isDispatchable.load(ordering: .sequentiallyConsistent).value.errored
+        guard dispatchError == nil else { throw dispatchError! }
+    }
+
+    static func createDownstreamFold(
+        _ isDispatchable: ManagedAtomic<Box<DownstreamState>>,
         _ queue: DownstreamQueue,
         _ downstream: @escaping Downstream
     ) async -> DownstreamFold {
@@ -30,6 +35,22 @@ extension Publisher {
                 return .none
             }
         ) )
+    }
+
+    static func createNextCancellable<C: Clock>(
+        atomic: ManagedAtomic<Cancellable<Void>?>,
+        clock: C,
+        duration: C.Duration,
+        queue: Queue<Publisher<Output>.Result>,
+        dispatchValue: @escaping () -> Publisher<Output>.Result
+    ) async -> Cancellable<Void>?  where C.Duration == Swift.Duration {
+        await Timeout(clock: clock, after: duration).sink { result in
+            guard atomic.exchange(.none, ordering: .sequentiallyConsistent) != nil,
+                case .success = result,
+                !Cancellables.isCancelled
+            else { return }
+            queue.continuation.yield(dispatchValue())
+        }
     }
 }
 

@@ -19,10 +19,31 @@
 //  limitations under the License.
 //
 import Atomics
-public final class ValueRef<Value>: AtomicReference {
-    enum Error: Swift.Error {
-        case occupied
+
+public final class Box<Value: Sendable> {
+    public let value: Value
+    public init(value: Value) { self.value = value }
+}
+
+extension Box: AtomicReference { }
+extension Box: Sendable { }
+extension Box: Identifiable {
+    public var id: ObjectIdentifier { ObjectIdentifier(self) }
+}
+extension Box: Equatable {
+    public static func == (lhs: Box<Value>, rhs: Box<Value>) -> Bool {
+        lhs.id == rhs.id
     }
+}
+
+extension Box: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        id.hash(into: &hasher)
+    }
+}
+
+
+public final class MutableBox<Value> {
     public private(set) var value: Value
 
     public init(value: Value) { self.value = value }
@@ -40,13 +61,25 @@ public final class ValueRef<Value>: AtomicReference {
         self.value = await value()
         return tmp
     }
+}
 
-    public func get() -> Value {
-        return self.value
+extension MutableBox: Identifiable {
+    public var id: ObjectIdentifier { ObjectIdentifier(self) }
+}
+
+extension MutableBox: Equatable {
+    public static func == (lhs: MutableBox<Value>, rhs: MutableBox<Value>) -> Bool {
+        lhs.id == rhs.id
     }
 }
 
-extension ValueRef {
+extension MutableBox: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        id.hash(into: &hasher)
+    }
+}
+
+extension MutableBox {
     public func append<T>(_ t: T) throws -> Void where Value == [T] {
         value.append(t)
     }

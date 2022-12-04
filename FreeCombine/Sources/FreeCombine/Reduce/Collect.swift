@@ -21,7 +21,7 @@
 public extension Publisher {
     func collect() -> Publisher<[Output]> {
         return .init { resumption, downstream in
-            let currentValue: ValueRef<[Output]> = ValueRef(value: [])
+            let currentValue: MutableBox<[Output]> = MutableBox(value: [])
             return self(onStartup: resumption) { r in
                 guard !Cancellables.isCancelled else {
                     return try await handleCancellation(of: downstream)

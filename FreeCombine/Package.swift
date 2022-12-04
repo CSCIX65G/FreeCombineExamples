@@ -27,8 +27,15 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "Core",
+            dependencies: [
+                .product(name: "Atomics", package: "swift-atomics")
+            ]
+        ),
+        .target(
             name: "FreeCombine",
             dependencies: [
+                "Core",
                 .product(name: "Atomics", package: "swift-atomics"),
             ]
         ),
@@ -51,6 +58,7 @@ let package = Package(
         .testTarget(
             name: "FreeCombineTests",
             dependencies: [
+                "Core",
                 "FreeCombine",
                 "Channel",
                 "Clock"

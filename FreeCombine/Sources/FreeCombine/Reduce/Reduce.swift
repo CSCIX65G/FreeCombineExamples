@@ -24,7 +24,7 @@ public extension Publisher {
         _ transform: @escaping (T, Output) async -> T
     ) -> Publisher<T> {
         return .init { resumption, downstream in
-            let currentValue: ValueRef<T> = ValueRef(value: initialValue)
+            let currentValue: MutableBox<T> = MutableBox(value: initialValue)
             return self(onStartup: resumption) { r in
                 guard !Cancellables.isCancelled else {
                     return try await handleCancellation(of: downstream)

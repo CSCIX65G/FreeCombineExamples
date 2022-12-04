@@ -23,7 +23,7 @@ public extension Publisher {
         with value: Output
     ) -> Self {
         .init { resumption, downstream in
-            let isEmpty = ValueRef<Bool>(value: true)
+            let isEmpty = MutableBox<Bool>(value: true)
             return self(onStartup: resumption) { r in switch r {
                 case .value(let a):
                     isEmpty.set(value: false)

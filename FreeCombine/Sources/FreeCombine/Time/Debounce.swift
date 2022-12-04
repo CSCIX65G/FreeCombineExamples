@@ -27,24 +27,25 @@ extension Publisher {
         duration: Swift.Duration
     ) -> Self where C.Duration == Swift.Duration {
         .init { resumption, downstream in
-            let isDispatchable = ManagedAtomic<ValueRef<DownstreamState>>.init(.init(value: .init()))
-            let previousValueTimeout = ValueRef<Cancellable<Void>?>(value: .none)
-            let downstreamFolderRef = ValueRef<DownstreamFold?>.init(value: .none)
+            let isDispatchable = ManagedAtomic<Box<DownstreamState>>.init(.init(value: .init()))
+            let downstreamValueCancellable = MutableBox<Cancellable<Void>?>(value: .none)
             let downstreamQueue = Queue<Publisher<Output>.Result>.init(buffering: .unbounded)
 
+            // One shot.  Set on subscribe
+            let downstreamFolderRef = MutableBox<DownstreamFold?>.init(value: .none)
+
             return self(onStartup: resumption) { r in
-                let dispatchError = isDispatchable.load(ordering: .sequentiallyConsistent).value.errored
-                guard dispatchError == nil else { throw dispatchError! }
-                
+                try Self.check(isDispatchable)
+
                 if downstreamFolderRef.value == nil, case .value = r {
                     downstreamFolderRef.set(
-                        value: await createDownstreamFold(isDispatchable, downstreamQueue, downstream)
+                        value: await Self.createDownstreamFold(isDispatchable, downstreamQueue, downstream)
                     )
                 }
 
                 switch r {
                     case .completion:
-                        _ = await previousValueTimeout.value?.result
+                        _ = await downstreamValueCancellable.value?.result
                         downstreamQueue.continuation.yield(r)
                         downstreamQueue.finish()
                         switch await downstreamFolderRef.value?.result {
@@ -53,9 +54,9 @@ extension Publisher {
                         }
 
                     case .value:
-                        try? previousValueTimeout.value?.cancel()
-                        await previousValueTimeout.set(value: Timeout(clock: clock, after: duration).sink { result in
-                            guard case .success = result else { return }
+                        try? downstreamValueCancellable.value?.cancel()
+                        await downstreamValueCancellable.set(value: Timeout(clock: clock, after: duration).sink { result in
+                            guard case .success = result, !Cancellables.isCancelled else { return }
                             downstreamQueue.continuation.yield(r)
                         })
                 }

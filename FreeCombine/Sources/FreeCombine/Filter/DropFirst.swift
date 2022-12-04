@@ -23,7 +23,7 @@ public extension Publisher {
         _ count: Int = 1
     ) -> Self {
         .init { resumption, downstream in
-            let currentValue: ValueRef<Int> = ValueRef(value: count + 1)
+            let currentValue: MutableBox<Int> = MutableBox(value: count + 1)
             return self(onStartup: resumption) { r in
                 let current = currentValue.value - 1
                 currentValue.set(value: max(0, current))
