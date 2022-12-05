@@ -68,6 +68,9 @@ let package = Package(
             name: "FreeCombine",
             dependencies: [
                 "Core",
+                "Channel",
+                "Future",
+                "Publisher",
                 .product(name: "Atomics", package: "swift-atomics"),
             ]
         ),
