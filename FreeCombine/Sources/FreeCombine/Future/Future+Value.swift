@@ -25,7 +25,7 @@ extension Future {
         get async throws { try await futureValue.value }
     }
 
-    var result: Result<Output, Swift.Error> {
+    var result: AsyncResult<Output, Swift.Error> {
         get async { await futureValue.result }
     }
 
@@ -33,7 +33,7 @@ extension Future {
         get {
             .init {
                 let ref: MutableBox<Result<Output, Swift.Error>?> = .init(value: .none)
-                let z: Cancellable<Void> = await self.sink { ref.set(value: $0) }
+                let z: Cancellable<Void> = await self.sink { ref.set(value: .init($0)) }
                 return try await withTaskCancellationHandler(
                     operation: {
                         _ = await z.result

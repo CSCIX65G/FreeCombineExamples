@@ -40,7 +40,7 @@ public struct Merge<Value> {
         let downstream: @Sendable (Publisher<Value>.Result) async throws -> Void
 
         mutating func cancel(_ id: Int) throws -> Void {
-            guard let can = cancellables[id] else { throw InternalError() }
+            guard let can = cancellables[id] else { throw CancellationFailureError() }
             cancellables[id] = .none
             try can.cancel()
             cancellables.removeValue(forKey: id)
@@ -148,7 +148,7 @@ public struct Merge<Value> {
     ) async throws -> Void {
         switch valuePair(state.current) {
             case let .some((value, resumption)):
-                state.current = try await Result<Void, Swift.Error> {
+                state.current = try await AsyncResult<Void, Swift.Error> {
                     try await state.downstream(.value(value))
                 }
                 .map {

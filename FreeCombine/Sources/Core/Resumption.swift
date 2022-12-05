@@ -71,8 +71,8 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
         }
     }
 
-    private func set(status newStatus: Status) -> Result<Void, Swift.Error> {
-        Result.success(()).set(atomic: self.atomicStatus, from: .waiting, to: newStatus)
+    private func set(status newStatus: Status) -> AsyncResult<Void, Swift.Error> {
+        AsyncResult.success(()).set(atomic: self.atomicStatus, from: .waiting, to: newStatus)
     }
 
     public func resume(returning output: Output) -> Void {

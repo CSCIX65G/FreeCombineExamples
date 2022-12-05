@@ -22,7 +22,7 @@ public final class Cancellable<Output: Sendable> {
         let atomic = atomicStatus
         self.task = .init {
             try await Cancellables.$status.withValue(atomic) {
-                try await Result(catching: operation)
+                try await AsyncResult(catching: operation)
                     .set(atomic: atomic, from: Status.running, to: Status.finished)
                     .get()
             }
@@ -30,7 +30,7 @@ public final class Cancellable<Output: Sendable> {
     }
 
     @Sendable public func cancel() throws {
-        try Result<Void, Swift.Error>.success(())
+        try AsyncResult<Void, Swift.Error>.success(())
             .set(atomic: atomicStatus, from: Status.running, to: Status.cancelled)
             .get()
         // Allow the task cancellation handlers to run
@@ -41,7 +41,7 @@ public final class Cancellable<Output: Sendable> {
     public var value: Output {
         get async throws { try await task.value }
     }
-    public var result: Result<Output, Swift.Error> {
+    public var result: AsyncResult<Output, Swift.Error> {
         get async { await task.result }
     }
 }

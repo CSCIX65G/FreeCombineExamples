@@ -28,8 +28,8 @@ public struct Or<Left, Right> {
     }
 
     public enum Action {
-        case left(Result<Left, Swift.Error>)
-        case right(Result<Right, Swift.Error>)
+        case left(AsyncResult<Left, Swift.Error>)
+        case right(AsyncResult<Right, Swift.Error>)
     }
 
     public struct State {

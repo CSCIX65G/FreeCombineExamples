@@ -142,7 +142,7 @@ public extension Distributor {
         try valueFold.send(.asyncCompletion(completion))
     }
 
-    var result: Result<DistributionState, Swift.Error> {
+    var result: AsyncResult<DistributionState, Swift.Error> {
         get async { await distributionFold.result }
     }
 }

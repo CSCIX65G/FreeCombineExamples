@@ -71,7 +71,7 @@ public final class Promise<Output> {
     }
 
     private func set(status newStatus: Promises.Status) throws -> Resumption<Output> {
-        try Result<Void, Swift.Error>.success(())
+        try AsyncResult<Void, Swift.Error>.success(())
             .set(atomic: atomicStatus, from: .waiting, to: newStatus)
             .get()
 
@@ -96,7 +96,7 @@ extension Promise: Hashable {
 }
 
 public extension Promise {
-    var result: Result<Output, Swift.Error> {
+    var result: AsyncResult<Output, Swift.Error> {
         get async { await cancellable.result }
     }
 
@@ -110,7 +110,7 @@ public extension Promise {
         try fail(CancellationError())
     }
 
-    func fulfill(_ result: Result<Output, Swift.Error>) throws {
+    func fulfill(_ result: AsyncResult<Output, Swift.Error>) throws {
         switch result {
             case let .success(arg): try succeed(arg)
             case let .failure(error): try fail(error)

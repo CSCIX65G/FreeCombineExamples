@@ -20,14 +20,13 @@
 //
 import Atomics
 
-public struct CancellationFailureError: Swift.Error, Sendable, Equatable { }
+public struct CancellationFailureError: Swift.Error, Sendable, Equatable {
+    public init() { }
+}
 
 public struct ReleaseError: Swift.Error, Sendable, Equatable { }
 public struct LeakError: Swift.Error, Sendable, Equatable { }
 public struct TimeoutError: Swift.Error, Sendable, Equatable { }
-public struct InternalError: Swift.Error, Sendable, Equatable {
-    public init() { }
-}
 
 public enum AtomicError<R: AtomicValue>: Error {
     case failedTransition(from: R, to: R, current: R)

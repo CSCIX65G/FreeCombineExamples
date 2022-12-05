@@ -45,7 +45,7 @@ public final class AsyncFold<State, Action: Sendable> {
         get async throws { try await cancellable.value }
     }
 
-    var result: Result<State, Swift.Error> {
+    var result: AsyncResult<State, Swift.Error> {
         get async { await cancellable.result }
     }
 
@@ -65,7 +65,7 @@ public final class AsyncFold<State, Action: Sendable> {
 extension AsyncFold {
     var future: Future<State> {
         .init { resumption, downstream in
-            .init { await downstream(self.cancellable.result) }
+                .init { await downstream(self.cancellable.result) }
         }
     }
     var publisher: Publisher<State> {

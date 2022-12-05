@@ -55,7 +55,7 @@ public struct ConcurrentFunc<Arg, Return>: @unchecked Sendable, Identifiable {
         self.init(dispatch: localDispatch, resumption: resumption)
     }
 
-    var result: Result<Return, Swift.Error> {
+    var result: AsyncResult<Return, Swift.Error> {
         get async { await dispatch.result }
     }
     var value: Return {
@@ -105,9 +105,9 @@ extension ConcurrentFunc {
             self.dispatch = asyncFunction
             self.cancellable = .init {
                 var (returnChannel, arg) = try await pause(resumption.resume)
-                var result = Result<Return, Swift.Error>.failure(InvocationError())
+                var result = AsyncResult<Return, Swift.Error>.failure(InvocationError())
                 while true {
-                    result = await Swift.Result { try await asyncFunction(arg) }
+                    result = await AsyncResult { try await asyncFunction(arg) }
                     switch arg {
                         case .completion(.finished):
                             throw CompletionError(completion: .finished)
@@ -127,7 +127,7 @@ extension ConcurrentFunc {
                 return try result.get()
             }
         }
-        var result: Result<Return, Swift.Error> {
+        var result: AsyncResult<Return, Swift.Error> {
             get async { await cancellable.result }
         }
         var value: Return {
@@ -139,7 +139,7 @@ extension ConcurrentFunc {
 public extension ConcurrentFunc {
     struct Next: @unchecked Sendable {
         public var id: ObjectIdentifier { concurrentFunc.dispatch.id }
-        public let result: Result<Return, Swift.Error>
+        public let result: AsyncResult<Return, Swift.Error>
         public let concurrentFunc: ConcurrentFunc<Arg, Return>
 
         public func callAsFunction(returnChannel: Queue<Next>, arg: Arg) throws -> Void {

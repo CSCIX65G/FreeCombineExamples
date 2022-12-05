@@ -36,13 +36,13 @@ public struct Select<Left, Right> {
         let downstream: @Sendable (Publisher<Either<Left, Right>>.Result) async throws -> Void
 
         mutating func cancelLeft() throws -> Void {
-            guard let can = leftCancellable else { throw InternalError() }
+            guard let can = leftCancellable else { throw CancellationFailureError() }
             leftCancellable = .none
             try can.cancel()
         }
 
         mutating func cancelRight() throws -> Void {
-            guard let can = rightCancellable else { throw InternalError() }
+            guard let can = rightCancellable else { throw CancellationFailureError() }
             rightCancellable = .none
             try can.cancel()
         }
@@ -167,7 +167,7 @@ public struct Select<Left, Right> {
     ) async throws -> Void {
         switch valuePair(state.current) {
             case let .some((value, resumption)):
-                state.current = try await Result<Void, Swift.Error> {
+                state.current = try await AsyncResult<Void, Swift.Error> {
                     try await state.downstream(.value(value))
                 }
                 .map {

@@ -65,7 +65,7 @@ public extension Subject {
         get async throws { _ = try await distributor.result.get() }
     }
 
-    var result: Result<Void, Swift.Error> {
+    var result: AsyncResult<Void, Swift.Error> {
         get async {
             switch await distributor.result {
                 case .success: return .success(())

@@ -37,13 +37,13 @@ public struct Zip<Left, Right> {
         let downstream: @Sendable (Publisher<(Left, Right)>.Result) async throws -> Void
 
         mutating func cancelLeft() throws -> Void {
-            guard let can = leftCancellable else { throw InternalError() }
+            guard let can = leftCancellable else { throw CancellationFailureError() }
             leftCancellable = .none
             try can.cancel()
         }
 
         mutating func cancelRight() throws -> Void {
-            guard let can = rightCancellable else { throw InternalError() }
+            guard let can = rightCancellable else { throw CancellationFailureError() }
             rightCancellable = .none
             try can.cancel()
         }
@@ -174,7 +174,7 @@ public struct Zip<Left, Right> {
     ) async throws -> Void {
         switch state.current {
             case let .hasBoth(left, leftResumption, right, rightResumption):
-                let r = await Result<Void, Swift.Error> { try await state.downstream(.value((left, right))) }
+                let r = await AsyncResult<Void, Swift.Error> { try await state.downstream(.value((left, right))) }
                     .map {
                         leftResumption.resume()
                         rightResumption.resume()

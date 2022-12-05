@@ -3,24 +3,27 @@
 //  
 //
 //  Created by Van Simmons on 11/28/22.
+//  FIXME: This is woefully non-performant and needs to adapt a real MPMC algorithm
+//  But all the ones I can find are C++ as macros.  sigh.
 //
 
 import Atomics
 import Core
+import DequeModule
 
 public final class Channel<Value> {
     private struct ChannelError: Error {
         let wrapper: Wrapper
     }
     private final class Wrapper: AtomicReference, Identifiable, Hashable, Equatable {
-        let value: Result<Value?, Error>
-        let readers: Set<Resumption<Value>>
-        let writers: Set<Resumption<Void>>
+        let value: AsyncResult<Value?, Error>
+        let readers: Deque<Resumption<Value>>
+        let writers: Deque<Resumption<Void>>
 
         init(
             _ value: Value?,
-            readers: Set<Resumption<Value>> = [],
-            writers: Set<Resumption<Void>> = []
+            readers: Deque<Resumption<Value>> = [],
+            writers: Deque<Resumption<Void>> = []
         ) {
             self.value = .success(value)
             self.readers = readers
@@ -28,9 +31,9 @@ public final class Channel<Value> {
         }
 
         init(
-            result: Result<Value?, Error>,
-            readers: Set<Resumption<Value>> = [],
-            writers: Set<Resumption<Void>> = []
+            result: AsyncResult<Value?, Error>,
+            readers: Deque<Resumption<Value>> = [],
+            writers: Deque<Resumption<Void>> = []
         ) {
             self.value = result
             self.readers = readers
@@ -110,7 +113,7 @@ public final class Channel<Value> {
         do {
             let _: Void = try await pause { resumption in
                 var writers = localWrapped.writers
-                writers.insert(resumption)
+                writers.append(resumption)
                 let newVar = Wrapper(value, readers: localWrapped.readers, writers: writers)
                 let (success, newLocalWrapped) = wrapped.compareExchange(
                     expected: localWrapped,
@@ -151,7 +154,7 @@ public final class Channel<Value> {
     private func blockForReading(_ localWrapped: inout Channel<Value>.Wrapper) async throws -> Value {
         let value: Value = try await pause { resumption in
             var readers = localWrapped.readers
-            readers.insert(resumption)
+            readers.append(resumption)
             let newVar = Wrapper(.none, readers: readers, writers: localWrapped.writers)
             let (success, newLocalWrapped) = wrapped.compareExchange(
                 expected: localWrapped,

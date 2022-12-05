@@ -21,6 +21,7 @@
 //  limitations under the License.
 //
 import XCTest
+@testable import Core
 @testable import FreeCombine
 
 final class AndTests: XCTestCase {
@@ -66,7 +67,7 @@ final class AndTests: XCTestCase {
         let future2 = promise2.future
 
         let andFuture = and(future1, future2)
-        let cancellation = await andFuture.sink { (result: Result<(Int, String), Swift.Error>) in
+        let cancellation = await andFuture.sink { (result: AsyncResult<(Int, String), Swift.Error>) in
             guard case .failure = result else {
                 XCTFail("Got a success when should have gotten failure!")
                 return

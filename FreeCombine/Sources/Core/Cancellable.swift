@@ -70,7 +70,7 @@ public final class Cancellable<Output: Sendable>: Sendable {
         let atomic = atomicStatus
         self.task = .init {
             try await Cancellables.$status.withValue(atomic) {
-                try await Result(catching: operation)
+                try await AsyncResult(catching: operation)
                     .set(atomic: atomic, from: .running, to: .finished)
                     .mapError {
                         guard let err = $0 as? AtomicError<Status>, case .failedTransition(_, _, .cancelled) = err else {
@@ -96,13 +96,13 @@ public final class Cancellable<Output: Sendable>: Sendable {
     public var value: Output {
         get async throws { try await task.value }
     }
-    public var result: Result<Output, Swift.Error> {
-        get async { await task.result }
+    public var result: AsyncResult<Output, Swift.Error> {
+        get async { await .init(task.result) }
     }
 
     /*:
      [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
-     are dealt with in the same way
+     are dealt with in the same way.  We want to do the same.
      */
     deinit {
         guard status != Status.running else {
