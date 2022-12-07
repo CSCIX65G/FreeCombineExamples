@@ -120,11 +120,16 @@ final class ThrottleTests: XCTestCase {
         }
         try await subject.finish()
 
+        for _ in (0 ..< 10) {
+            try await clock.advance(by: .milliseconds(100))
+        }
+        await clock.runToCompletion()
+
         _ = await t.result
         _ = await subject.result
 
         let count = counter.count
-        XCTAssert(count >= 1, "Got wrong count = \(count)")
+        XCTAssert(count >= 2, "Got wrong count = \(count)")
 
         let inputCount = inputCounter.count
         XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
