@@ -1,8 +1,8 @@
 //
 //  Delay.swift
-//  
 //
-//  Created by Van Simmons on 9/18/22.
+//
+//  Created by Van Simmons on 5/27/22.
 //
 //  Copyright 2022, ComputeCycles, LLC
 //
@@ -18,32 +18,29 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+import Atomics
+import Core
+
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
-extension Future {
-    func delay<C: Clock>(
+public extension Publisher {
+    func delayEach<C: Clock>(
         clock: C,
-        duration: Swift.Duration
+        interval duration: C.Duration
     ) -> Self where C.Duration == Swift.Duration {
         .init { resumption, downstream in
-            self(onStartup: resumption) { r in
-                try? await clock.sleep(until: clock.now.advanced(by: duration), tolerance: .none)
-                return await downstream(r)
-            }
+            self(onStartup: resumption) { r in switch r {
+                case .value:
+                    do {
+                        try? await clock.sleep(until: clock.now.advanced(by: duration), tolerance: .none)
+                        guard !Cancellables.isCancelled else { throw CancellationError() }
+                        return try await downstream(r)
+                    }
+                    catch {
+                        return try await handleCancellation(of: downstream)
+                    }
+                case let .completion(value):
+                    return try await downstream(.completion(value))
+            } }
         }
     }
 }
-
-public extension AsyncContinuation {
-    func delay(
-        _ nanoseconds: UInt64
-    ) -> Self {
-        .init { resumption, downstream in
-            self(onStartup: resumption) { r in
-                try? await Task.sleep(nanoseconds: nanoseconds)
-                return try await downstream(r)
-            }
-        }
-    }
-}
-
-

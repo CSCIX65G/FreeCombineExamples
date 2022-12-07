@@ -27,10 +27,10 @@ public func Heartbeat<C: Clock>(
     clock: C,
     interval: Swift.Duration,
     tolerance: Swift.Duration? = .none,
-    deadline:  C.Instant,
+    endingBefore:  C.Instant? = .none,
     tickAtStart: Bool = false
 ) -> Publisher<C.Instant> where C.Duration == Swift.Duration {
-    .init(clock: clock, interval: interval, tolerance: tolerance, deadline: deadline, tickAtStart: tickAtStart)
+    .init(clock: clock, interval: interval, tolerance: tolerance, endingBefore: endingBefore, tickAtStart: tickAtStart)
 }
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
@@ -45,7 +45,7 @@ public func Heartbeat<C: Clock>(
         clock: clock,
         interval: interval,
         tolerance: tolerance,
-        deadline: clock.now.advanced(by: duration),
+        endingBefore: clock.now.advanced(by: duration),
         tickAtStart: tickAtStart
     )
 }
@@ -56,7 +56,7 @@ extension Publisher {
         clock: C,
         interval: Swift.Duration,
         tolerance: Swift.Duration? = .none,
-        deadline:  C.Instant,
+        endingBefore:  C.Instant? = .none,
         tickAtStart: Bool = false
     ) where Output == C.Instant, C.Duration == Swift.Duration {
         self = Publisher<C.Instant> { resumption, downstream in
@@ -67,7 +67,7 @@ extension Publisher {
                 resumption.resume()
                 do {
                     if tickAtStart { try await downstream(.value(clock.now)) }
-                    while clock.now < deadline {
+                    while clock.now < (endingBefore ?? clock.now.advanced(by: .seconds(1))) {
                         ticks += 1
                         let fromStart = Swift.Duration.componentMultiply(components, ticks)
                         try await clock.sleep(

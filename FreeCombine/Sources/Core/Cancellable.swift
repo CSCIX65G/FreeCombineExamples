@@ -84,7 +84,7 @@ public final class Cancellable<Output: Sendable>: Sendable {
     }
     
     @Sendable public func cancel() throws {
-        try Result<Void, Swift.Error>.success(())
+        try AsyncResult<Void, Swift.Error>.success(())
             .set(atomic: atomicStatus, from: Status.running, to: Status.cancelled)
             .mapError {_ in CancellationFailureError() }
             .get()

@@ -68,7 +68,7 @@ public final class Uncancellable<Output: Sendable> {
     }
 
     @Sendable public func release() throws {
-        try Result<Void, Swift.Error>.success(())
+        try AsyncResult<Void, Swift.Error>.success(())
             .set(atomic: atomicStatus, from: Status.running, to: Status.released)
             .mapError {_ in ReleaseError() }
             .get()

@@ -21,7 +21,7 @@ final class HeartbeatTests: XCTestCase {
         let clock = TestClock()
         let end = clock.now.advanced(by: .seconds(5))
         let counter = Counter()
-        let heartbeat = Heartbeat(clock: clock, interval: .milliseconds(100), deadline: end)
+        let heartbeat = Heartbeat(clock: clock, interval: .milliseconds(100), endingBefore: end)
 
         let ticker: Channel<Void> = .init()
         let cancellable = await heartbeat.sink { result in
