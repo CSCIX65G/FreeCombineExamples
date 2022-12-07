@@ -25,21 +25,13 @@ extension Publisher {
         interval duration: Swift.Duration
     ) -> Self where C.Duration == Swift.Duration {
         .init { resumption, downstream in
-            let instantBox = MutableBox<C.Instant?>.init(value: .none)
+            let instantBox = MutableBox<C.Instant>.init(value: clock.now.advanced(by: duration * -1.0))
             return self(onStartup: resumption) { r in
-                guard case .value = r else {
-                    return try await downstream(r)
+                guard case .value = r else { return try await downstream(r) }
+                if instantBox.value.advanced(by: duration) >= clock.now {
+                    instantBox.set(value: clock.now)
+                    try await downstream(r)
                 }
-                if let lastInstant = instantBox.value {
-                    if lastInstant.advanced(by: duration) < clock.now {
-                        instantBox.set(value: clock.now)
-                        return try await downstream(r)
-                    } else {
-                        return
-                    }
-                }
-                instantBox.set(value: clock.now)
-                return try await downstream(r)
             }
         }
     }
