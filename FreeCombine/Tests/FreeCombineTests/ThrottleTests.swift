@@ -41,9 +41,52 @@ final class ThrottleTests: XCTestCase {
         await clock.runToCompletion()
         let count = counter.count
         let inputCount = inputCounter.count
+        XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
+        XCTAssert(count >= 1, "Got wrong count = \(count)")
+    }
+
+    func testSimpleThrottleLatest() async throws {
+        let clock = TestClock()
+        let inputCounter = Counter()
+        let counter = Counter()
+
+        let subject = try await PassthroughSubject(Int.self)
+        let t = await subject.asyncPublisher
+            .handleEvents(
+                receiveOutput: { value in
+                    inputCounter.increment()
+                }
+            )
+            .throttle(clock: clock, interval: .milliseconds(100), latest: true)
+            .sink({ value in
+                switch value {
+                    case .value(_):
+                        counter.increment()
+                        return
+                    case let .completion(.failure(error)):
+                        XCTFail("Got unexpected failure: \(error)")
+                        return
+                    case .completion(.finished):
+                        return
+                }
+            })
+        for i in (0 ..< 15) {
+            try await subject.send(i)
+            try await clock.advance(by: .milliseconds(9))
+        }
+        try await subject.finish()
+        for _ in 0 ..< 20 {
+            try await clock.advance(by: .milliseconds(10))
+        }
+        _ = await t.result
+
+        await clock.runToCompletion()
+        let count = counter.count
+        let inputCount = inputCounter.count
         XCTAssert(count >= 1, "Got wrong count = \(count)")
         XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
     }
+
 
     func testSimpleSubjectThrottle() async throws {
         let clock = TestClock()
