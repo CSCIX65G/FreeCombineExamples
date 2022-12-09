@@ -3,7 +3,7 @@
 //  
 //
 //  Created by Van Simmons on 11/28/22.
-//  FIXME: This is woefully non-performant and needs to adapt a real MPMC algorithm
+//  FIXME: This is woefully non-performant and needs to adapt a real MPMC fifo algorithm
 //  But all the ones I can find are C++ as macros.  sigh.
 //
 
@@ -94,7 +94,7 @@ public final class Channel<Value> {
         while true {
             switch try localWrapped.value.get() {
                 case let .some(value):
-                    do { return try await dispatchWriter(localWrapped, value) }
+                    do { return try dispatchWriter(localWrapped, value) }
                     catch {
                         guard let error = error as? ChannelError else { throw error }
                         localWrapped = error.wrapper
@@ -172,7 +172,7 @@ public final class Channel<Value> {
         return value
     }
 
-    private func dispatchWriter(_ localWrapped: Wrapper, _ value: Value) async throws -> Value {
+    private func dispatchWriter(_ localWrapped: Wrapper, _ value: Value) throws -> Value {
         var writers = localWrapped.writers
         let writer: Resumption<Void>? = writers.isEmpty ? .none : writers.removeFirst()
         let newVar = Wrapper(.none, readers: localWrapped.readers, writers: writers)
