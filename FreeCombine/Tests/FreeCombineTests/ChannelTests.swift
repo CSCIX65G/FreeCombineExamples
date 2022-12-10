@@ -20,7 +20,7 @@ final class ChannelTests: XCTestCase {
         let mvar: Channel<Int> = .init(.none)
 
         let reader = Cancellable<Void> {
-            for i in 0 ..< 100 {
+            for i in 0 ..< 10_000 {
                 do {
                     let val = try await mvar.read()
                     XCTAssert(val == i, "Invalid value read: \(val), should be: \(i)")
@@ -31,7 +31,7 @@ final class ChannelTests: XCTestCase {
         }
 
         let writer = Cancellable<Void> {
-            for i in 0 ..< 100 {
+            for i in 0 ..< 10_000 {
                 do { try await mvar.write(i) }
                 catch { XCTFail("Failed to write \(i)") }
             }
