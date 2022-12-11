@@ -7,7 +7,8 @@
 
 import XCTest
 @testable import Core
-@testable import FreeCombine
+@testable import Queue
+@testable import Publisher
 
 fileprivate typealias TestArg = Int
 fileprivate typealias TestReturn = String

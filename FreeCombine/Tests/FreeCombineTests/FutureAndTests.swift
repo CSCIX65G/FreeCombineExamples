@@ -7,7 +7,8 @@
 
 import XCTest
 
-@testable import FreeCombine
+@testable import Queue
+@testable import Future
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 final class FutureAndTests: XCTestCase {

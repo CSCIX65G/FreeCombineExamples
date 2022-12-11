@@ -22,7 +22,7 @@
 //
 import XCTest
 @testable import Core
-@testable import FreeCombine
+@testable import Future
 
 final class AndTests: XCTestCase {
 

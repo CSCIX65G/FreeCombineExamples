@@ -19,7 +19,9 @@
 //  limitations under the License.
 //
 import XCTest
-@testable import FreeCombine
+@testable import Core
+@testable import Future
+@testable import Publisher
 
 class MergeTests: XCTestCase {
 

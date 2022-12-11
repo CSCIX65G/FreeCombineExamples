@@ -19,7 +19,7 @@
 //  limitations under the License.
 //
 import XCTest
-@testable import FreeCombine
+@testable import Future
 
 final class FutureTests: XCTestCase {
 

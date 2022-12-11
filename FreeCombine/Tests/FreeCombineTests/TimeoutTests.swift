@@ -6,9 +6,9 @@
 //
 
 import XCTest
-import Channel
-import Clock
-@testable import FreeCombine
+@testable import Channel
+@testable import Clock
+@testable import Future
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 final class TimeoutTests: XCTestCase {

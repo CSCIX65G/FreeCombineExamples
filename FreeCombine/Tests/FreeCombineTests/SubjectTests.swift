@@ -19,6 +19,9 @@
 //  limitations under the License.
 //
 import XCTest
+@testable import Core
+@testable import Future
+@testable import Publisher
 @testable import FreeCombine
 
 class SubjectTests: XCTestCase {

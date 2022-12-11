@@ -6,8 +6,11 @@
 //
 
 import XCTest
-import Channel
-import Clock
+@testable import Channel
+@testable import Clock
+@testable import Core
+@testable import Queue
+@testable import Publisher
 @testable import FreeCombine
 
 struct DebounceTestError: Error { }

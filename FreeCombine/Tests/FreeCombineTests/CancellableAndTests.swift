@@ -1,7 +1,7 @@
 import XCTest
 
 @testable import Core
-@testable import FreeCombine
+@testable import Future
 
 final class CancellableAndTests: XCTestCase {
     override func setUpWithError() throws { }

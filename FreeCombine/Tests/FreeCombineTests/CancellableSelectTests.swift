@@ -8,7 +8,7 @@
 import XCTest
 
 @testable import Core
-@testable import FreeCombine
+@testable import Future
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 final class CancellableOrTests: XCTestCase {

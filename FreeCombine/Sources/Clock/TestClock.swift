@@ -32,7 +32,8 @@
 import Atomics
 import Core
 import Channel
-import FreeCombine
+import Queue
+import Future
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 extension [TestClock.Suspension] {

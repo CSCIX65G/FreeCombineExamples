@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import FreeCombine
+@testable import Future
 
 final class OrTests: XCTestCase {
     override func setUpWithError() throws { }

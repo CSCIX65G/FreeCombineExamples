@@ -5,7 +5,7 @@
 //  Created by Van Simmons on 9/13/22.
 //
 import XCTest
-@testable import FreeCombine
+@testable import Future
 
 final class FutureFoldTests: XCTestCase {
 

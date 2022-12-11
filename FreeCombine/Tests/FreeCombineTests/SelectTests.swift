@@ -6,7 +6,9 @@
 //
 
 import XCTest
-@testable import FreeCombine
+@testable import Core
+@testable import Future
+@testable import Publisher
 
 final class SelectTests: XCTestCase {
 

@@ -7,7 +7,7 @@
 
 import XCTest
 @testable import Core
-@testable import FreeCombine
+@testable import Publisher
 
 final class DistributorTests: XCTestCase {
 

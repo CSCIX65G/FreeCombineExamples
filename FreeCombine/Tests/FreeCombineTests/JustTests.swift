@@ -20,7 +20,8 @@
 //
 import XCTest
 @testable import Core
-@testable import FreeCombine
+@testable import Future
+@testable import Publisher
 
 class JustTests: XCTestCase {
 

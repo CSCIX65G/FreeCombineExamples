@@ -16,7 +16,10 @@ let package = Package(
             targets: [
                 "FreeCombine",
                 "Channel",
-                "Clock"
+                "Clock",
+                "Future",
+                "Publisher",
+                "Queue"
             ]
         ),
     ],
@@ -43,8 +46,9 @@ let package = Package(
         .target(
             name: "Clock",
             dependencies: [
-                "FreeCombine",
                 "Channel",
+                "Future",
+                "Queue",
                 .product(name: "Atomics", package: "swift-atomics")
             ]
         ),
@@ -52,6 +56,7 @@ let package = Package(
             name: "Future",
             dependencies: [
                 "Core",
+                "Queue",
                 .product(name: "Atomics", package: "swift-atomics"),
             ]
         ),
@@ -61,6 +66,15 @@ let package = Package(
                 "Core",
                 "Channel",
                 "Future",
+                "Queue",
+                .product(name: "Atomics", package: "swift-atomics"),
+            ]
+        ),
+        .target(
+            name: "Queue",
+            dependencies: [
+                "Core",
+                "Channel",
                 .product(name: "Atomics", package: "swift-atomics"),
             ]
         ),
