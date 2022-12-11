@@ -16,19 +16,32 @@ final class LockFreeQueueTests: XCTestCase {
 
     override func tearDownWithError() throws { }
 
-    func xtestLockFreeQueueMultiProducer() async throws {
+    func testLockFreeQueueMultiProducer() async throws {
         let queue = LockFreeQueue<Int>()
-        let cancellables: [Cancellable<Void>] = (0 ..< 1_000).map { _ in
+        let cancellables: [Cancellable<Void>] = (0 ..< 100).map { _ in
             .init {
-                (0 ..< 10).forEach { queue.enqueue($0) }
+                for i in (0 ..< 10) {
+                    guard !Cancellables.isCancelled else { return }
+                    queue.enqueue(i)
+                    await Task.yield()
+                }
             }
         }
-        (0 ..< 10_000).forEach { _ in
-            guard let i = queue.dequeue() else {
-                XCTFail("Queue exhausted early")
-                return
+        var failureCount = 0
+        for j in (0 ..< 1_000) {
+            while failureCount < 100_000 {
+                if let i = queue.dequeue() {
+                    XCTAssert(i >= 0 && i < 1_000, "Invalid value")
+                    break
+                } else {
+                    failureCount += 1
+                }
+                await Task.yield()
             }
-            XCTAssert(i >= 0 && i < 1_000, "Invalid value")
+            if failureCount >= 10_000 {
+                XCTFail("Queue exhausted early, j = \(j)")
+                break
+            }
         }
         guard queue.dequeue() == nil else {
             XCTFail("too many values")

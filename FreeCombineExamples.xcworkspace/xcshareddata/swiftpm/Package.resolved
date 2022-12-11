@@ -3,10 +3,10 @@
     {
       "identity" : "swift-atomics",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/CSCIX65G/swift-atomics.git",
+      "location" : "https://github.com/apple/swift-atomics.git",
       "state" : {
-        "branch" : "CSCIX65G/playgrounds",
-        "revision" : "b12993f4e0c1b1a99392533087c9bd405e473044"
+        "revision" : "ff3d2212b6b093db7f177d0855adbc4ef9c5f036",
+        "version" : "1.0.3"
       }
     },
     {
