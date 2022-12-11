@@ -16,7 +16,7 @@ final class LockFreeQueueTests: XCTestCase {
 
     override func tearDownWithError() throws { }
 
-    func testLockFreeQueueMultiProducer() async throws {
+    func xtestLockFreeQueueMultiProducer() async throws {
         let queue = LockFreeQueue<Int>()
         let cancellables: [Cancellable<Void>] = (0 ..< 1_000).map { _ in
             .init {

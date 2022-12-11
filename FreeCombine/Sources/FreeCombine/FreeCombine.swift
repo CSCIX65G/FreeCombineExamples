@@ -12,4 +12,10 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-public enum FreeCombine { }
+@_exported import Core
+@_exported import Channel
+@_exported import Clock
+@_exported import Queue
+@_exported import Future
+@_exported import Publisher
+

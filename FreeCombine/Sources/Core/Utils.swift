@@ -23,11 +23,17 @@
 
 precedencegroup CompositionPrecedence {
   associativity: right
+  higherThan: ApplicationPrecedence
+  lowerThan: MultiplicationPrecedence, AdditionPrecedence
+}
+
+precedencegroup ApplicationPrecedence {
+  associativity: right
   higherThan: AssignmentPrecedence
   lowerThan: MultiplicationPrecedence, AdditionPrecedence
 }
 
-infix operator |>: CompositionPrecedence  // Application
+infix operator |>: ApplicationPrecedence  // Application
 infix operator >>>: CompositionPrecedence // Composition aka map
 infix operator >>=: CompositionPrecedence // Chaining aka flatMap
 infix operator <*>: CompositionPrecedence // Parallel aka zip
