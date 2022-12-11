@@ -17,6 +17,12 @@
 		FBC823A82946234C0084250F /* ComposableConcurrency in Frameworks */ = {isa = PBXBuildFile; productRef = FBC823A72946234C0084250F /* ComposableConcurrency */; };
 		FBC823AB294624780084250F /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = FBC823AA294624780084250F /* ComposableArchitecture */; };
 		FBC823AD294624780084250F /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = FBC823AC294624780084250F /* Dependencies */; };
+		FBC823AF29464AF40084250F /* Application.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC823AE29464AF40084250F /* Application.swift */; };
+		FBC823B1294651960084250F /* CoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC823B0294651960084250F /* CoreView.swift */; };
+		FBC823B3294653720084250F /* ChannelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC823B2294653720084250F /* ChannelView.swift */; };
+		FBC823B5294653810084250F /* QueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC823B4294653810084250F /* QueueView.swift */; };
+		FBC823B7294653910084250F /* FutureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC823B6294653910084250F /* FutureView.swift */; };
+		FBC823B92946539A0084250F /* PublisherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBC823B82946539A0084250F /* PublisherView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,6 +56,12 @@
 		FBC82396294622A20084250F /* ExamplesUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExamplesUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		FBC823A4294623040084250F /* ComposableConcurrency */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = ComposableConcurrency; path = ../ComposableConcurrency; sourceTree = "<group>"; };
 		FBC823A5294623430084250F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		FBC823AE29464AF40084250F /* Application.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Application.swift; sourceTree = "<group>"; };
+		FBC823B0294651960084250F /* CoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreView.swift; sourceTree = "<group>"; };
+		FBC823B2294653720084250F /* ChannelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelView.swift; sourceTree = "<group>"; };
+		FBC823B4294653810084250F /* QueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueView.swift; sourceTree = "<group>"; };
+		FBC823B6294653910084250F /* FutureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FutureView.swift; sourceTree = "<group>"; };
+		FBC823B82946539A0084250F /* PublisherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublisherView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -108,6 +120,12 @@
 				FBC823A5294623430084250F /* Info.plist */,
 				FBC82378294622A10084250F /* ExamplesApp.swift */,
 				FBC8237A294622A10084250F /* ContentView.swift */,
+				FBC823B0294651960084250F /* CoreView.swift */,
+				FBC823B2294653720084250F /* ChannelView.swift */,
+				FBC823B4294653810084250F /* QueueView.swift */,
+				FBC823B6294653910084250F /* FutureView.swift */,
+				FBC823B82946539A0084250F /* PublisherView.swift */,
+				FBC823AE29464AF40084250F /* Application.swift */,
 				FBC8237C294622A20084250F /* Assets.xcassets */,
 				FBC8237E294622A20084250F /* Examples.entitlements */,
 				FBC8237F294622A20084250F /* Preview Content */,
@@ -293,8 +311,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FBC823AF29464AF40084250F /* Application.swift in Sources */,
+				FBC823B1294651960084250F /* CoreView.swift in Sources */,
 				FBC8237B294622A10084250F /* ContentView.swift in Sources */,
+				FBC823B3294653720084250F /* ChannelView.swift in Sources */,
+				FBC823B7294653910084250F /* FutureView.swift in Sources */,
+				FBC823B5294653810084250F /* QueueView.swift in Sources */,
 				FBC82379294622A10084250F /* ExamplesApp.swift in Sources */,
+				FBC823B92946539A0084250F /* PublisherView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

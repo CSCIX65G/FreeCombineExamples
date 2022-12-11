@@ -12,7 +12,12 @@ import ComposableArchitecture
 struct ExamplesApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(
+                store: .init(
+                    initialState: .init(selectedTab: .core),
+                    reducer: Application()
+                )
+            )
         }
     }
 }
