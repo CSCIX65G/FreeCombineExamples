@@ -68,9 +68,17 @@ extension Publisher {
             }
         }
 
-        func send(now: C.Instant, value: Output) throws {
+        func send(_ now: C.Instant, _ value: Output) throws -> Void {
             _ = downstreamValue.exchange(.init(value: (now, value)), ordering: .sequentiallyConsistent)
-            try queue.tryYield()
+            guard case .terminated = queue.yield() else { return }
+            throw FinishedError()
+        }
+
+        func complete(with completion: Completion) async throws -> Void {
+            _ = try? queue.tryYield()
+            queue.finish()
+            try await sender.value
+            return try await downstream(.completion(completion))
         }
     }
 }
@@ -83,24 +91,17 @@ extension Publisher {
     ) -> Self where C.Duration == Swift.Duration {
         .init { resumption, downstream in
             let debouncerBox: MutableBox<Debouncer<C>?> = .init(value: .none)
-
             return self(onStartup: resumption) { r in
                 if debouncerBox.value == nil {
                     await debouncerBox.set(value: .init(clock: clock, duration: duration, downstream: downstream))
                 }
                 guard let debouncer = debouncerBox.value else { fatalError("Failed to create debouncer") }
                 try await Self.check(debouncer.downstreamState, debouncer.sender)
-
                 switch r {
-                    case .completion:
-                        _ = try? debouncer.queue.tryYield()
-                        debouncer.queue.finish()
-                        try await debouncer.sender.value
-                        return try await downstream(r)
+                    case let .completion(completion):
+                        return try await debouncer.complete(with: completion)
                     case let .value(value):
-                        _ = debouncer.downstreamValue.exchange(.init(value:(clock.now, value)), ordering: .sequentiallyConsistent)
-                        guard case .terminated = debouncer.queue.yield() else { return }
-                        throw FinishedError()
+                        return try debouncer.send(clock.now, value)
                 }
             }
         }
