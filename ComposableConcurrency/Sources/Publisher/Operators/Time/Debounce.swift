@@ -49,7 +49,6 @@ extension Publisher {
                 self.sender = .init {
                     resumption.resume()
                     for await _ in queue.stream {
-                        var toSendOptional: Output? = .none
                         var arr: Array<(instant: C.Instant, value: Output)> = .init()
                         while let next = downstreamValue.exchange(.none, ordering: .sequentiallyConsistent)?.value {
                             arr = arr + next
@@ -63,12 +62,11 @@ extension Publisher {
                                     )
                                 }
                             }
-                            toSendOptional = arr.last!.value
                             guard clock.now < arr.last!.instant.advanced(by: duration) else { break }
                             try await clock.sleep(until: arr.last!.instant.advanced(by: duration), tolerance: .none)
                             arr = [arr.last!]
                         }
-                        guard let toSend = toSendOptional else { continue }
+                        guard let toSend = arr.last?.value else { continue }
                         try await Self.sendDownStream(
                             downstream: downstream,
                             downstreamState: downstreamState,
@@ -96,8 +94,8 @@ extension Publisher {
         }
 
         func send(_ now: C.Instant, _ value: Output) throws -> Void {
-            var current = downstreamValue.load(ordering: .sequentiallyConsistent)
-            var new = (current?.value ?? [(instant: C.Instant, value: Output)]()) + [(instant: now, value: value)]
+            let current = downstreamValue.load(ordering: .sequentiallyConsistent)
+            let new = (current?.value ?? [(instant: C.Instant, value: Output)]()) + [(instant: now, value: value)]
             let (success, replaced) = downstreamValue.compareExchange(
                 expected: current,
                 desired: .init(value: new),
