@@ -28,7 +28,7 @@ extension Publisher {
         let duration: C.Duration
         let downstream: Downstream
         let downstreamState: ManagedAtomic<Box<DownstreamState>>
-        let downstreamValue: ManagedAtomic<Box<(instant: C.Instant, value: Output)>?>
+        let downstreamValue: ManagedAtomic<Box<Array<(instant: C.Instant, value: Output)>>?>
         let queue: Queue<Void>
         private(set) var sender: Cancellable<Void>!
 
@@ -37,7 +37,7 @@ extension Publisher {
             duration: C.Duration,
             downstream: @escaping Downstream,
             downstreamState: ManagedAtomic<Box<DownstreamState>> = .init(.init(value: .init())),
-            downstreamValue: ManagedAtomic<Box<(instant: C.Instant, value: Output)>?> = .init(.none),
+            downstreamValue: ManagedAtomic<Box<Array<(instant: C.Instant, value: Output)>>?> = .init(.none),
             queue: Queue<Void> = .init(buffering: .bufferingNewest(1))
         ) async {
             self.duration = duration
@@ -50,26 +50,66 @@ extension Publisher {
                     resumption.resume()
                     for await _ in queue.stream {
                         var toSendOptional: Output? = .none
-                        while let (then, r) = downstreamValue.exchange(.none, ordering: .sequentiallyConsistent)?.value {
-                            toSendOptional = r
-                            guard clock.now < then.advanced(by: duration) else { break }
-                            try await clock.sleep(until: then.advanced(by: duration), tolerance: .none)
+                        var arr: Array<(instant: C.Instant, value: Output)> = .init()
+                        while let next = downstreamValue.exchange(.none, ordering: .sequentiallyConsistent)?.value {
+                            arr = arr + next
+                            for i in 0 ..< arr.count - 1 {
+                                if arr[i].instant.duration(to: arr[i + 1].instant) > duration {
+                                    try await Self.sendDownStream(
+                                        downstream: downstream,
+                                        downstreamState: downstreamState,
+                                        queue: queue,
+                                        value: arr[i].value
+                                    )
+                                }
+                            }
+                            toSendOptional = arr.last!.value
+                            guard clock.now < arr.last!.instant.advanced(by: duration) else { break }
+                            try await clock.sleep(until: arr.last!.instant.advanced(by: duration), tolerance: .none)
+                            arr = [arr.last!]
                         }
                         guard let toSend = toSendOptional else { continue }
-                        do { try await downstream(.value(toSend)) }
-                        catch {
-                            _ = downstreamState.exchange(.init(value: .init(errored: error)), ordering: .sequentiallyConsistent)
-                            queue.finish()
-                            for await _ in queue.stream { }
-                            return
-                        }
+                        try await Self.sendDownStream(
+                            downstream: downstream,
+                            downstreamState: downstreamState,
+                            queue: queue,
+                            value: toSend
+                        )
                     }
                 }
             }
         }
 
+        static func sendDownStream(
+            downstream: @escaping Downstream,
+            downstreamState: ManagedAtomic<Box<DownstreamState>> = .init(.init(value: .init())),
+            queue: Queue<Void> = .init(buffering: .bufferingNewest(1)),
+            value: Output
+        ) async throws -> Void {
+            do { try await downstream(.value(value)) }
+            catch {
+                _ = downstreamState.exchange(.init(value: .init(errored: error)), ordering: .sequentiallyConsistent)
+                queue.finish()
+                for await _ in queue.stream { }
+                throw error
+            }
+        }
+
         func send(_ now: C.Instant, _ value: Output) throws -> Void {
-            _ = downstreamValue.exchange(.init(value: (now, value)), ordering: .sequentiallyConsistent)
+            var current = downstreamValue.load(ordering: .sequentiallyConsistent)
+            var new = (current?.value ?? [(instant: C.Instant, value: Output)]()) + [(instant: now, value: value)]
+            let (success, replaced) = downstreamValue.compareExchange(
+                expected: current,
+                desired: .init(value: new),
+                ordering: .sequentiallyConsistent
+            )
+            if !success {
+                guard replaced == nil else { fatalError("can only have nil") }
+                guard downstreamValue.exchange(
+                    .init(value: [(instant: now, value: value)]),
+                    ordering: .sequentiallyConsistent
+                ) == nil else { fatalError("really, this can only have nil") }
+            }
             guard case .terminated = queue.yield() else { return }
             throw FinishedError()
         }

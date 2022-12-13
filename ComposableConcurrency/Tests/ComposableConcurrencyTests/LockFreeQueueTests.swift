@@ -6,9 +6,8 @@
 //
 import XCTest
 @testable import Core
-@testable import Channel
+@testable import Queue
 
-import XCTest
 
 final class LockFreeQueueTests: XCTestCase {
 

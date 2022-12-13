@@ -102,10 +102,7 @@ class DebounceTests: XCTestCase {
         let count = counter.count
         XCTAssert(count >= 1, "Got wrong count = \(count)")
 
-        if count == 1 {
-            let vals = values.value
-            XCTAssert(vals == [14], "Incorrect values: \(vals)")
-        }
+        XCTAssert(values.value.contains(14), "Didn't get the last one")
     }
 
     func testMoreComplexDebounce() async throws {
@@ -154,7 +151,7 @@ class DebounceTests: XCTestCase {
         XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
 
         let count = counter.count
-        XCTAssert(count <= 8 && count >= 1, "Got wrong count = \(count)")
+        XCTAssert(count == 8, "Got wrong count = \(count)")
     }
 
     func testRapidfireDebounce() async throws {
@@ -163,14 +160,12 @@ class DebounceTests: XCTestCase {
         let inputCounter = Counter()
         let counter = Counter()
         let subject = try await PassthroughSubject(Int.self, buffering: .unbounded)
-        let ticker = Channel<Void>()
 
         let t = await subject.asyncPublisher
             .handleEvents(
                 receiveOutput: { value in
                     guard value != Int.max else { return }
                     inputCounter.increment()
-                    try? await ticker.write()
                 }
             )
             .debounce(clock: clock, duration: .milliseconds(100))
@@ -192,7 +187,6 @@ class DebounceTests: XCTestCase {
         for i in (0 ..< 15) {
             for _ in 0 ..< 10 { try await subject.send(Int.max) }
             try subject.yield(i)
-            try? await ticker.read()
             let num = i % 2 == 0 ? 5 : 11
             for _ in 0 ..< num { try await clock.advance(by: .milliseconds(10)) }
         }
@@ -206,8 +200,7 @@ class DebounceTests: XCTestCase {
         let inputCount = inputCounter.count
         XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
 
-        let count = counter.count
-        XCTAssert(count <= 8 && count >= 1, "Got wrong count = \(count)")
+        XCTAssert(values.value.contains(14), "Didn't get the last one: \(values.value)")
     }
 
     func testDebounceBreak() async throws {
@@ -263,7 +256,7 @@ class DebounceTests: XCTestCase {
         _ = await t.result
 
         let count = counter.count
-        XCTAssert(count <= 5, "Got wrong count = \(count)")
+        XCTAssert(count == 5, "Got wrong count = \(count)")
 
         let inputCount = inputCounter.count
         XCTAssert(inputCount >= 10, "Got wrong count = \(inputCount)")

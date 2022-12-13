@@ -18,6 +18,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+import Core
+
 public extension Publisher {
     func handleEvents(
         receiveDownstream: @escaping (@escaping (Publisher<Output>.Result) async throws -> Void) -> Void = {_ in },
@@ -36,7 +38,8 @@ public extension Publisher {
         receiveDownstream: @escaping (@escaping (Publisher<Output>.Result) async throws -> Void) -> Void = {_ in },
         receiveOutput: @escaping (Output) async -> Void = { _ in },
         receiveFinished: @escaping () async -> Void = { },
-        receiveFailure: @escaping (Swift.Error) async -> Void = {_ in }
+        receiveFailure: @escaping (Swift.Error) async -> Void = { _ in },
+        receiveResponse: @escaping (AsyncResult<Void, Swift.Error>) async -> Void = { _ in }
     ) -> Self {
         .init { resumption, downstream in
             receiveDownstream(downstream)
@@ -49,7 +52,9 @@ public extension Publisher {
                     case let .completion(.failure(error)):
                         await receiveFailure(error)
                 }
-                return try await downstream(r)
+                let result = await AsyncResult(catching: { try await downstream(r) })
+                await receiveResponse(result)
+                return try result.get()
             }
         }
     }
