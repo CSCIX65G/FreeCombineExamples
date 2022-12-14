@@ -23,7 +23,7 @@ final class ThrottleTests: XCTestCase {
         let t = await (1 ... 15).asyncPublisher
             .handleEvents(receiveOutput: { _ in inputCounter.increment() })
             .throttle(clock: clock, interval: .milliseconds(100), latest: false)
-            .sink({ value in
+            .sink { value in
                 switch value {
                     case .value(_):
                         counter.increment()
@@ -34,7 +34,7 @@ final class ThrottleTests: XCTestCase {
                     case .completion(.finished):
                         return
                 }
-            })
+            }
         for _ in 0 ..< 20 {
             try await clock.advance(by: .milliseconds(10))
         }
