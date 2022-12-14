@@ -45,6 +45,7 @@ extension Publisher {
             self.downstreamState = downstreamState
             self.downstreamValue = downstreamValue
             self.queue = queue
+            let downstreamSender = Self.downstreamSender(downstream: downstream, downstreamState: downstreamState, queue: queue)
             await unfailingPause { resumption in
                 self.sender = .init {
                     resumption.resume()
@@ -54,12 +55,7 @@ extension Publisher {
                             arr = arr + next
                             for i in 0 ..< arr.count - 1 {
                                 if arr[i].instant.duration(to: arr[i + 1].instant) > duration {
-                                    try await Self.sendDownStream(
-                                        downstream: downstream,
-                                        downstreamState: downstreamState,
-                                        queue: queue,
-                                        value: arr[i].value
-                                    )
+                                    try await downstreamSender(arr[i].value)
                                 }
                             }
                             guard clock.now < arr.last!.instant.advanced(by: duration) else { break }
@@ -67,29 +63,25 @@ extension Publisher {
                             arr = [arr.last!]
                         }
                         guard let toSend = arr.last?.value else { continue }
-                        try await Self.sendDownStream(
-                            downstream: downstream,
-                            downstreamState: downstreamState,
-                            queue: queue,
-                            value: toSend
-                        )
+                        try await downstreamSender(toSend)
                     }
                 }
             }
         }
 
-        static func sendDownStream(
+        static func downstreamSender(
             downstream: @escaping Downstream,
             downstreamState: ManagedAtomic<Box<DownstreamState>> = .init(.init(value: .init())),
-            queue: Queue<Void> = .init(buffering: .bufferingNewest(1)),
-            value: Output
-        ) async throws -> Void {
-            do { try await downstream(.value(value)) }
-            catch {
-                _ = downstreamState.exchange(.init(value: .init(errored: error)), ordering: .sequentiallyConsistent)
-                queue.finish()
-                for await _ in queue.stream { }
-                throw error
+            queue: Queue<Void> = .init(buffering: .bufferingNewest(1))
+        ) -> (Output) async throws -> Void {
+            { value in
+                do { try await downstream(.value(value)) }
+                catch {
+                    _ = downstreamState.exchange(.init(value: .init(errored: error)), ordering: .sequentiallyConsistent)
+                    queue.finish()
+                    for await _ in queue.stream { }
+                    throw error
+                }
             }
         }
 
@@ -103,10 +95,10 @@ extension Publisher {
             )
             if !success {
                 guard replaced == nil else { fatalError("can only have nil") }
-                guard downstreamValue.exchange(
-                    .init(value: [(instant: now, value: value)]),
-                    ordering: .sequentiallyConsistent
-                ) == nil else { fatalError("really, this can only have nil") }
+                let box = Box(value:  [(instant: now, value: value)])
+                guard downstreamValue.exchange(box, ordering: .sequentiallyConsistent) == nil else {
+                    fatalError("really, this can only be nil")
+                }
             }
             guard case .terminated = queue.yield() else { return }
             throw FinishedError()

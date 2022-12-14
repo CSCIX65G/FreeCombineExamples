@@ -51,6 +51,7 @@ final class ThrottleTests: XCTestCase {
         let clock = TestClock()
         let inputCounter = Counter()
         let counter = Counter()
+        let values = MutableBox<[Int]>.init(value: [])
 
         let subject = try await PassthroughSubject(Int.self)
         let t = await subject.asyncPublisher
@@ -60,9 +61,11 @@ final class ThrottleTests: XCTestCase {
                 }
             )
             .throttle(clock: clock, interval: .milliseconds(100), latest: true)
-            .sink({ value in
-                switch value {
-                    case .value(_):
+            .sink { result in
+                switch result {
+                    case let .value(value):
+                        let vals = values.value
+                        values.set(value: vals + [value])
                         counter.increment()
                         return
                     case let .completion(.failure(error)):
@@ -71,7 +74,7 @@ final class ThrottleTests: XCTestCase {
                     case .completion(.finished):
                         return
                 }
-            })
+            }
         for i in (0 ..< 15) {
             try await subject.send(i)
             try await clock.advance(by: .milliseconds(9))
@@ -85,7 +88,8 @@ final class ThrottleTests: XCTestCase {
         await clock.runToCompletion()
         let count = counter.count
         let inputCount = inputCounter.count
-        XCTAssert(count >= 1, "Got wrong count = \(count)")
+        XCTAssert(count >= 2, "Got wrong count = \(count)")
+        XCTAssert(values.value.last! == 14, "Got wrong count = \(count)")
         XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
     }
 
@@ -175,6 +179,7 @@ final class ThrottleTests: XCTestCase {
 
         let count = counter.count
         XCTAssert(count >= 2, "Got wrong count = \(count)")
+        XCTAssert(values.value.last! == 14, "Got wrong count = \(count)")
 
         let inputCount = inputCounter.count
         XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
