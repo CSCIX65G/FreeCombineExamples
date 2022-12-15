@@ -1,8 +1,8 @@
 //
-//  DelayEachDemand.swift
+//  MakeConnectable.swift
 //
 //
-//  Created by Van Simmons on 7/9/22.
+//  Created by Van Simmons on 6/4/22.
 //
 //  Copyright 2022, ComputeCycles, LLC
 //
@@ -18,20 +18,13 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-import Atomics
-import Core
-
-@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
-extension Publisher {
-    func delayEachDemand<C: Clock>(
-        clock: C,
-        interval duration: C.Duration
-    ) -> Self where C.Duration == Swift.Duration {
-        .init { resumption, downstream in
-            self(onStartup: resumption) { r in
-                try await downstream(r)
-                try await clock.sleep(until: clock.now.advanced(by: duration), tolerance: .none)
-            }
-        }
+public extension Publisher {
+    func makeConnectable(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1)
+    ) async throws -> Connectable<Output> {
+        .init(upstream: self, buffering: buffering)
     }
 }

@@ -21,7 +21,7 @@ final class MulticastTests: XCTestCase {
         let promise1 = await Promise<Void>()
         let promise2 = await Promise<Void>()
 
-        let subject = try await PassthroughSubject(Int.self)
+        let subject = PassthroughSubject(Int.self)
 
         let counter1 = Counter()
         let u1 = await subject.asyncPublisher.sink { (result: Publisher<Int>.Result) in
@@ -102,7 +102,7 @@ final class MulticastTests: XCTestCase {
     }
 
 //    func testSubjectMulticast() async throws {
-//        let subj = try await PassthroughSubject(Int.self)
+//        let subj = PassthroughSubject(Int.self)
 //
 //        let connectable = try await subj
 //            .publisher()

@@ -28,8 +28,8 @@ public func CurrentValueSubject<Output>(
     buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1),
     onStartup: Resumption<Void>,
     _ initialValue: Output
-) async throws -> Subject<Output> {
-    try await .init(buffering: buffering, initialValue: initialValue)
+) -> Subject<Output> {
+    .init(buffering: buffering, initialValue: initialValue)
 }
 
 public func CurrentValueSubject<Output>(
@@ -39,6 +39,6 @@ public func CurrentValueSubject<Output>(
     type: Output.Type = Output.self,
     buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1),
     _ initialValue: Output
-) async throws -> Subject<Output> {
-    try await .init(buffering: buffering, initialValue: initialValue)
+) -> Subject<Output> {
+    .init(buffering: buffering, initialValue: initialValue)
 }

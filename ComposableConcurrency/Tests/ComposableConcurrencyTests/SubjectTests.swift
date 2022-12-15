@@ -35,7 +35,7 @@ class SubjectTests: XCTestCase {
         let expectation3 = await Promise<Void>()
         let release = await Promise<Void>()
 
-        let subject = try await PassthroughSubject(Int.self)
+        let subject = PassthroughSubject(Int.self)
         let p = subject.publisher()
 
         let can = await p.sink { result in
@@ -114,7 +114,7 @@ class SubjectTests: XCTestCase {
         let counter = Counter()
         let expectation = await Promise<Void>()
 
-        let subject = try await PassthroughSubject(Int.self)
+        let subject = PassthroughSubject(Int.self)
         let p = subject.asyncPublisher
 
         let c1 = await p.sink { result in
@@ -154,7 +154,7 @@ class SubjectTests: XCTestCase {
         let counter = Counter()
         let expectation = await Promise<Void>()
 
-        let subject = try await PassthroughSubject(Int.self)
+        let subject = PassthroughSubject(Int.self)
         let p = subject.asyncPublisher
 
         let c1 = await p.sink({ result in
@@ -192,8 +192,8 @@ class SubjectTests: XCTestCase {
 
     func testSyncAsync() async throws {
         let expectation = await Promise<Void>()
-        let fsubject1 = try await PassthroughSubject(Int.self)
-        let fsubject2 = try await PassthroughSubject(String.self)
+        let fsubject1 = PassthroughSubject(Int.self)
+        let fsubject2 = PassthroughSubject(String.self)
 
         let fseq1 = "abcdefghijklmnopqrstuvwxyz".asyncPublisher
         let fseq2 = (1 ... 100).asyncPublisher
@@ -245,7 +245,7 @@ class SubjectTests: XCTestCase {
     func testSimpleSubject() async throws {
         let expectation = await Promise<Void>()
 
-        let subject = try await CurrentValueSubject(14)
+        let subject = CurrentValueSubject(14)
         let publisher = subject.asyncPublisher
 
         let counter = Counter()
@@ -297,7 +297,7 @@ class SubjectTests: XCTestCase {
         let expectation1 = await Promise<Void>()
         let expectation2 = await Promise<Void>()
 
-        let subject = try await CurrentValueSubject(13)
+        let subject = CurrentValueSubject(13)
         let publisher = subject.asyncPublisher
 
         let counter1 = Counter()

@@ -24,7 +24,7 @@ class DebounceTests: XCTestCase {
         let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
-        let subject = try await PassthroughSubject(Int.self)
+        let subject = PassthroughSubject(Int.self)
 
         let t = await subject.asyncPublisher
             .handleEvents(receiveOutput: { _ in inputCounter.increment() })
@@ -68,7 +68,7 @@ class DebounceTests: XCTestCase {
         let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
-        let subject = try await PassthroughSubject(Int.self)
+        let subject = PassthroughSubject(Int.self)
         let t = await subject.asyncPublisher
             .handleEvents(receiveOutput: { _ in inputCounter.increment() })
             .debounce(clock: clock, duration: .milliseconds(100))
@@ -110,7 +110,7 @@ class DebounceTests: XCTestCase {
         let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
-        let subject = try await PassthroughSubject(Int.self, buffering: .unbounded)
+        let subject = PassthroughSubject(Int.self, buffering: .unbounded)
 
         let t = await subject.asyncPublisher
             .handleEvents(receiveOutput: { value in
@@ -159,7 +159,7 @@ class DebounceTests: XCTestCase {
         let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
-        let subject = try await PassthroughSubject(Int.self, buffering: .unbounded)
+        let subject = PassthroughSubject(Int.self, buffering: .unbounded)
 
         let t = await subject.asyncPublisher
             .handleEvents(
@@ -208,7 +208,7 @@ class DebounceTests: XCTestCase {
         let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
-        let subject = try await PassthroughSubject(Int.self, buffering: .unbounded)
+        let subject = PassthroughSubject(Int.self, buffering: .unbounded)
 
         let t = await subject.asyncPublisher
             .handleEvents(

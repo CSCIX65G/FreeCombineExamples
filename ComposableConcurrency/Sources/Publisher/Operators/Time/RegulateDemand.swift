@@ -1,8 +1,8 @@
 //
-//  Delay.swift
+//  DelayEachDemand.swift
 //
 //
-//  Created by Van Simmons on 5/27/22.
+//  Created by Van Simmons on 7/9/22.
 //
 //  Copyright 2022, ComputeCycles, LLC
 //
@@ -22,25 +22,19 @@ import Atomics
 import Core
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
-public extension Publisher {
-    func delayEach<C: Clock>(
+extension Publisher {
+    func regulateDemand<C: Clock>(
         clock: C,
         interval duration: C.Duration
     ) -> Self where C.Duration == Swift.Duration {
         .init { resumption, downstream in
-            self(onStartup: resumption) { r in switch r {
-                case .value:
-                    do {
-                        try? await clock.sleep(until: clock.now.advanced(by: duration), tolerance: .none)
-                        guard !Cancellables.isCancelled else { throw CancellationError() }
-                        return try await downstream(r)
-                    }
-                    catch {
-                        return try await handleCancellation(of: downstream)
-                    }
-                case let .completion(value):
-                    return try await downstream(.completion(value))
-            } }
+            self(onStartup: resumption) { r in
+                let start = clock.now
+                try await downstream(r)
+                if start.advanced(by: duration) < clock.now {
+                    try await clock.sleep(until: start.advanced(by: duration), tolerance: .none)
+                }
+            }
         }
     }
 }

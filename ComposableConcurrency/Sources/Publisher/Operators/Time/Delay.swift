@@ -26,8 +26,12 @@ public extension AsyncContinuation {
         duration: Swift.Duration
     ) -> Self where C.Duration == Swift.Duration {
         .init { resumption, downstream in
-            self(onStartup: resumption) { r in
-                try? await clock.sleep(until: clock.now.advanced(by: duration), tolerance: .none)
+            let hasDelayed = MutableBox(value: false)
+            return self(onStartup: resumption) { r in
+                if !hasDelayed.value {
+                    try? await clock.sleep(until: clock.now.advanced(by: duration), tolerance: .none)
+                    hasDelayed.set(value: true)
+                }
                 return try await downstream(r)
             }
         }

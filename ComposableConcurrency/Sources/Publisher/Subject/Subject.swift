@@ -33,7 +33,7 @@ public final class Subject<Output: Sendable> {
         line: UInt = #line,
         buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1),
         initialValue: Output? = .none
-    ) async throws {
+    ) {
         self.function = function
         self.file = file
         self.line = line

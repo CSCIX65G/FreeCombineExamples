@@ -27,8 +27,8 @@ public func PassthroughSubject<Output>(
     _ type: Output.Type = Output.self,
     buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1),
     onStartup: Resumption<Void>
-) async throws -> Subject<Output> {
-    try await .init(buffering: buffering)
+) -> Subject<Output> {
+    .init(buffering: buffering)
 }
 
 public func PassthroughSubject<Output>(
@@ -37,6 +37,6 @@ public func PassthroughSubject<Output>(
     line: UInt = #line,
     _ type: Output.Type = Output.self,
     buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1)
-) async throws -> Subject<Output> {
-    try await .init(buffering: buffering)
+) -> Subject<Output> {
+    .init(buffering: buffering)
 }
