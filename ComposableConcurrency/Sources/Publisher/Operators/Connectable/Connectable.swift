@@ -36,11 +36,28 @@ public class Connectable<Output> {
     }
 
     var asyncPublisher: Publisher<Output> {
-        .init(self)
+        .init(connectable: self)
     }
 
-    func connect() async -> Void {
-        cancellable = await self.upstream.sink { result in
+    func publisher(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) -> Publisher<Output> {
+        .init(
+            function: function,
+            file: file,
+            line: line,
+            connectable: self
+        )
+    }
+
+    func connect(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) async -> Void {
+        cancellable = await self.upstream.sink(function: function, file: file, line: line) { result in
             switch result {
                 case let .value(value):
                     try await self.subject.send(value)
@@ -58,10 +75,20 @@ public class Connectable<Output> {
 }
 
 public extension Publisher {
-    init(_ connectable: Connectable<Output>) {
+    init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        connectable: Connectable<Output>
+    ) {
         self = .init { resumption, downstream in
             return Cancellable<Cancellable<Void>>.init {
-                await connectable.subject.asyncPublisher.sink(downstream)
+                await connectable.subject.asyncPublisher.sink(
+                    function: function,
+                    file: file,
+                    line: line,
+                    downstream
+                )
             }.join()
         }
     }
