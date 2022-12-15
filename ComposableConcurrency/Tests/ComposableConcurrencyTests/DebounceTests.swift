@@ -20,7 +20,7 @@ class DebounceTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSingleDebounce() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
@@ -64,7 +64,7 @@ class DebounceTests: XCTestCase {
     }
 
     func testSimpleDebounce() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
@@ -106,7 +106,7 @@ class DebounceTests: XCTestCase {
     }
 
     func testMoreComplexDebounce() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
@@ -155,7 +155,7 @@ class DebounceTests: XCTestCase {
     }
 
     func testRapidfireDebounce() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
@@ -204,7 +204,7 @@ class DebounceTests: XCTestCase {
     }
 
     func testDebounceBreak() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()

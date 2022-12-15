@@ -36,7 +36,7 @@ import Queue
 import Future
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
-extension [TestClock.Suspension] {
+extension [DiscreteClock.Suspension] {
     func release() async -> Void {
         forEach {
             $0.release()
@@ -53,7 +53,7 @@ extension [TestClock.Suspension] {
 }
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
-public final class TestClock: Clock, @unchecked Sendable {
+public final class DiscreteClock: Clock, @unchecked Sendable {
     public typealias Duration = Swift.Duration
     public struct Instant: InstantProtocol, Sendable, Equatable, Hashable {
         public private(set) var offset: Duration

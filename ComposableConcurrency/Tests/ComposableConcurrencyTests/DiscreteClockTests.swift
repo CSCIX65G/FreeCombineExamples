@@ -11,16 +11,16 @@ import XCTest
 @testable import Core
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
-final class ClockTests: XCTestCase {
+final class DiscreteClockTests: XCTestCase {
 
     override func setUpWithError() throws { }
 
     override func tearDownWithError() throws { }
 
     func testTestClockCancellation() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
 
-        let cancellable: Cancellable<TestClock.Instant> = .init {
+        let cancellable: Cancellable<DiscreteClock.Instant> = .init {
             try await clock.sleep(for: .seconds(5))
             return clock.now
         }

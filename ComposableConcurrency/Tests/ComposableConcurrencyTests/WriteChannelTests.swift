@@ -20,7 +20,7 @@ final class ProducerTests: XCTestCase {
 
     func testSimpleProducer() async throws {
         let channel: WriteChannel<Int> = .init()
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let readPromise = await Promise<Void>()
         let writePromise = await Promise<Void>()
 

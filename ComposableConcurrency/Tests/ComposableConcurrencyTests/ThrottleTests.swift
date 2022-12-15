@@ -17,7 +17,7 @@ final class ThrottleTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleThrottle() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let inputCounter = Counter()
         let counter = Counter()
         let t = await (1 ... 15).asyncPublisher
@@ -48,7 +48,7 @@ final class ThrottleTests: XCTestCase {
     }
 
     func testSimpleThrottleLatest() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let inputCounter = Counter()
         let counter = Counter()
         let values = MutableBox<[Int]>.init(value: [])
@@ -95,7 +95,7 @@ final class ThrottleTests: XCTestCase {
 
 
     func testSimpleSubjectThrottle() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()
@@ -140,7 +140,7 @@ final class ThrottleTests: XCTestCase {
     }
 
     func testSimpleSubjectThrottleLatest() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let values = MutableBox<[Int]>.init(value: [])
         let inputCounter = Counter()
         let counter = Counter()

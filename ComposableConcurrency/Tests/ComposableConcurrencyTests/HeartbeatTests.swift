@@ -20,7 +20,7 @@ final class HeartbeatTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testHeartbeatUntil() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let end = clock.now.advanced(by: .seconds(5))
         let counter = Counter()
         let heartbeat = Heartbeat(clock: clock, interval: .milliseconds(100), endingBefore: end)
@@ -46,7 +46,7 @@ final class HeartbeatTests: XCTestCase {
     }
     
     func testHeartbeatFor() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let counter = Counter()
         let end = Swift.Duration.seconds(5)
         let endInstant = clock.now.advanced(by: .seconds(5))
@@ -66,6 +66,7 @@ final class HeartbeatTests: XCTestCase {
             try await clock.advance(by: .milliseconds(50))
             try? await ticker.read()
         }
+        for _ in 0 ..< 10 { try await clock.advance(by: .milliseconds(50)) }
         _ = await cancellable.result
         await clock.runToCompletion()
         XCTAssert(counter.count == 50, "Failed \(#function) due to count = \(counter.count)")

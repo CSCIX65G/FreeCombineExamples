@@ -18,7 +18,7 @@ final class TimeoutTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleTimeout() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let timeout = Timeout(clock: clock, after: .seconds(10))
 
         let cancellable = await timeout.sink { result in
@@ -35,7 +35,7 @@ final class TimeoutTests: XCTestCase {
     }
 
     func testOredTimeout() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let promise = await Promise<Void>()
         let timeout = Timeout(clock: clock, after: .seconds(10))
         let ticker: Channel<Void> = .init()
@@ -61,7 +61,7 @@ final class TimeoutTests: XCTestCase {
     }
 
     func testOredTimeout2() async throws {
-        let clock = TestClock()
+        let clock = DiscreteClock()
         let ticker: Channel<Void> = .init()
 
         let ored = Timeout(clock: clock, after: .seconds(10))
