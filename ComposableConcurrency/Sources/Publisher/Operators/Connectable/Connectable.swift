@@ -83,10 +83,11 @@ public extension Publisher {
     ) {
         self = .init { resumption, downstream in
             return Cancellable<Cancellable<Void>>.init {
-                await connectable.subject.asyncPublisher.sink(
+                connectable.subject.asyncPublisher.sink(
                     function: function,
                     file: file,
                     line: line,
+                    onStartup: resumption,
                     downstream
                 )
             }.join()

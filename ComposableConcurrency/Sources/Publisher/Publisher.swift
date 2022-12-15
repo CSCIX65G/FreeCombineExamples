@@ -55,12 +55,24 @@ public extension Publisher {
 
 public extension Publisher {
     @discardableResult
-    func sink(onStartup: Resumption<Void>, _ downstream: @escaping Downstream) -> Cancellable<Void> {
-        self(onStartup: onStartup, downstream)
+    func sink(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        onStartup: Resumption<Void>,
+        _ downstream: @escaping Downstream
+    ) -> Cancellable<Void> {
+        self(function: function, file: file, line: line, onStartup: onStartup, downstream)
     }
 
     @discardableResult
-    func callAsFunction(onStartup: Resumption<Void>, _ downstream: @escaping Downstream) -> Cancellable<Void> {
+    func callAsFunction(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        onStartup: Resumption<Void>,
+        _ downstream: @escaping Downstream
+    ) -> Cancellable<Void> {
         call(onStartup, { result in
             guard !Cancellables.isCancelled else {
                 return try await handleCancellation(of: downstream)

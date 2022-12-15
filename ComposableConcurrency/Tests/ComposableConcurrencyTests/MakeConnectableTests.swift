@@ -29,7 +29,7 @@ class MakeConnectableTests: XCTestCase {
 
     override func tearDownWithError() throws { }
 
-    func xtestSimpleMakeConnectable() async throws {
+    func testSimpleMakeConnectable() async throws {
         let promise1 = await Promise<Void>()
         let promise2 = await Promise<Void>()
 
@@ -87,7 +87,7 @@ class MakeConnectableTests: XCTestCase {
         _ = await connectable.result
     }
 
-    func xtestSubjectMakeConnectable() async throws {
+    func testSubjectMakeConnectable() async throws {
         let subj = PassthroughSubject(Int.self)
 
         let connectable = try await subj
