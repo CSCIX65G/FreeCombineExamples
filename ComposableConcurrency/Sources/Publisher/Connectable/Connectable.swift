@@ -82,7 +82,7 @@ public extension Publisher {
         connectable: Connectable<Output>
     ) {
         self = .init { resumption, downstream in
-            return Cancellable<Cancellable<Void>>.init {
+            Cancellable<Cancellable<Void>>.init {
                 connectable.subject.asyncPublisher.sink(
                     function: function,
                     file: file,

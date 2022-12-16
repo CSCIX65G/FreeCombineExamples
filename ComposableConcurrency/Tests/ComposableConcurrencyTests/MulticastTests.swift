@@ -101,69 +101,61 @@ final class MulticastTests: XCTestCase {
         let _ = try await shared.value
     }
 
-//    func testSubjectMulticast() async throws {
-//        let subj = PassthroughSubject(Int.self)
-//
-//        let connectable = try await subj
-//            .publisher()
-//            .map { $0 }
-//            .makeConnectable()
-//
-//        let counter1 = Counter()
-//        let u1 = await connectable.publisher().sink({ result in
-//            switch result {
-//                case .value:
-//                    counter1.increment()
-//                    return .more
-//                case let .completion(.failure(error)):
-//                    XCTFail("Got an error? \(error)")
-//                    return .done
-//                case .completion(.finished):
-//                    let count = counter1.count
-//                    if count != 100 {
-//                        XCTFail("Incorrect count: \(count) in subscription 1")
-//                    }
-//                    return .done
-//                case .completion(.cancelled):
-//                    XCTFail("Should not have cancelled")
-//                    return .done
-//            }
-//        })
-//
-//        let counter2 = Counter()
-//        let u2 = await connectable.publisher().sink { (result: AsyncStream<Int>.Result) in
-//            switch result {
-//                case .value:
-//                    counter2.increment()
-//                    return .more
-//                case let .completion(.failure(error)):
-//                    XCTFail("Got an error? \(error)")
-//                    return .done
-//                case .completion(.finished):
-//                    let count = counter2.count
-//                    if count != 100  {
-//                        XCTFail("Incorrect count: \(count) in subscription 2")
-//                    }
-//                    return .done
-//                case .completion(.cancelled):
-//                    XCTFail("Should not have cancelled")
-//                    return .done
-//            }
-//        }
-//
-//        try await connectable.connect()
-//
-//        for i in (0 ..< 100) {
-//            do { try await subj.blockingSend(i) }
-//            catch { XCTFail("Failed to send on \(i) with error: \(error)") }
-//        }
-//
-//        try await subj.finish()
-//        _ = await subj.result
-//        _ = await connectable.result
-//        let d1 = try await u1.value
-//        XCTAssert(d1 == .done, "First chain has wrong value")
-//        let d2 = try await u2.value
-//        XCTAssert(d2 == .done, "Second chain has wrong value")
-//    }
+    func testSubjectMulticast() async throws {
+        let subj = PassthroughSubject(Int.self)
+
+        let connectable = try await subj
+            .publisher()
+            .map { $0 }
+            .makeConnectable()
+
+        let counter1 = Counter()
+        let u1 = await connectable.asyncPublisher.sink { result in
+            switch result {
+                case .value:
+                    counter1.increment()
+                    return
+                case let .completion(.failure(error)):
+                    XCTFail("Got an error? \(error)")
+                    return
+                case .completion(.finished):
+                    let count = counter1.count
+                    if count != 100 {
+                        XCTFail("Incorrect count: \(count) in subscription 1")
+                    }
+                    return
+            }
+        }
+
+        let counter2 = Counter()
+        let u2 = await connectable.asyncPublisher.sink { (result: Publisher<Int>.Result) in
+            switch result {
+                case .value:
+                    counter2.increment()
+                    return
+                case let .completion(.failure(error)):
+                    XCTFail("Got an error? \(error)")
+                    return
+                case .completion(.finished):
+                    let count = counter2.count
+                    if count != 100  {
+                        XCTFail("Incorrect count: \(count) in subscription 2")
+                    }
+                    return
+            }
+        }
+
+        await connectable.connect()
+
+        for i in (0 ..< 100) {
+            do { try await subj.send(i) }
+            catch { XCTFail("Failed to send on \(i) with error: \(error)") }
+        }
+
+        try await subj.finish()
+        _ = await subj.result
+        _ = await connectable.result
+        _ = try await u1.value
+        _ = try await u2.value
+    }
 }

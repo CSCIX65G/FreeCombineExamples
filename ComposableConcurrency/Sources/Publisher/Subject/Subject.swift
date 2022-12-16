@@ -42,26 +42,42 @@ public final class Subject<Output: Sendable> {
 }
 
 public extension Subject {
+    @Sendable
     func yield(_ value: Output) throws {
         try distributor.send(value)
     }
 
+    @Sendable
+    func send(_ result: Publisher<Output>.Result) async throws {
+        switch result {
+            case let .value(value):
+                return try await distributor.send(value)
+            case let .completion(completion):
+                return try await distributor.finish(completion)
+        }
+    }
+
+    @Sendable
     func send(_ value: Output) async throws {
         try await distributor.send(value)
     }
 
+    @Sendable
     func cancel() throws -> Void {
         try distributor.cancel()
     }
 
+    @Sendable
     func finish(_ completion: Publishers.Completion = .finished) throws {
         try distributor.finish(completion)
     }
 
+    @Sendable
     func finish(_ completion: Publishers.Completion = .finished) async throws {
         try await distributor.finish(completion)
     }
 
+    @Sendable
     func fail(_ error: Error) async throws {
         try await distributor.finish(.failure(error))
     }

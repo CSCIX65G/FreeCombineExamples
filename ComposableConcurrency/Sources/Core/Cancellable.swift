@@ -37,6 +37,7 @@ public enum Cancellables {
         case running
         case finished
         case cancelled
+        case released
     }
 }
 
@@ -110,6 +111,15 @@ public final class Cancellable<Output: Sendable>: Sendable {
             try? cancel()
             return
         }
+    }
+}
+
+extension Cancellable where Output == Void {
+    @Sendable public func release() throws {
+        try AsyncResult<Void, Swift.Error>.success(())
+            .set(atomic: atomicStatus, from: Status.running, to: Status.released)
+            .mapError {_ in CancellationFailureError() }
+            .get()
     }
 }
 

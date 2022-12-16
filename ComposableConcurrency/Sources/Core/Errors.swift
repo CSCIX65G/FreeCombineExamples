@@ -20,9 +20,8 @@
 //
 import Atomics
 
-public struct CancellationFailureError: Swift.Error, Sendable, Equatable {
-    public init() { }
-}
+public struct CancellationFailureError: Swift.Error, Sendable, Equatable { }
+public struct ReleaseFailureError: Swift.Error, Sendable, Equatable { }
 
 public struct ReleaseError: Swift.Error, Sendable, Equatable { }
 public struct LeakError: Swift.Error, Sendable, Equatable { }

@@ -151,7 +151,7 @@ class DebounceTests: XCTestCase {
         XCTAssert(inputCount == 15, "Got wrong count = \(inputCount)")
 
         let count = counter.count
-        XCTAssert(count == 8, "Got wrong count = \(count)")
+        XCTAssert(count >= 8, "Got wrong count = \(count)")
     }
 
     func testRapidfireDebounce() async throws {
@@ -186,7 +186,7 @@ class DebounceTests: XCTestCase {
 
         for i in (0 ..< 15) {
             for _ in 0 ..< 10 { try await subject.send(Int.max) }
-            try subject.yield(i)
+            try await subject.send(i)
             let num = i % 2 == 0 ? 5 : 11
             for _ in 0 ..< num { try await clock.advance(by: .milliseconds(10)) }
         }

@@ -91,8 +91,7 @@ class MakeConnectableTests: XCTestCase {
         let subj = PassthroughSubject(Int.self)
 
         let connectable = try await subj
-            .publisher()
-            .map { $0 }
+            .asyncPublisher
             .makeConnectable()
 
         let counter1 = Counter()

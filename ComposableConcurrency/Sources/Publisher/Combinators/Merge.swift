@@ -41,7 +41,7 @@ public struct Merge<Value> {
         let downstream: @Sendable (Publisher<Value>.Result) async throws -> Void
 
         mutating func cancel(_ id: Int) throws -> Void {
-            guard let can = cancellables[id] else { throw CancellationFailureError() }
+            guard let can = cancellables[id] else { throw MergeCancellationFailureError(id: id) }
             cancellables[id] = .none
             try can.cancel()
             cancellables.removeValue(forKey: id)

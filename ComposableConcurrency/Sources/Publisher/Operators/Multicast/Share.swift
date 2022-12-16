@@ -1,5 +1,5 @@
 //
-//  Multicast.swift
+//  Share.swift
 //
 //
 //  Created by Van Simmons on 6/26/22.
@@ -19,8 +19,10 @@
 //  limitations under the License.
 //
 import Core
+
 public extension Publisher {
-    func multicast(_ subject: Subject<Output>) -> Self {
+    func share() async throws -> Self {
+        let subject: Subject<Output> = PassthroughSubject()
         let upstreamBox: MutableBox<Cancellable<Void>?> = .init(value: .none)
         return .init { resumption, downstream in
             Cancellable<Cancellable<Void>> {
@@ -34,11 +36,5 @@ public extension Publisher {
                 return cancellable
             }.join()
         }
-    }
-
-    func multicast(
-        _ generator: @escaping () -> Subject<Output>
-    ) async -> Self {
-        return multicast(generator())
     }
 }
