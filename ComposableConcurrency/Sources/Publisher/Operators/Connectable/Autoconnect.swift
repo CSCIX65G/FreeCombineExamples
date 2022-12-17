@@ -20,6 +20,7 @@
 //
 import Core
 public extension Publisher {
+    // FIXME: This needs to connect on the first subscriber
     func autoconnect(
         function: StaticString = #function,
         file: StaticString = #file,

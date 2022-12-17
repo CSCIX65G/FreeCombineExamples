@@ -20,25 +20,13 @@
 //
 import Core
 public extension Publisher {
-    func multicast(_ subject: Subject<Output>) -> Self {
-        let upstreamBox: MutableBox<Cancellable<Void>?> = .init(value: .none)
-        return .init { resumption, downstream in
-            Cancellable<Cancellable<Void>> {
-                let cancellable = await subject.asyncPublisher.sink(downstream)
-                if  upstreamBox.value == nil {
-                    let upstream = await self.sink(subject.send)
-                    try? upstream.release()
-                    upstreamBox.set(value: upstream)
-                }
-                resumption.resume()
-                return cancellable
-            }.join()
-        }
+    func multicast(_ subject: Subject<Output>) -> Connectable<Output> {
+        .init(upstream: self, subject: subject)
     }
 
     func multicast(
         _ generator: @escaping () -> Subject<Output>
-    ) async -> Self {
+    ) async -> Connectable<Output> {
         return multicast(generator())
     }
 }

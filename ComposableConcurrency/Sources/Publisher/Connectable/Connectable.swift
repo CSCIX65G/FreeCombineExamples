@@ -31,6 +31,14 @@ public class Connectable<Output> {
         self.subject = PassthroughSubject(buffering: buffering)
     }
 
+    init(
+        upstream: Publisher<Output>,
+        subject: Subject<Output>
+    ) {
+        self.upstream = upstream
+        self.subject = subject
+    }
+
     var result: AsyncResult<Void, Error> {
         get async { await subject.result }
     }

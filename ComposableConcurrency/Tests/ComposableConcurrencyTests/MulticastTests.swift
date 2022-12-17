@@ -68,7 +68,7 @@ final class MulticastTests: XCTestCase {
         let n = 100
         let upstreamCounter = Counter()
         let upstreamShared = MutableBox<Bool>(value: false)
-        let shared = await (0 ..< n)
+        let connectable = (0 ..< n)
             .asyncPublisher
             .handleEvents(
                 receiveDownstream: { _ in
@@ -92,25 +92,22 @@ final class MulticastTests: XCTestCase {
                 }
             )
             .multicast(subject)
-            .sink { value in  }
+
+        _ = await connectable.connect()
 
         _ = try await u1.value
         _ = try await u2.value
 
         let _ = try await subject.value
-        let _ = try await shared.value
     }
 
     func testSubjectMulticast() async throws {
         let subj = PassthroughSubject(Int.self)
-
-        let connectable = try await subj
-            .publisher()
-            .map { $0 }
-            .makeConnectable()
+        let upstream = PassthroughSubject(Int.self)
+        let connectable = upstream.asyncPublisher.multicast(subj)
 
         let counter1 = Counter()
-        let u1 = await connectable.asyncPublisher.sink { result in
+        let u1 = await subj.asyncPublisher.sink { result in
             switch result {
                 case .value:
                     counter1.increment()
@@ -128,7 +125,7 @@ final class MulticastTests: XCTestCase {
         }
 
         let counter2 = Counter()
-        let u2 = await connectable.asyncPublisher.sink { (result: Publisher<Int>.Result) in
+        let u2 = await subj.asyncPublisher.sink { (result: Publisher<Int>.Result) in
             switch result {
                 case .value:
                     counter2.increment()
@@ -148,14 +145,16 @@ final class MulticastTests: XCTestCase {
         await connectable.connect()
 
         for i in (0 ..< 100) {
-            do { try await subj.send(i) }
+            do { try await upstream.send(i) }
             catch { XCTFail("Failed to send on \(i) with error: \(error)") }
         }
+        try? await upstream.finish()
+        _ = await upstream.result
 
-        try await subj.finish()
-        _ = await subj.result
         _ = await connectable.result
         _ = try await u1.value
         _ = try await u2.value
+        try? await subj.finish()
+        _ = await subj.result
     }
 }
