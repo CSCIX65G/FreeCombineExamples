@@ -60,6 +60,27 @@ public class Connectable<Output> {
         )
     }
 
+    static func autoconnect(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        publisher: Publisher<Output>
+    ) async -> Publisher<Output> {
+        let subject: Subject<Output> = PassthroughSubject()
+        let connectable: Connectable<Output> = .init(upstream: publisher, subject: subject)
+        return .init { resumption, downstream in
+            Cancellable<Cancellable<Void>> {
+                let cancellable = await subject.asyncPublisher.sink(downstream)
+                if connectable.cancellable == nil {
+                    await connectable.connect()
+                    try? connectable.cancellable?.release()
+                }
+                resumption.resume()
+                return cancellable
+            }.join()
+        }
+    }
+
     func connect(
         function: StaticString = #function,
         file: StaticString = #file,

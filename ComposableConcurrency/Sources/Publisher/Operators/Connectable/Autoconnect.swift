@@ -26,19 +26,15 @@ public extension Publisher {
         line: UInt = #line,
         buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1)
     ) async throws -> Self {
-        let connectable: Connectable<Output> = self.makeConnectable(buffering: buffering)
         let subject: Subject<Output> = PassthroughSubject()
-        let upstreamBox: MutableBox<Cancellable<Void>?> = .init(value: .none)
+        let connectable: Connectable<Output> = .init(upstream: self, subject: subject)
         return .init { resumption, downstream in
             Cancellable<Cancellable<Void>> {
                 let cancellable = await subject.asyncPublisher.sink(downstream)
-                if  upstreamBox.value == nil {
-                    let upstream = await self.sink(subject.send)
-                    try? upstream.release()
-                    upstreamBox.set(value: upstream)
+                if connectable.cancellable == nil {
+                    await connectable.connect()
+                    try? connectable.cancellable?.release()
                 }
-                await connectable.connect()
-                try? connectable.cancellable?.release()
                 resumption.resume()
                 return cancellable
             }.join()

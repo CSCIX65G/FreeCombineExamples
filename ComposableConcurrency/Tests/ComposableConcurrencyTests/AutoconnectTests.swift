@@ -29,7 +29,7 @@ class AutoconnectTests: XCTestCase {
 
     override func tearDownWithError() throws { }
 
-    func xtestSimpleAutoconnect() async throws {
+    func testSimpleAutoconnect() async throws {
         /*
          p1 and p2 below are NOT guaranteed to see the same number of values bc
          the autoconnected publisher begins publishing as soon as the first subscription
@@ -43,11 +43,11 @@ class AutoconnectTests: XCTestCase {
         let autoconnected = try await (0 ..< n)
             .asyncPublisher
             .map { $0 * 2 }
-            .autoconnect(buffering: .bufferingOldest(2))
+            .autoconnect()
 
         let counter1 = Counter()
         let value1 = MutableBox<Int>(value: -1)
-        let u1 = await autoconnected.sink({ result in
+        let u1 = await autoconnected.sink { result in
             switch result {
                 case let .value(value):
                     counter1.increment()
@@ -66,7 +66,7 @@ class AutoconnectTests: XCTestCase {
                     catch { XCTFail("u1 Failed to complete with error: \(error)") }
                     return
             }
-        })
+        }
 
         let counter2 = Counter()
         let value2 = MutableBox<Int>(value: -1)
@@ -92,7 +92,7 @@ class AutoconnectTests: XCTestCase {
             }
         }
 
-        _ = try await u1.value
+        _ = await u1.result
         try? u2.cancel()
         _ = await u2.result
     }
@@ -111,7 +111,7 @@ class AutoconnectTests: XCTestCase {
         let autoconnected = try await (0 ..< n)
             .asyncPublisher
             .map { $0 * 2 }
-            .autoconnect(buffering: .bufferingOldest(2))
+            .autoconnect()
 
         let counter1 = Counter()
         let value1 = MutableBox<Int>(value: -1)
@@ -158,6 +158,7 @@ class AutoconnectTests: XCTestCase {
         })
 
         _ = await u1.result
+        try? u2.cancel()
         _ = await u2.result
     }
 
@@ -224,7 +225,8 @@ class AutoconnectTests: XCTestCase {
         _ = await u1.result
         _ = await u2.result
     }
-    func xtestSubjectAutoconnect() async throws {
+
+    func testSubjectAutoconnect() async throws {
         /*
          p1 and p2 below should see the same number of values bc
          we set them up before we send to the subject

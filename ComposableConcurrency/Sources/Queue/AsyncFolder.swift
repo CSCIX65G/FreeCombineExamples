@@ -121,8 +121,6 @@ extension AsyncFolder {
             switch error {
                 case is FinishedError:
                     await self(action, .finished); continue
-                case is CancellationError:
-                    await self(action, .failure(error)); continue
                 default:
                     await self(action, .failure(error)); continue
             }

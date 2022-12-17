@@ -116,7 +116,9 @@ public extension Distributor {
     func send(_ value: Output) async throws {
         try await pause { resumption in
             do { try valueFold.send(.syncValue(.value(value), resumption)) }
-            catch { resumption.resume(throwing: error) }
+            catch {
+                resumption.resume(throwing: error)
+            }
         }
     }
 
