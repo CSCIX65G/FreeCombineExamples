@@ -21,7 +21,7 @@ import Core
 public class Connectable<Output> {
     fileprivate let upstream: Publisher<Output>
     fileprivate let subject: Subject<Output>
-    fileprivate var cancellable: Cancellable<Void>? = .none
+    private(set) var cancellable: Cancellable<Void>? = .none
 
     init(
         upstream: Publisher<Output>,

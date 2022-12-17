@@ -33,7 +33,7 @@ class MakeConnectableTests: XCTestCase {
         let promise1 = await Promise<Void>()
         let promise2 = await Promise<Void>()
 
-        let connectable = try await UnfoldedSequence(0 ..< 100)
+        let connectable = UnfoldedSequence(0 ..< 100)
             .makeConnectable()
 
         let p = connectable.asyncPublisher
@@ -90,7 +90,7 @@ class MakeConnectableTests: XCTestCase {
     func testSubjectMakeConnectable() async throws {
         let subj = PassthroughSubject(Int.self)
 
-        let connectable = try await subj
+        let connectable = subj
             .asyncPublisher
             .makeConnectable()
 

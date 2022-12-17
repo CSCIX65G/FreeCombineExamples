@@ -20,15 +20,28 @@
 //
 import Core
 public extension Publisher {
-    // FIXME: This needs to connect on the first subscriber
     func autoconnect(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
         buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1)
     ) async throws -> Self {
-        // When Connectable is _not_ a publisher, any subscription to the asyncPublisher of a Connectable
-        // is equivalent to `autoconnect`.  This type is here for consistency with Combine only
-        return self
+        let connectable: Connectable<Output> = self.makeConnectable(buffering: buffering)
+        let subject: Subject<Output> = PassthroughSubject()
+        let upstreamBox: MutableBox<Cancellable<Void>?> = .init(value: .none)
+        return .init { resumption, downstream in
+            Cancellable<Cancellable<Void>> {
+                let cancellable = await subject.asyncPublisher.sink(downstream)
+                if  upstreamBox.value == nil {
+                    let upstream = await self.sink(subject.send)
+                    try? upstream.release()
+                    upstreamBox.set(value: upstream)
+                }
+                await connectable.connect()
+                try? connectable.cancellable?.release()
+                resumption.resume()
+                return cancellable
+            }.join()
+        }
     }
 }
