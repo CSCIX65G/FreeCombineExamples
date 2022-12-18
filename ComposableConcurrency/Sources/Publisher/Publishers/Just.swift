@@ -18,14 +18,24 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-public func Just<Output>(_ a: Output) -> Publisher<Output> {
-    .init(a)
+public func Just<Output>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
+    _ a: Output
+) -> Publisher<Output> {
+    .init(function: function, file: file, line: line, a)
 }
 
 public extension Publisher {
-    init(_ a: Output) {
+    init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        _ a: Output
+    ) {
         self = .init { resumption, downstream in
-            .init {
+            .init(function: function, file: file, line: line) {
                 resumption.resume()
                 _ = try await downstream(.value(a))
                 return try await downstream(.completion(.finished))
@@ -34,14 +44,24 @@ public extension Publisher {
     }
 }
 
-public func Just<Output>(_ generator: @escaping () async -> Output) -> Publisher<Output> {
-    .init(generator)
+public func Just<Output>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
+    _ generator: @escaping () async -> Output
+) -> Publisher<Output> {
+    .init(function: function, file: file, line: line, generator)
 }
 
 public extension Publisher {
-    init(_ generator: @escaping () async -> Output) {
+    init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        _ generator: @escaping () async -> Output
+    ) {
         self = .init { resumption, downstream in
-            .init {
+            .init(function: function, file: file, line: line) {
                 resumption.resume()
                 _ = try await downstream(.value(generator()))
                 return try await downstream(.completion(.finished))
@@ -50,12 +70,22 @@ public extension Publisher {
     }
 }
 
-public func Just<Output>(_ a: Publisher<Output>.Result) -> Publisher<Output> {
+public func Just<Output>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
+    _ a: Publisher<Output>.Result
+) -> Publisher<Output> {
     .init(a)
 }
 
 public extension Publisher {
-    init(_ result: Publisher<Output>.Result) {
+    init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        _ result: Publisher<Output>.Result
+    ) {
         self = .init { resumption, downstream in
             .init {
                 resumption.resume()
@@ -67,6 +97,9 @@ public extension Publisher {
 }
 
 public func Just<Output>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ generator: @escaping () async -> Publisher<Output>.Result
 ) -> Publisher<Output> {
     .init(generator)
@@ -74,6 +107,9 @@ public func Just<Output>(
 
 public extension Publisher {
     init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         _ generator: @escaping () async -> Publisher<Output>.Result
     ) {
         self = .init { resumption, downstream in

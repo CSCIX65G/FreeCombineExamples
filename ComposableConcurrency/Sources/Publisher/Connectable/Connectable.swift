@@ -16,68 +16,136 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+import Atomics
 import Core
+import Future
 
 public class Connectable<Output> {
-    fileprivate let upstream: Publisher<Output>
-    fileprivate let subject: Subject<Output>
-    private(set) var cancellable: Cancellable<Void>? = .none
+    private let function: StaticString
+    private let file: StaticString
+    private let line: UInt
+    private let upstream: Publisher<Output>
+    private let subject: Subject<Output>
+    private let ownsSubject: Bool
+    private let autoconnect: Bool
+    private let atomicIsComplete: ManagedAtomic<Bool> = .init(false)
+    private let promise: Promise<Void>
+    private(set) var cancellable: Cancellable<Void>! = .none
 
-    init(
+    public init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         upstream: Publisher<Output>,
+        autoconnect: Bool = false,
         buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1)
-    ) {
+    ) async {
+        self.function = function
+        self.file = file
+        self.line = line
+        let localPromise: Promise<Void> = await .init()
+
         self.upstream = upstream
-        self.subject = PassthroughSubject(buffering: buffering)
+        self.autoconnect = autoconnect
+        self.ownsSubject = true
+        self.subject = PassthroughSubject(function: function, file: file, line: line, buffering: buffering)
+        self.promise = localPromise
+        self.cancellable = Cancellable<Cancellable<Void>> {
+            _ = try await localPromise.value
+            return await self.upstream.sink(function: function, file: file, line: line) { result in
+                switch result {
+                    case let .value(value):
+                        try await self.subject.send(value)
+                    case .completion:
+                        await self.complete(result)
+                }
+            }
+        }.join(function: function, file: file, line: line)
     }
 
-    init(
+    public init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         upstream: Publisher<Output>,
-        subject: Subject<Output>
-    ) {
+        subject: Subject<Output>,
+        ownsSubject: Bool = false,
+        autoconnect: Bool = false
+    ) async {
+        self.function = function
+        self.file = file
+        self.line = line
+        let localPromise: Promise<Void> = await .init()
+
         self.upstream = upstream
         self.subject = subject
+        self.ownsSubject = ownsSubject
+        self.autoconnect = autoconnect
+        self.promise = localPromise
+        self.cancellable = Cancellable<Cancellable<Void>> {
+            _ = try await localPromise.value
+            return await self.upstream.sink(function: function, file: file, line: line) { result in
+                switch result {
+                    case let .value(value):
+                        try await self.subject.send(value)
+                    case .completion:
+                        await self.complete(result)
+                }
+            }
+        }.join(function: function, file: file, line: line)
     }
 
-    var result: AsyncResult<Void, Error> {
-        get async { await subject.result }
+    public var result: AsyncResult<Void, Error> {
+        get async {
+            await cancellable.result
+        }
     }
 
-    var asyncPublisher: Publisher<Output> {
-        .init(connectable: self)
-    }
+//    public var asyncPublisher: Publisher<Output> {
+//        asyncPublisher()
+//    }
 
-    func publisher(
+    public func asyncPublisher(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line
     ) -> Publisher<Output> {
-        .init(
-            function: function,
-            file: file,
-            line: line,
-            connectable: self
-        )
+        return .init { resumption, downstream in
+            Cancellable<Cancellable<Void>>(function: function, file: file, line: line) {
+                defer { resumption.resume() }
+                guard !self.isComplete else {
+                    return .init {
+                        try await downstream(.completion(.failure(ConnectableCompletionError())))
+                    }
+                }
+                let downstreamCancellable = await self.subject
+                    .asyncPublisher(function: function, file: file, line: line)
+                    .sink(downstream)
+                if self.autoconnect {
+                    do {
+                        try self.connect(function: function, file: file, line: line)
+                        try self.cancellable.release()
+                    } catch { }
+                }
+                return downstreamCancellable
+            }.join()
+        }
     }
 
-    static func autoconnect(
-        function: StaticString = #function,
-        file: StaticString = #file,
-        line: UInt = #line,
-        publisher: Publisher<Output>
-    ) async -> Publisher<Output> {
-        let subject: Subject<Output> = PassthroughSubject()
-        let connectable: Connectable<Output> = .init(upstream: publisher, subject: subject)
-        return .init { resumption, downstream in
-            Cancellable<Cancellable<Void>> {
-                let cancellable = await subject.asyncPublisher.sink(downstream)
-                if connectable.cancellable == nil {
-                    await connectable.connect()
-                    try? connectable.cancellable?.release()
-                }
-                resumption.resume()
-                return cancellable
-            }.join()
+    var isComplete: Bool {
+        get { atomicIsComplete.load(ordering: .sequentiallyConsistent) }
+    }
+
+    func complete(_ result: Publisher<Output>.Result) async {
+        let (success, _) = atomicIsComplete.compareExchange(
+            expected: false,
+            desired: true,
+            ordering: .sequentiallyConsistent
+        )
+        guard success else { return }
+        if ownsSubject {
+            try? await subject.send(result)
+            _ = await subject.result
         }
     }
 
@@ -85,41 +153,11 @@ public class Connectable<Output> {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line
-    ) async -> Void {
-        cancellable = await self.upstream.sink(function: function, file: file, line: line) { result in
-            switch result {
-                case let .value(value):
-                    try await self.subject.send(value)
-                case let .completion(.failure(error)):
-                    try await self.subject.fail(error)
-                case .completion(.finished):
-                    try await self.subject.finish()
-            }
-        }
+    ) throws -> Void {
+        try promise.succeed()
     }
 
     func cancel() throws -> Void {
         try cancellable?.cancel()
-    }
-}
-
-public extension Publisher {
-    init(
-        function: StaticString = #function,
-        file: StaticString = #file,
-        line: UInt = #line,
-        connectable: Connectable<Output>
-    ) {
-        self = .init { resumption, downstream in
-            Cancellable<Cancellable<Void>>.init {
-                connectable.subject.asyncPublisher.sink(
-                    function: function,
-                    file: file,
-                    line: line,
-                    onStartup: resumption,
-                    downstream
-                )
-            }.join()
-        }
     }
 }

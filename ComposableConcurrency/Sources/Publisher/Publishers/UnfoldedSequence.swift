@@ -24,16 +24,34 @@ extension Sequence {
     public var asyncPublisher: Publisher<Element> {
         UnfoldedSequence(self)
     }
+    
+    public func asyncPublisher(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) -> Publisher<Element> {
+        UnfoldedSequence(function: function, file: file, line: line, self)
+    }
 }
 
-public func UnfoldedSequence<S: Sequence>(_ sequence: S) -> Publisher<S.Element> {
-    .init(sequence)
+public func UnfoldedSequence<S: Sequence>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
+    _ sequence: S
+) -> Publisher<S.Element> {
+    .init(function: function, file: file, line: line, sequence)
 }
 
 extension Publisher {
-    public init<S: Sequence>(_ sequence: S) where S.Element == Output {
+    public init<S: Sequence>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        _ sequence: S
+    ) where S.Element == Output {
         self = .init { resumption, downstream in
-            .init {
+            .init(function: function, file: file, line: line) {
                 resumption.resume()
                 for a in sequence {
                     guard !Cancellables.isCancelled else {
@@ -48,15 +66,23 @@ extension Publisher {
 }
 
 public func Unfolded<Output>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ generator: @escaping () async throws -> Output?
 ) -> Publisher<Output> {
-    .init(generator)
+    .init(function: function, file: file, line: line, generator)
 }
 
 extension Publisher {
-    public init(_ generator: @escaping () async throws -> Output?) {
+    public init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        _ generator: @escaping () async throws -> Output?
+    ) {
         self = .init { resumption, downstream in
-            .init {
+            .init(function: function, file: file, line: line) {
                 resumption.resume()
                 while let a = try await generator() {
                     guard !Cancellables.isCancelled else {

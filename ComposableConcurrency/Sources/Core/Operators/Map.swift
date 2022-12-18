@@ -20,9 +20,12 @@
 //
 public extension Cancellable {
     func map<T>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         _ transform: @escaping (Output) async -> T
     ) -> Cancellable<T> {
-        .init {
+        .init(function: function, file: file, line: line) {
             let value = try await self.value
             try Cancellables.checkCancellation()
             return await transform(value)
@@ -32,9 +35,12 @@ public extension Cancellable {
 
 extension Uncancellable {
     public func map<T>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         _ transform: @escaping (Output) async -> T
     ) -> Uncancellable<T> {
-        .init { await transform(self.value) }
+        .init(function: function, file: file, line: line) { await transform(self.value) }
     }
 }
 

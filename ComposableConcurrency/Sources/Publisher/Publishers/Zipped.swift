@@ -23,31 +23,47 @@ import Queue
 
 public extension Publisher {
     func zip<Other>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         _ other: Publisher<Other>
     ) -> Publisher<(Output, Other)> {
-        Zipped(self, other)
+        Zipped(function: function, file: file, line: line, self, other)
     }
 }
 
 public func Zipped<Left, Right>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ left: Publisher<Left>,
     _ right: Publisher<Right>
 ) -> Publisher<(Left, Right)> {
-    zip(left, right)
+    zip(function: function, file: file, line: line, left, right)
 }
 
 public func zip<Left, Right>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ left: Publisher<Left>,
     _ right: Publisher<Right>
 ) -> Publisher<(Left, Right)> {
     .init { resumption, downstream in
         let cancellable = Queue<Zip<Left, Right>.Action>(buffering: .bufferingOldest(2))
             .fold(
+                function: function,
+                file: file,
+                line: line,
                 onStartup: resumption,
-                into: Zip<Left, Right>.folder(left: left, right: right, downstream: downstream)
+                into: Zip<Left, Right>.folder(
+                    left: left,
+                    right: right,
+                    downstream: downstream
+                )
             )
             .cancellable
-        return .init {
+        return .init(function: function, file: file, line: line) {
             try await withTaskCancellationHandler(
                 operation: {
                     _ = try await cancellable.value
@@ -60,36 +76,70 @@ public func zip<Left, Right>(
 }
 
 public func zip<A, B, C>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ one: Publisher<A>,
     _ two: Publisher<B>,
     _ three: Publisher<C>
 ) -> Publisher<(A, B, C)> {
-    zip(zip(one, two), three)
-        .map { ($0.0.0, $0.0.1, $0.1) }
+    zip(
+        function: function, file: file, line: line,
+        zip(function: function, file: file, line: line, one, two),
+        three
+    )
+    .map {
+        ($0.0.0, $0.0.1, $0.1)
+    }
 }
 
 public func zip<A, B, C, D>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ one: Publisher<A>,
     _ two: Publisher<B>,
     _ three: Publisher<C>,
     _ four: Publisher<D>
 ) -> Publisher<(A, B, C, D)> {
-    zip(zip(one, two), zip(three, four))
-        .map { ($0.0.0, $0.0.1, $0.1.0, $0.1.1) }
+    zip(
+        function: function, file: file, line: line,
+        zip(function: function, file: file, line: line, one, two),
+        zip(function: function, file: file, line: line, three, four)
+    )
+    .map {
+        ($0.0.0, $0.0.1, $0.1.0, $0.1.1)
+    }
 }
 
 public func zip<A, B, C, D, E>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ one: Publisher<A>,
     _ two: Publisher<B>,
     _ three: Publisher<C>,
     _ four: Publisher<D>,
     _ five: Publisher<E>
 ) -> Publisher<(A, B, C, D, E)> {
-    zip(zip(zip(one, two), zip(three, four)), five)
-        .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1) }
+    zip(
+        function: function, file: file, line: line,
+        zip(
+            function: function, file: file, line: line,
+            zip(function: function, file: file, line: line, one, two),
+            zip(function: function, file: file, line: line, three, four)
+        ),
+        five
+    )
+    .map {
+        ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1)
+    }
 }
 
 public func zip<A, B, C, D, E, F>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ one: Publisher<A>,
     _ two: Publisher<B>,
     _ three: Publisher<C>,
@@ -97,11 +147,24 @@ public func zip<A, B, C, D, E, F>(
     _ five: Publisher<E>,
     _ six: Publisher<F>
 ) -> Publisher<(A, B, C, D, E, F)> {
-    zip(zip(zip(one, two), zip(three, four)), zip(five, six))
-        .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0, $0.1.1) }
+    zip(
+        function: function, file: file, line: line,
+        zip(
+            function: function, file: file, line: line,
+            zip(function: function, file: file, line: line, one, two),
+            zip(function: function, file: file, line: line, three, four)
+        ),
+        zip(function: function, file: file, line: line, five, six)
+    )
+    .map {
+        ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0, $0.1.1)
+    }
 }
 
 public func zip<A, B, C, D, E, F, G>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ one: Publisher<A>,
     _ two: Publisher<B>,
     _ three: Publisher<C>,
@@ -110,11 +173,26 @@ public func zip<A, B, C, D, E, F, G>(
     _ six: Publisher<F>,
     _ seven: Publisher<G>
 ) -> Publisher<(A, B, C, D, E, F, G)> {
-    zip(zip(zip(one, two), zip(three, four)), zip(zip(five, six), seven))
-        .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0.0, $0.1.0.1, $0.1.1) }
+    zip(
+        function: function, file: file, line: line,
+        zip(
+            function: function, file: file, line: line,
+            zip(function: function, file: file, line: line, one, two),
+            zip(function: function, file: file, line: line, three, four)
+        ),
+        zip(
+            function: function, file: file, line: line,
+            zip(function: function, file: file, line: line, five, six),
+            seven
+        )
+    )
+    .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0.0, $0.1.0.1, $0.1.1) }
 }
 
 public func zip<A, B, C, D, E, F, G, H>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ one: Publisher<A>,
     _ two: Publisher<B>,
     _ three: Publisher<C>,
@@ -124,6 +202,19 @@ public func zip<A, B, C, D, E, F, G, H>(
     _ seven: Publisher<G>,
     _ eight: Publisher<H>
 ) -> Publisher<(A, B, C, D, E, F, G, H)> {
-    zip(zip(zip(one, two), zip(three, four)), zip(zip(five, six), zip(seven, eight)))
-        .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0.0, $0.1.0.1, $0.1.1.0, $0.1.1.1) }
+    zip(
+        function: function, file: file, line: line,
+        zip(
+            function: function, file: file, line: line,
+            zip(function: function, file: file, line: line, one, two),
+            zip(function: function, file: file, line: line, three, four)
+        ),
+        zip(
+            function: function, file: file, line: line,
+            zip(function: function, file: file, line: line, five, six),
+            zip(function: function, file: file, line: line, seven, eight)
+        )
+    ).map {
+        ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0.0, $0.1.0.1, $0.1.1.0, $0.1.1.1)
+    }
 }

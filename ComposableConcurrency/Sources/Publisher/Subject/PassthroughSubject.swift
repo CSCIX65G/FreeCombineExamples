@@ -28,7 +28,7 @@ public func PassthroughSubject<Output>(
     buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1),
     onStartup: Resumption<Void>
 ) -> Subject<Output> {
-    .init(buffering: buffering)
+    .init(function: function, file: file, line: line, buffering: buffering)
 }
 
 public func PassthroughSubject<Output>(
@@ -38,5 +38,5 @@ public func PassthroughSubject<Output>(
     _ type: Output.Type = Output.self,
     buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1)
 ) -> Subject<Output> {
-    .init(buffering: buffering)
+    .init(function: function, file: file, line: line, buffering: buffering)
 }

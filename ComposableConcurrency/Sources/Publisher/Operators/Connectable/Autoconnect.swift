@@ -25,19 +25,7 @@ public extension Publisher {
         file: StaticString = #file,
         line: UInt = #line,
         buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1)
-    ) async throws -> Self {
-        let subject: Subject<Output> = PassthroughSubject()
-        let connectable: Connectable<Output> = .init(upstream: self, subject: subject)
-        return .init { resumption, downstream in
-            Cancellable<Cancellable<Void>> {
-                let cancellable = await subject.asyncPublisher.sink(downstream)
-                if connectable.cancellable == nil {
-                    await connectable.connect()
-                    try? connectable.cancellable?.release()
-                }
-                resumption.resume()
-                return cancellable
-            }.join()
-        }
+    ) async -> Connectable<Output> {
+        await .init(upstream: self, autoconnect: true, buffering: buffering)
     }
 }

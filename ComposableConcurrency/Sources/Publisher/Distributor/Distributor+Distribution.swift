@@ -55,7 +55,6 @@ extension Distributor {
                     resultArg: value,
                     channel: returnChannel
                 )
-//                .successes.mapValues(\.invocation)
                 upstreamResumption.resume()
             case let .subscribe(invocation, idResumption):
                 var inv = invocation
@@ -98,11 +97,10 @@ extension Distributor {
                 resumption.resume(throwing: CompletionError(completion: completion))
             case let .value(_, upstreamResumption):
                 upstreamResumption.resume()
-            case let .subscribe(_, idResumption):
+            case let .subscribe(invocation, idResumption):
+                invocation.resumption.resume(throwing: CancellationError())
                 idResumption.resume(throwing: CancellationError())
-            case .cancel:
-                ()
-            case .unsubscribe:
+            case .cancel, .unsubscribe:
                 ()
         }
     }

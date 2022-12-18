@@ -36,7 +36,7 @@ class SubjectTests: XCTestCase {
         let release = await Promise<Void>()
 
         let subject = PassthroughSubject(Int.self)
-        let p = subject.publisher()
+        let p = subject.asyncPublisher()
 
         let can = await p.sink { result in
             switch result {
@@ -201,9 +201,9 @@ class SubjectTests: XCTestCase {
         let fz1 = fseq1.zip(fseq2)
         let fz2 = fz1.map { left, right in String(left) + String(right) }
 
-        let fm1 = fsubject1.publisher()
+        let fm1 = fsubject1.asyncPublisher()
             .map(String.init)
-            .merge(with: fsubject2.publisher())
+            .merge(with: fsubject2.asyncPublisher())
 
         let counter = Counter()
         let c1 = await fz2

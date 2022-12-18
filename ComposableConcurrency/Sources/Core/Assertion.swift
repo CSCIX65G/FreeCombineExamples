@@ -24,10 +24,10 @@ extension Assertion {
     static var runningTests = false
 
     public static func assert(
-        _ condition: @autoclosure () -> Bool,
-        _ message: @autoclosure () -> String = String(),
         file: StaticString = #file,
-        line: UInt = #line
+        line: UInt = #line,
+        _ condition: @autoclosure () -> Bool,
+        _ message: @autoclosure () -> String = String()
     ) {
         if !runningTests {
             Swift.assert(condition(), message(), file: file, line: line)
@@ -35,9 +35,9 @@ extension Assertion {
     }
 
     public static func assertionFailure(
-        _ message: @autoclosure () -> String = String(),
         file: StaticString = #file,
-        line: UInt = #line
+        line: UInt = #line,
+        _ message: @autoclosure () -> String = String()
     ) {
         if !runningTests {
             Swift.assertionFailure(message(), file: file, line: line)

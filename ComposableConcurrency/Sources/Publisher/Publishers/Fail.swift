@@ -19,19 +19,25 @@
 //  limitations under the License.
 //
 public func Fail<Output>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ t: Output.Type = Output.self,
     _ e: Swift.Error
 ) -> Publisher<Output> {
-    .init(t, e)
+    .init(function: function, file: file, line: line, t, e)
 }
 
 public extension Publisher {
     init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         _: Output.Type = Output.self,
         _ error: Swift.Error
     ) {
         self = .init { resumption, downstream in
-            .init {
+            .init(function: function, file: file, line: line) {
                 try await downstream(.completion(.failure(error)))
             }
         }

@@ -19,24 +19,35 @@
 //  limitations under the License.
 //
 public extension Publisher  {
-    func concat(_ other: Publisher<Output>) -> Publisher<Output> {
-        .init(concatenating: [self, other])
+    func concat(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        _ other: Publisher<Output>
+    ) -> Publisher<Output> {
+        .init(function: function, file: file, line: line, concatenating: [self, other])
     }
 }
 
 public func Concat<Output, S: Sequence>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ publishers: S
 ) -> Publisher<Output> where S.Element == Publisher<Output>{
-    .init(concatenating: publishers)
+    .init(function: function, file: file, line: line, concatenating: publishers)
 }
 
 public extension Publisher {
     init<S: Sequence>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         concatenating publishers: S
     ) where S.Element == Publisher<Output> {
         self = .init { resumption, downstream  in
             let flattenedDownstream = flattener(downstream)
-            return .init {
+            return .init(function: function, file: file, line: line) {
                 resumption.resume()
                 for p in publishers {
                     try await p(flattenedDownstream).value
@@ -48,32 +59,44 @@ public extension Publisher {
 }
 
 public func Concat<Element>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ publishers: Publisher<Element>...
 ) -> Publisher<Element> {
-    .init(concatenating: publishers)
+    .init(function: function, file: file, line: line, concatenating: publishers)
 }
 
 public extension Publisher {
     init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         concatenating publishers: Publisher<Output>...
     ) {
-        self = .init(concatenating: publishers)
+        self = .init(function: function, file: file, line: line, concatenating: publishers)
     }
 }
 
 public func Concat<Element>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ publishers: @escaping () async -> Publisher<Element>?
 ) -> Publisher<Element> {
-    .init(flattening: publishers)
+    .init(function: function, file: file, line: line, flattening: publishers)
 }
 
 public extension Publisher {
     init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         flattening: @escaping () async -> Publisher<Output>?
     ) {
         self = .init { resumption, downstream  in
             let flattenedDownstream = flattener(downstream)
-            return .init {
+            return .init(function: function, file: file, line: line) {
                 resumption.resume()
                 while let p = await flattening() { try await p(flattenedDownstream).value }
                 return try await downstream(.completion(.finished))

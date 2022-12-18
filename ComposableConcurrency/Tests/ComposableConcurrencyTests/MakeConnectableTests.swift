@@ -33,10 +33,10 @@ class MakeConnectableTests: XCTestCase {
         let promise1 = await Promise<Void>()
         let promise2 = await Promise<Void>()
 
-        let connectable = UnfoldedSequence(0 ..< 100)
+        let connectable = await UnfoldedSequence(0 ..< 100)
             .makeConnectable()
 
-        let p = connectable.asyncPublisher
+        let p = connectable.asyncPublisher()
 
         let counter1 = Counter()
         let u1 = await p.sink { (result: Publisher<Int>.Result) in
@@ -80,7 +80,7 @@ class MakeConnectableTests: XCTestCase {
             }
         }
 
-        await connectable.connect()
+        try connectable.connect()
 
         _ = try await u1.value
         _ = try await u2.value
@@ -90,12 +90,12 @@ class MakeConnectableTests: XCTestCase {
     func testSubjectMakeConnectable() async throws {
         let subj = PassthroughSubject(Int.self)
 
-        let connectable = subj
-            .asyncPublisher
+        let connectable = await subj
+            .asyncPublisher()
             .makeConnectable()
 
         let counter1 = Counter()
-        let u1 = await connectable.asyncPublisher.sink({ result in
+        let u1 = await connectable.asyncPublisher().sink { result in
             switch result {
                 case .value:
                     counter1.increment()
@@ -110,10 +110,10 @@ class MakeConnectableTests: XCTestCase {
                     }
                     return
             }
-        })
+        }
 
         let counter2 = Counter()
-        let u2 = await connectable.asyncPublisher.sink { (result: Publisher<Int>.Result) in
+        let u2 = await connectable.asyncPublisher().sink { (result: Publisher<Int>.Result) in
             switch result {
                 case .value:
                     counter2.increment()
@@ -130,7 +130,7 @@ class MakeConnectableTests: XCTestCase {
             }
         }
 
-        await connectable.connect()
+        try connectable.connect()
 
         for i in (0 ..< 100) {
             do { try await subj.send(i) }

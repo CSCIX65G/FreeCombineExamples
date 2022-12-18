@@ -24,7 +24,7 @@ public extension Publisher {
         file: StaticString = #file,
         line: UInt = #line,
         buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1)
-    ) -> Connectable<Output> {
-        .init(upstream: self, buffering: buffering)
+    ) async -> Connectable<Output> {
+        await .init(upstream: self, buffering: buffering)
     }
 }

@@ -18,14 +18,24 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-public func Deferred<Element>(from flattable: Publisher<Element>) -> Publisher<Element> {
-    .init(from: flattable)
+public func Deferred<Element>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
+    from flattable: Publisher<Element>
+) -> Publisher<Element> {
+    .init(function: function, file: file, line: line, from: flattable)
 }
 
 extension Publisher {
-    init(from flattable: Publisher<Output>) {
+    init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        from flattable: Publisher<Output>
+    ) {
         self = .init { resumption, downstream in
-            .init {
+            .init(function: function, file: file, line: line) {
                 resumption.resume()
                 return try await flattable(downstream).value
             }
@@ -34,15 +44,23 @@ extension Publisher {
 }
 
 public func Deferred<Element>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     flattener: @escaping () async -> Publisher<Element>
 ) -> Publisher<Element> {
-    .init(from: flattener)
+    .init(function: function, file: file, line: line, from: flattener)
 }
 
 extension Publisher {
-    init(from flattener: @escaping () async throws -> Publisher<Output>) {
+    init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        from flattener: @escaping () async throws -> Publisher<Output>
+    ) {
         self = .init { resumption, downstream in
-            .init {
+            .init(function: function, file: file, line: line) {
                 resumption.resume()
                 let p = try await flattener()
                 let c = await p(downstream)

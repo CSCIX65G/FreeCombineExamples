@@ -23,31 +23,43 @@ import Queue
 
 public extension Publisher {
     func select<Other>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         _ other: Publisher<Other>
     ) -> Publisher<Either<Output, Other>> {
-        Selected(self, other)
+        Selected(function: function, file: file, line: line, self, other)
     }
 }
 
 public func Selected<Left, Right>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ left: Publisher<Left>,
     _ right: Publisher<Right>
 ) -> Publisher<Either<Left, Right>> {
-    select(left, right)
+    select(function: function, file: file, line: line, left, right)
 }
 
 public func select<Left, Right>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ left: Publisher<Left>,
     _ right: Publisher<Right>
 ) -> Publisher<Either<Left, Right>> {
     .init { resumption, downstream in
         let cancellable = Queue<Select<Left, Right>.Action>(buffering: .bufferingOldest(2))
             .fold(
+                function: function,
+                file: file,
+                line: line,
                 onStartup: resumption,
                 into: Select<Left, Right>.folder(left: left, right: right, downstream: downstream)
             )
             .cancellable
-        return .init {
+        return .init(function: function, file: file, line: line) {
             try await withTaskCancellationHandler(
                 operation: {
                     _ = try await cancellable.value
@@ -60,51 +72,78 @@ public func select<Left, Right>(
 }
 
 public func select<A, B, C>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ one: Publisher<A>,
     _ two: Publisher<B>,
     _ three: Publisher<C>
 ) -> Publisher<OneOfThree<A, B, C>> {
-    select(select(one, two), three)
-        .map { switch $0 {
-            case let .left(.left(value)): return .one(value)
-            case let .left(.right(value)): return .two(value)
-            case let .right(value): return .three(value)
-        } }
+    select(
+        function: function, file: file, line: line,
+        select(function: function, file: file, line: line, one, two),
+        three
+    )
+    .map { switch $0 {
+        case let .left(.left(value)): return .one(value)
+        case let .left(.right(value)): return .two(value)
+        case let .right(value): return .three(value)
+    } }
 }
 
 public func select<A, B, C, D>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ one: Publisher<A>,
     _ two: Publisher<B>,
     _ three: Publisher<C>,
     _ four: Publisher<D>
 ) -> Publisher<OneOfFour<A, B, C, D>> {
-    select(select(one, two), select(three, four))
-        .map { switch $0 {
-            case let .left(.left(value)): return .one(value)
-            case let .left(.right(value)): return .two(value)
-            case let .right(.left(value)): return .three(value)
-            case let .right(.right(value)): return .four(value)
-        }  }
+    select(
+        function: function, file: file, line: line,
+        select(function: function, file: file, line: line, one, two),
+        select(function: function, file: file, line: line, three, four)
+    )
+    .map { switch $0 {
+        case let .left(.left(value)): return .one(value)
+        case let .left(.right(value)): return .two(value)
+        case let .right(.left(value)): return .three(value)
+        case let .right(.right(value)): return .four(value)
+    }  }
 }
 
 public func select<A, B, C, D, E>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ one: Publisher<A>,
     _ two: Publisher<B>,
     _ three: Publisher<C>,
     _ four: Publisher<D>,
     _ five: Publisher<E>
 ) -> Publisher<OneOfFive<A, B, C, D, E>> {
-    select(select(select(one, two), select(three, four)), five)
-        .map { switch $0 {
-            case let .left(.left(.left(one))): return .one(one)
-            case let .left(.left(.right(two))): return .two(two)
-            case let .left(.right(.left(three))): return .three(three)
-            case let .left(.right(.right(four))): return .four(four)
-            case let .right(five): return .five(five)
-        } }
+    select(
+        function: function, file: file, line: line,
+        select(
+            function: function, file: file, line: line,
+            select(function: function, file: file, line: line, one, two),
+            select(function: function, file: file, line: line, three, four)
+        ), five
+    )
+    .map { switch $0 {
+        case let .left(.left(.left(one))): return .one(one)
+        case let .left(.left(.right(two))): return .two(two)
+        case let .left(.right(.left(three))): return .three(three)
+        case let .left(.right(.right(four))): return .four(four)
+        case let .right(five): return .five(five)
+    } }
 }
 
 public func select<A, B, C, D, E, F>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ one: Publisher<A>,
     _ two: Publisher<B>,
     _ three: Publisher<C>,
@@ -112,18 +151,29 @@ public func select<A, B, C, D, E, F>(
     _ five: Publisher<E>,
     _ six: Publisher<F>
 ) -> Publisher<OneOfSix<A, B, C, D, E, F>> {
-    select(select(select(one, two), select(three, four)), select(five, six))
-        .map { switch $0 {
-            case let .left(.left(.left(one))): return .one(one)
-            case let .left(.left(.right(two))): return .two(two)
-            case let .left(.right(.left(three))): return .three(three)
-            case let .left(.right(.right(four))): return .four(four)
-            case let .right(.left(five)): return .five(five)
-            case let .right(.right(six)): return .six(six)
-        } }
+    select(
+        function: function, file: file, line: line,
+        select(
+            function: function, file: file, line: line,
+            select(function: function, file: file, line: line, one, two),
+            select(function: function, file: file, line: line, three, four)
+        ),
+        select(function: function, file: file, line: line, five, six)
+    )
+    .map { switch $0 {
+        case let .left(.left(.left(one))): return .one(one)
+        case let .left(.left(.right(two))): return .two(two)
+        case let .left(.right(.left(three))): return .three(three)
+        case let .left(.right(.right(four))): return .four(four)
+        case let .right(.left(five)): return .five(five)
+        case let .right(.right(six)): return .six(six)
+    } }
 }
 
 public func select<A, B, C, D, E, F, G>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ one: Publisher<A>,
     _ two: Publisher<B>,
     _ three: Publisher<C>,
@@ -132,19 +182,34 @@ public func select<A, B, C, D, E, F, G>(
     _ six: Publisher<F>,
     _ seven: Publisher<G>
 ) -> Publisher<OneOfSeven<A, B, C, D, E, F, G>> {
-    select(select(select(one, two), select(three, four)), select(select(five, six), seven))
-        .map { switch $0 {
-            case let .left(.left(.left(one))): return .one(one)
-            case let .left(.left(.right(two))): return .two(two)
-            case let .left(.right(.left(three))): return .three(three)
-            case let .left(.right(.right(four))): return .four(four)
-            case let .right(.left(.left(five))): return .five(five)
-            case let .right(.left(.right(six))): return .six(six)
-            case let .right(.right(seven)): return .seven(seven)
-        } }
+    select(
+        function: function, file: file, line: line,
+        select(
+            function: function, file: file, line: line,
+            select(function: function, file: file, line: line, one, two),
+            select(function: function, file: file, line: line, three, four)
+        ),
+        select(
+            function: function, file: file, line: line,
+            select(function: function, file: file, line: line, five, six),
+            seven
+        )
+    )
+    .map { switch $0 {
+        case let .left(.left(.left(one))): return .one(one)
+        case let .left(.left(.right(two))): return .two(two)
+        case let .left(.right(.left(three))): return .three(three)
+        case let .left(.right(.right(four))): return .four(four)
+        case let .right(.left(.left(five))): return .five(five)
+        case let .right(.left(.right(six))): return .six(six)
+        case let .right(.right(seven)): return .seven(seven)
+    } }
 }
 
 public func select<A, B, C, D, E, F, G, H>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ one: Publisher<A>,
     _ two: Publisher<B>,
     _ three: Publisher<C>,
@@ -154,15 +219,27 @@ public func select<A, B, C, D, E, F, G, H>(
     _ seven: Publisher<G>,
     _ eight: Publisher<H>
 ) -> Publisher<OneOfEight<A, B, C, D, E, F, G, H>> {
-    select(select(select(one, two), select(three, four)), select(select(five, six), select(seven, eight)))
-        .map { switch $0 {
-            case let .left(.left(.left(one))): return .one(one)
-            case let .left(.left(.right(two))): return .two(two)
-            case let .left(.right(.left(three))): return .three(three)
-            case let .left(.right(.right(four))): return .four(four)
-            case let .right(.left(.left(five))): return .five(five)
-            case let .right(.left(.right(six))): return .six(six)
-            case let .right(.right(.left(seven))): return .seven(seven)
-            case let .right(.right(.right(eight))): return .eight(eight)
-        } }
+    select(
+        function: function, file: file, line: line,
+        select(
+            function: function, file: file, line: line,
+            select(function: function, file: file, line: line, one, two),
+            select(function: function, file: file, line: line, three, four)
+        ),
+        select(
+            function: function, file: file, line: line,
+            select(function: function, file: file, line: line, five, six),
+            select(function: function, file: file, line: line, seven, eight)
+        )
+    )
+    .map { switch $0 {
+        case let .left(.left(.left(one))): return .one(one)
+        case let .left(.left(.right(two))): return .two(two)
+        case let .left(.right(.left(three))): return .three(three)
+        case let .left(.right(.right(four))): return .four(four)
+        case let .right(.left(.left(five))): return .five(five)
+        case let .right(.left(.right(six))): return .six(six)
+        case let .right(.right(.left(seven))): return .seven(seven)
+        case let .right(.right(.right(eight))): return .eight(eight)
+    } }
 }

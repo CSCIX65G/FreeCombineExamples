@@ -71,7 +71,7 @@ public extension Distributor {
         operation: @escaping @Sendable (Publisher<Output>.Result) async throws -> Void
     ) -> Cancellable<Cancellable<Void>> {
         .init {
-          try await self.subscribe(function: function, file: file, line: line, operation: operation)
+            try await self.subscribe(function: function, file: file, line: line, operation: operation)
         }
     }
 
@@ -88,8 +88,13 @@ public extension Distributor {
             operation
         )
         let subscriptionId: ObjectIdentifier = try await pause { idResumption in
-            do { try distributionFold.send(.subscribe(invocation, idResumption)) }
-            catch { try? idResumption.tryResume(throwing: SubscriptionError()) }
+            do {
+                try distributionFold.send(.subscribe(invocation, idResumption))
+            }
+            catch {
+                invocation.resumption.resume(throwing: error)
+                try? idResumption.tryResume(throwing: error)
+            }
         }
 
         return .init(function: function, file: file, line: line) {
@@ -116,9 +121,7 @@ public extension Distributor {
     func send(_ value: Output) async throws {
         try await pause { resumption in
             do { try valueFold.send(.syncValue(.value(value), resumption)) }
-            catch {
-                resumption.resume(throwing: error)
-            }
+            catch {  resumption.resume(throwing: error) }
         }
     }
 

@@ -61,6 +61,16 @@ extension Distributor {
                         throw CompletionError(completion: completion)
                 }
                 return .none
+            },
+            disposer: { action, completion in
+                switch action {
+                    case .asyncValue, .asyncCompletion:
+                        ()
+                    case let .syncValue(_, resumption):
+                        resumption.resume(throwing: CancellationError())
+                    case let .syncCompletion(_, resumption):
+                        resumption.resume(throwing: CancellationError())
+                }
             }
         )
     }

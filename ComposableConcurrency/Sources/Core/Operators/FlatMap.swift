@@ -22,17 +22,23 @@ import Foundation
 
 public extension Cancellable {
     func flatMap<T>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         _ transform: @escaping (Output) async -> Cancellable<T>
     ) -> Cancellable<T> {
-        map(transform).join()
+        map(transform).join(function: function, file: file, line: line)
     }
 }
 
 extension Uncancellable {
     public func flatMap<T>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         _ transform: @escaping (Output) async -> Uncancellable<T>
     ) -> Uncancellable<T> {
-        map(transform).join()
+        map(transform).join(function: function, file: file, line: line)
     }
 }
 

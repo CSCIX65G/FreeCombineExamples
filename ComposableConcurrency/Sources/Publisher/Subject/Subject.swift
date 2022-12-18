@@ -37,7 +37,7 @@ public final class Subject<Output: Sendable> {
         self.function = function
         self.file = file
         self.line = line
-        distributor = .init(buffering: buffering, initialValue: initialValue)
+        distributor = .init(function: function, file: file, line: line, buffering: buffering, initialValue: initialValue)
     }
 }
 
@@ -104,23 +104,28 @@ public extension Publisher {
         distributor: Distributor<Output>
     ) {
         self = .init { resumption, downstream in
-            Cancellable<Cancellable<Void>> {
-                let cancellable = try await distributor.subscribe { result in
-                    _ = try await downstream(result)
+            Cancellable<Cancellable<Void>>(function: function, file: file, line: line) {
+                do {
+                    let cancellable = try await distributor.subscribe { result in
+                        _ = try await downstream(result)
+                    }
+                    resumption.resume()
+                    return cancellable
+                } catch {
+                    resumption.resume(throwing: error)
+                    throw error
                 }
-                resumption.resume()
-                return cancellable
-            }.join()
+            }.join(function: function, file: file, line: line)
         }
     }
 }
 
 public extension Subject {
     var asyncPublisher: Publisher<Output> {
-        publisher()
+        asyncPublisher()
     }
 
-    func publisher(
+    func asyncPublisher(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line

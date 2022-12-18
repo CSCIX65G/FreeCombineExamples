@@ -21,20 +21,11 @@
 import Core
 
 public extension Publisher {
-    func share() async throws -> Self {
-        let subject: Subject<Output> = PassthroughSubject()
-        let upstreamBox: MutableBox<Cancellable<Void>?> = .init(value: .none)
-        return .init { resumption, downstream in
-            Cancellable<Cancellable<Void>> {
-                let cancellable = await subject.asyncPublisher.sink(downstream)
-                if  upstreamBox.value == nil {
-                    let upstream = await self.sink(subject.send)
-                    try? upstream.release()
-                    upstreamBox.set(value: upstream)
-                }
-                resumption.resume()
-                return cancellable
-            }.join()
-        }
+    func share(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) async -> Connectable<Output> {
+        await .init(upstream: self)
     }
 }

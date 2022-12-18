@@ -23,38 +23,53 @@ import Queue
 
 public extension Publisher {
     func merge(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         with upstream2: Publisher<Output>,
         _ otherUpstreams: Publisher<Output>...
     ) -> Publisher<Output> {
-        Merged(self, upstream2, otherUpstreams)
+        Merged(function: function, file: file, line: line, self, upstream2, otherUpstreams)
     }
 }
 
 public func Merged<Output, S: Sequence>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ upstream1: Publisher<Output>,
     _ upstream2: Publisher<Output>,
     _ otherUpstreams: S
 ) -> Publisher<Output> where S.Element == Publisher<Output> {
-    merge(publishers: upstream1, upstream2, otherUpstreams)
+    merge(function: function, file: file, line: line, publishers: upstream1, upstream2, otherUpstreams)
 }
 
 public func Merged<Output>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ upstream1: Publisher<Output>,
     _ upstream2: Publisher<Output>,
     _ otherUpstreams: Publisher<Output>...
 ) -> Publisher<Output> {
-    merge(publishers: upstream1, upstream2, otherUpstreams)
+    merge(function: function, file: file, line: line, publishers: upstream1, upstream2, otherUpstreams)
 }
 
 public func merge<Output>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     publishers upstream1: Publisher<Output>,
     _ upstream2: Publisher<Output>,
     _ otherUpstreams: Publisher<Output>...
 ) -> Publisher<Output> {
-    merge(publishers: upstream1, upstream2, otherUpstreams)
+    merge(function: function, file: file, line: line, publishers: upstream1, upstream2, otherUpstreams)
 }
 
 public func merge<Output, S: Sequence>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     publishers upstream1: Publisher<Output>,
     _ upstream2: Publisher<Output>,
     _ otherUpstreams: S
@@ -62,6 +77,9 @@ public func merge<Output, S: Sequence>(
     .init { resumption, downstream in
         let cancellable = Queue<Merge<Output>.Action>(buffering: .bufferingOldest(2 + otherUpstreams.underestimatedCount))
             .fold(
+                function: function,
+                file: file,
+                line: line,
                 onStartup: resumption,
                 into: Merge<Output>.folder(
                     publishers: [upstream1, upstream2] + otherUpstreams,
@@ -69,7 +87,7 @@ public func merge<Output, S: Sequence>(
                 )
             )
             .cancellable
-        return .init {
+        return .init(function: function, file: file, line: line) {
             try await withTaskCancellationHandler(
                 operation: {
                     _ = try await cancellable.value
@@ -82,6 +100,9 @@ public func merge<Output, S: Sequence>(
 }
 
 public func merge<Output, S: Sequence>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     publishers: S
 ) -> Publisher<Output> where S.Element == Publisher<Output> {
     let array = Array(publishers)
@@ -89,10 +110,10 @@ public func merge<Output, S: Sequence>(
         case 1:
             return array[0]
         case 2:
-            return Merged(array[0], array[1])
+            return Merged(function: function, file: file, line: line, array[0], array[1])
         case 3... :
-            return Merged(array[0], array[1], array[2...])
+            return Merged(function: function, file: file, line: line, array[0], array[1], array[2...])
         default:
-            return Publisher<Output>.init()
+            return Publisher<Output>.init(function: function, file: file, line: line)
     }
 }

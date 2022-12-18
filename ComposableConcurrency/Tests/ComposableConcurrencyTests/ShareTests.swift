@@ -43,7 +43,7 @@ final class ShareTests: XCTestCase {
         let upstreamCounter = Counter()
         let upstreamValue = MutableBox<Int>(value: -1)
         let upstreamShared = MutableBox<Bool>(value: false)
-        let shared = try await (0 ..< n)
+        let shared = await (0 ..< n)
             .asyncPublisher
             .handleEvents(
                 receiveDownstream: { _ in
@@ -71,7 +71,7 @@ final class ShareTests: XCTestCase {
 
         let counter1 = Counter()
         let value1 = MutableBox<Int>(value: 0)
-        let u1 = await shared.sink { result in
+        let u1 = await shared.asyncPublisher().sink { result in
             switch result {
                 case let .value(value):
                     guard value == counter1.count else {
@@ -100,7 +100,7 @@ final class ShareTests: XCTestCase {
 
         let counter2 = Counter()
         let value2 = MutableBox<Int>(value: 0)
-        let u2 = await shared.sink { result in
+        let u2 = await shared.asyncPublisher().sink { result in
             switch result {
                 case let .value(value):
                     counter2.increment()
@@ -121,6 +121,8 @@ final class ShareTests: XCTestCase {
                     return
             }
         }
+
+        try shared.connect()
 
         _ = await u1.result
         _ = await u2.result

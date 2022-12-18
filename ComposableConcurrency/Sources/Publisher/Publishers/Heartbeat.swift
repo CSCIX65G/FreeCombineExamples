@@ -24,17 +24,32 @@ import Core
 #if swift(>=5.7)
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 public func Heartbeat<C: Clock>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     clock: C,
     interval: Swift.Duration,
     tolerance: Swift.Duration? = .none,
     endingBefore:  C.Instant? = .none,
     tickAtStart: Bool = false
 ) -> Publisher<C.Instant> where C.Duration == Swift.Duration {
-    .init(clock: clock, interval: interval, tolerance: tolerance, endingBefore: endingBefore, tickAtStart: tickAtStart)
+    .init(
+        function: function,
+        file: file,
+        line: line,
+        clock: clock,
+        interval: interval,
+        tolerance: tolerance,
+        endingBefore: endingBefore,
+        tickAtStart: tickAtStart
+    )
 }
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 public func Heartbeat<C: Clock>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     clock: C,
     interval: Swift.Duration,
     tolerance: Swift.Duration? = .none,
@@ -42,6 +57,9 @@ public func Heartbeat<C: Clock>(
     tickAtStart: Bool = false
 ) -> Publisher<C.Instant> where C.Duration == Swift.Duration {
     .init(
+        function: function,
+        file: file,
+        line: line,
         clock: clock,
         interval: interval,
         tolerance: tolerance,
@@ -53,6 +71,9 @@ public func Heartbeat<C: Clock>(
 extension Publisher {
     @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
     public init<C: Clock>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
         clock: C,
         interval: Swift.Duration,
         tolerance: Swift.Duration? = .none,
@@ -60,7 +81,7 @@ extension Publisher {
         tickAtStart: Bool = false
     ) where Output == C.Instant, C.Duration == Swift.Duration {
         self = Publisher<C.Instant> { resumption, downstream in
-            .init {
+            .init(function: function, file: file, line: line) {
                 let start = clock.now
                 var ticks: Int64 = .zero
                 let components = interval.components

@@ -29,7 +29,7 @@ public func CurrentValueSubject<Output>(
     onStartup: Resumption<Void>,
     _ initialValue: Output
 ) -> Subject<Output> {
-    .init(buffering: buffering, initialValue: initialValue)
+    .init(function: function, file: file, line: line, buffering: buffering, initialValue: initialValue)
 }
 
 public func CurrentValueSubject<Output>(
@@ -40,5 +40,5 @@ public func CurrentValueSubject<Output>(
     buffering: AsyncStream<Output>.Continuation.BufferingPolicy = .bufferingOldest(1),
     _ initialValue: Output
 ) -> Subject<Output> {
-    .init(buffering: buffering, initialValue: initialValue)
+    .init(function: function, file: file, line: line, buffering: buffering, initialValue: initialValue)
 }

@@ -20,13 +20,18 @@
 //
 import Core
 public extension Publisher {
-    func multicast(_ subject: Subject<Output>) -> Connectable<Output> {
-        .init(upstream: self, subject: subject)
+    func multicast(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        _ subject: Subject<Output>
+    ) async -> Connectable<Output> {
+        await .init(upstream: self, subject: subject)
     }
 
     func multicast(
         _ generator: @escaping () -> Subject<Output>
     ) async -> Connectable<Output> {
-        return multicast(generator())
+        return await multicast(generator())
     }
 }

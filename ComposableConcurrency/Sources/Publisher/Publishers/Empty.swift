@@ -19,9 +19,12 @@
 //  limitations under the License.
 //
 public func Empty<Output>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
     _ elementType: Output.Type = Output.self
 ) -> Publisher<Output> {
-    .init(elementType)
+    .init(function: function, file: file, line: line, elementType)
 }
 
 public extension Publisher {
@@ -29,9 +32,14 @@ public extension Publisher {
         Empty(Output.self)
     }
 
-    init( _: Output.Type = Output.self) {
+    init(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        _: Output.Type = Output.self
+    ) {
         self = .init { resumption, downstream in
-            .init {
+            .init(function: function, file: file, line: line) {
                 resumption.resume()
                 return try await downstream(.completion(.finished))
             }

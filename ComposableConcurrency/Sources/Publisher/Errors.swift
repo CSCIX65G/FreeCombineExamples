@@ -8,3 +8,4 @@
 struct MergeCancellationFailureError: Error { let id: Int }
 struct ZipCancellationFailureError: Error { }
 struct SelectCancellationFailureError: Error { }
+struct ConnectableCompletionError: Error { }

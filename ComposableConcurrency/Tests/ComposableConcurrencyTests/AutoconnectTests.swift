@@ -36,22 +36,17 @@ class AutoconnectTests: XCTestCase {
          is connected.  The second subscriber will see only those published
          values that occur after it subscribes.  In some cases it will see zero
          */
-        let promise1 = await Promise<Void>()
-        let promise2 = await Promise<Void>()
-
         let n = 100
-        let autoconnected = try await (0 ..< n)
-            .asyncPublisher
+        let autoconnected = await (0 ..< n)
+            .asyncPublisher()
             .map { $0 * 2 }
             .autoconnect()
 
         let counter1 = Counter()
-        let value1 = MutableBox<Int>(value: -1)
-        let u1 = await autoconnected.sink { result in
+        let u1 = await autoconnected.asyncPublisher().sink { result in
             switch result {
-                case let .value(value):
+                case .value:
                     counter1.increment()
-                    value1.set(value: value)
                     return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
@@ -59,63 +54,49 @@ class AutoconnectTests: XCTestCase {
                 case .completion(.finished):
                     let count = counter1.count
                     guard count == n else {
-                        XCTFail("Incorrect count: \(count) in subscription 1")
+                        XCTAssert(count <= n, "How'd we get: \(count)?")
                         return
                     }
-                    do { try promise1.succeed() }
-                    catch { XCTFail("u1 Failed to complete with error: \(error)") }
                     return
             }
         }
 
         let counter2 = Counter()
-        let value2 = MutableBox<Int>(value: -1)
-        let u2 = await autoconnected.sink { result in
+        let u2 = await autoconnected.asyncPublisher().sink { result in
             switch result {
-                case let .value(value):
+                case .value:
                     counter2.increment()
-                    value2.set(value: value)
                     return
-                case let .completion(.failure(error)):
-                    XCTFail("u2 completed with error: \(error)")
-                    do { try promise2.succeed() }
-                    catch { XCTFail("u2 Failed to complete with error: \(error)") }
-                    return
-                case .completion(.finished):
+                case .completion:
                     // NB: the number of values received here is unpredictable
                     // and may be anything 0 ... n
                     let count = counter2.count
-                    XCTAssert(count <= n, "How'd we get so many?")
-                    do { try promise2.succeed() }
-                    catch { XCTFail("u2 Failed to complete with error: \(error)") }
+                    XCTAssert(count <= n, "How'd we get: \(count)?")
                     return
             }
         }
 
         _ = await u1.result
-        try? u2.cancel()
         _ = await u2.result
+        _ = await autoconnected.result
     }
 
-    func xtestSimpleShortAutoconnect() async throws {
+    func testSimpleShortAutoconnect() async throws {
         /*
          p1 and p2 below are NOT guaranteed to see the same number of values bc
          the autoconnectd publisher begins publishing as soon as the first subscription
          is connected.  The second subscriber will see only those published
          values that occur after it subscribes.  In some cases it will see zero
          */
-        let promise1 = await Promise<Void>()
-        let promise2 = await Promise<Void>()
-
         let n = 1
-        let autoconnected = try await (0 ..< n)
-            .asyncPublisher
+        let autoconnected = await (0 ..< n)
+            .asyncPublisher()
             .map { $0 * 2 }
             .autoconnect()
 
         let counter1 = Counter()
         let value1 = MutableBox<Int>(value: -1)
-        let u1 = await autoconnected.sink({ result in
+        let u1 = await autoconnected.asyncPublisher().sink { result in
             switch result {
                 case let .value(value):
                     counter1.increment()
@@ -130,57 +111,48 @@ class AutoconnectTests: XCTestCase {
                         XCTFail("Incorrect count: \(count) in subscription 1")
                         return
                     }
-                    do { try promise1.succeed() }
-                    catch { XCTFail("u1 Failed to complete with error: \(error)") }
                     return
             }
-        })
+        }
 
         let counter2 = Counter()
         let value2 = MutableBox<Int>(value: -1)
-        let u2 = await autoconnected.sink({ result in
+        let u2 = await autoconnected.asyncPublisher().sink { result in
             switch result {
                 case let .value(value):
                     counter2.increment()
                     value2.set(value: value)
                     return
-                case let .completion(.failure(error)):
-                    XCTFail("u2 completed with error: \(error)")
-                    do { try promise2.succeed() }
-                    catch { XCTFail("u2 Failed to complete with error: \(error)") }
+                case .completion(.failure):
+                    // NB this might happen if the stream has already completed by the time
+                    // our subscription goes through
                     return
                 case .completion(.finished):
                     // NB: the number of values received here is unpredictable
-                    do { try promise2.succeed() }
-                    catch { XCTFail("u2 Failed to complete with error: \(error)") }
                     return
             }
-        })
+        }
 
         _ = await u1.result
-        try? u2.cancel()
         _ = await u2.result
     }
 
-    func xtestSimpleEmptyAutoconnect() async throws {
+    func testSimpleEmptyAutoconnect() async throws {
         /*
          p1 and p2 below are NOT guaranteed to see the same number of values bc
          the autoconnectd publisher begins publishing as soon as the first subscription
          is connected.  The second subscriber will see only those published
          values that occur after it subscribes.  In some cases it will see zero
          */
-        let promise1 = await Promise<Void>()
-        let promise2 = await Promise<Void>()
 
         let n = 0
-        let autoconnected = try await (0 ..< n)
-            .asyncPublisher
+        let autoconnected = await (0 ..< n).asyncPublisher
             .map { $0 * 2 }
             .autoconnect()
 
         let counter1 = Counter()
-        let value1 = MutableBox<Int>(value: -1)
-        let u1 = await autoconnected.sink { result in
+        let value1 = MutableBox<Int>(value: 0)
+        let u1 = await autoconnected.asyncPublisher().sink { result in
             switch result {
                 case let .value(value):
                     counter1.increment()
@@ -195,29 +167,19 @@ class AutoconnectTests: XCTestCase {
                         XCTFail("Incorrect count: \(count) in subscription 1")
                         return
                     }
-                    do { try promise1.succeed() }
-                    catch { XCTFail("u1 Failed to complete with error: \(error)") }
                     return
             }
         }
 
         let counter2 = Counter()
-        let value2 = MutableBox<Int>(value: -1)
-        let u2 = await autoconnected.sink({ result in
+        let value2 = MutableBox<Int>(value: 0)
+        let u2 = await autoconnected.asyncPublisher().sink({ result in
             switch result {
                 case let .value(value):
                     counter2.increment()
                     value2.set(value: value)
                     return
-                case let .completion(.failure(error)):
-                    XCTFail("u2 completed with error: \(error)")
-                    do { try promise2.succeed() }
-                    catch { XCTFail("u2 Failed to complete with error: \(error)") }
-                    return
-                case .completion(.finished):
-                    // NB: the number of values received here is unpredictable
-                    do { try promise2.succeed() }
-                    catch { XCTFail("u2 Failed to complete with error: \(error)") }
+                case .completion:
                     return
             }
         })
@@ -237,12 +199,12 @@ class AutoconnectTests: XCTestCase {
          Note that we don't need the `.bufferingOldest(2)` here.  Bc
          we are not trying to simultaneously subscribe and send.
          */
-        let publisher = try await subject.asyncPublisher
+        let autoconnected = await subject.asyncPublisher
             .map { $0 % 47 }
             .autoconnect()
 
         let counter1 = Counter()
-        let p1 = await publisher.sink { result in
+        let p1 = await autoconnected.asyncPublisher().sink { result in
             switch result {
                 case .value:
                     counter1.increment()
@@ -258,7 +220,7 @@ class AutoconnectTests: XCTestCase {
         }
 
         let counter2 = Counter()
-        let p2 = await publisher.sink { result in
+        let p2 = await autoconnected.asyncPublisher().sink { result in
             switch result {
                 case .value:
                     counter2.increment()

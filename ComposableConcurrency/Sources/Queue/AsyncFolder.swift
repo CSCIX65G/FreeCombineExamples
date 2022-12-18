@@ -120,9 +120,11 @@ extension AsyncFolder {
         for await action in channel.stream {
             switch error {
                 case is FinishedError:
-                    await self(action, .finished); continue
+                    await self(action, .finished)
+                    continue
                 default:
-                    await self(action, .failure(error)); continue
+                    await self(action, .failure(error))
+                    continue
             }
         }
     }
