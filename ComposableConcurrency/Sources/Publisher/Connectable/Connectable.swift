@@ -30,7 +30,9 @@ public class Connectable<Output> {
     private let autoconnect: Bool
     private let atomicIsComplete: ManagedAtomic<Bool> = .init(false)
     private let promise: Promise<Void>
+
     private(set) var cancellable: Cancellable<Void>! = .none
+    private(set) var upstreamCancellable: Cancellable<Void>! = .none
 
     public init(
         function: StaticString = #function,
@@ -50,9 +52,9 @@ public class Connectable<Output> {
         self.ownsSubject = true
         self.subject = PassthroughSubject(function: function, file: file, line: line, buffering: buffering)
         self.promise = localPromise
-        self.cancellable = Cancellable<Cancellable<Void>> {
+        self.cancellable = .init {
             _ = try await localPromise.value
-            return await self.upstream.sink(function: function, file: file, line: line) { result in
+            self.upstreamCancellable = await self.upstream.sink(function: function, file: file, line: line) { result in
                 switch result {
                     case let .value(value):
                         try await self.subject.send(value)
@@ -60,7 +62,7 @@ public class Connectable<Output> {
                         await self.complete(result)
                 }
             }
-        }.join(function: function, file: file, line: line)
+        }
     }
 
     public init(
@@ -82,9 +84,9 @@ public class Connectable<Output> {
         self.ownsSubject = ownsSubject
         self.autoconnect = autoconnect
         self.promise = localPromise
-        self.cancellable = Cancellable<Cancellable<Void>> {
+        self.cancellable = .init {
             _ = try await localPromise.value
-            return await self.upstream.sink(function: function, file: file, line: line) { result in
+            self.upstreamCancellable = await self.upstream.sink(function: function, file: file, line: line) { result in
                 switch result {
                     case let .value(value):
                         try await self.subject.send(value)
@@ -92,12 +94,16 @@ public class Connectable<Output> {
                         await self.complete(result)
                 }
             }
-        }.join(function: function, file: file, line: line)
+        }
     }
 
     public var result: AsyncResult<Void, Error> {
         get async {
-            await cancellable.result
+            _ = await upstreamCancellable?.result
+            if ownsSubject {
+                _ = await subject.result
+            }
+            return await cancellable.result
         }
     }
 
@@ -119,13 +125,11 @@ public class Connectable<Output> {
                     }
                 }
                 let downstreamCancellable = await self.subject
-                    .asyncPublisher(function: function, file: file, line: line)
+                    .asyncPublisher()
                     .sink(downstream)
+
                 if self.autoconnect {
-                    do {
-                        try self.connect(function: function, file: file, line: line)
-                        try self.cancellable.release()
-                    } catch { }
+                    try? self.connect(function: function, file: file, line: line)
                 }
                 return downstreamCancellable
             }.join()

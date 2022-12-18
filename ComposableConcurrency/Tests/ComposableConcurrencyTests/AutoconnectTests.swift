@@ -171,19 +171,9 @@ class AutoconnectTests: XCTestCase {
             }
         }
 
-        let counter2 = Counter()
-        let value2 = MutableBox<Int>(value: 0)
-        let u2 = await autoconnected.asyncPublisher().sink({ result in
-            switch result {
-                case let .value(value):
-                    counter2.increment()
-                    value2.set(value: value)
-                    return
-                case .completion:
-                    return
-            }
-        })
+        let u2 = await autoconnected.asyncPublisher().sink { _ in  }
 
+        _ = await autoconnected.result
         _ = await u1.result
         _ = await u2.result
     }
@@ -219,18 +209,14 @@ class AutoconnectTests: XCTestCase {
             }
         }
 
-        let counter2 = Counter()
         let p2 = await autoconnected.asyncPublisher().sink { result in
             switch result {
                 case .value:
-                    counter2.increment()
                     return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
                     return
                 case .completion(.finished):
-                    let count = counter2.count
-                    XCTAssert(count == 100, "Incorrect count: \(count) in subscription 2")
                     return
             }
         }
@@ -244,5 +230,6 @@ class AutoconnectTests: XCTestCase {
         _ = await p1.result
         _ = await p2.result
         _ = await subject.result
+        _ = await autoconnected.result
     }
 }

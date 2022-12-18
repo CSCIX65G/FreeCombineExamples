@@ -105,15 +105,16 @@ public extension Publisher {
     ) {
         self = .init { resumption, downstream in
             Cancellable<Cancellable<Void>>(function: function, file: file, line: line) {
+                defer { resumption.resume() }
                 do {
                     let cancellable = try await distributor.subscribe { result in
                         _ = try await downstream(result)
                     }
-                    resumption.resume()
                     return cancellable
                 } catch {
-                    resumption.resume(throwing: error)
-                    throw error
+                    return .init(function: function, file: file, line: line) {
+                        throw error
+                    }
                 }
             }.join(function: function, file: file, line: line)
         }
