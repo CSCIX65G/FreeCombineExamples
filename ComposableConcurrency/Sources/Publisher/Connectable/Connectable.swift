@@ -24,15 +24,15 @@ public class Connectable<Output> {
     private let function: StaticString
     private let file: StaticString
     private let line: UInt
-    private let upstream: Publisher<Output>
+
     private let ownsSubject: Bool
     private let autoconnect: Bool
     private let atomicIsComplete: ManagedAtomic<Bool> = .init(false)
     private let promise: Promise<Void>
 
-    let subject: Subject<Output>
+    private let downstreamSubject: Subject<Output>
 
-    private(set) var cancellable: Cancellable<Void>! = .none
+    private(set) var connector: Cancellable<Void>! = .none
     private(set) var upstreamCancellable: Cancellable<Void>! = .none
 
     public init(
@@ -48,21 +48,17 @@ public class Connectable<Output> {
         self.line = line
         let localPromise: Promise<Void> = await .init()
 
-        self.upstream = upstream
         self.autoconnect = autoconnect
         self.ownsSubject = true
-        self.subject = PassthroughSubject(function: function, file: file, line: line, buffering: buffering)
+        self.downstreamSubject = PassthroughSubject(function: function, file: file, line: line, buffering: buffering)
         self.promise = localPromise
-        self.cancellable = .init {
-            _ = try await localPromise.value
-            self.upstreamCancellable = await self.upstream.sink(function: function, file: file, line: line) { result in
-                switch result {
-                    case let .value(value):
-                        try await self.subject.send(value)
-                    case .completion:
-                        await self.complete(result)
-                }
+        self.connector = .init {
+            do { try await localPromise.value }
+            catch {
+                try? self.downstreamSubject.cancel()
+                throw error
             }
+            self.upstreamCancellable = await upstream.sink(function: function, file: file, line: line, self.sink)
         }
     }
 
@@ -80,37 +76,37 @@ public class Connectable<Output> {
         self.line = line
         let localPromise: Promise<Void> = await .init()
 
-        self.upstream = upstream
-        self.subject = subject
+        self.downstreamSubject = subject
         self.ownsSubject = ownsSubject
         self.autoconnect = autoconnect
         self.promise = localPromise
-        self.cancellable = .init {
-            _ = try await localPromise.value
-            self.upstreamCancellable = await self.upstream.sink(function: function, file: file, line: line) { result in
-                switch result {
-                    case let .value(value):
-                        try await self.subject.send(value)
-                    case .completion:
-                        await self.complete(result)
-                }
+        self.connector = .init {
+            do {
+                try await localPromise.value
+            } catch {
+                if ownsSubject { try? subject.cancel() }
+                throw error
             }
+            self.upstreamCancellable = await upstream.sink(function: function, file: file, line: line, self.sink)
         }
     }
 
     public var result: AsyncResult<Void, Error> {
         get async {
-            _ = await upstreamCancellable?.result
-            if ownsSubject {
-                _ = await subject.result
-            }
-            return await cancellable.result
+            if ownsSubject { _ = await downstreamSubject.result  }
+            _ = await connector.result
+            return await upstreamCancellable.result
         }
     }
 
-//    public var asyncPublisher: Publisher<Output> {
-//        asyncPublisher()
-//    }
+    @Sendable func sink(_ result: Publisher<Output>.Result) async throws -> Void {
+        switch result {
+            case let .value(value):
+                try await downstreamSubject.send(value)
+            case .completion:
+                await complete(result)
+        }
+    }
 
     public func asyncPublisher(
         function: StaticString = #function,
@@ -125,7 +121,7 @@ public class Connectable<Output> {
                         try await downstream(.completion(.failure(ConnectableCompletionError())))
                     }
                 }
-                let downstreamCancellable = await self.subject
+                let downstreamCancellable = await self.downstreamSubject
                     .asyncPublisher()
                     .sink(downstream)
 
@@ -149,8 +145,8 @@ public class Connectable<Output> {
         )
         guard success else { return }
         if ownsSubject {
-            try? await subject.send(result)
-            _ = await subject.result
+            try? await downstreamSubject.send(result)
+            _ = await downstreamSubject.result
         }
     }
 
@@ -160,10 +156,10 @@ public class Connectable<Output> {
         line: UInt = #line
     ) async throws -> Void {
         try promise.succeed()
-        _ = await cancellable.result
+        _ = await connector.result
     }
 
     func cancel() throws -> Void {
-        try cancellable?.cancel()
+        try promise.fail(CancellationError())
     }
 }

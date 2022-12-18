@@ -25,7 +25,7 @@ final class MulticastTests: XCTestCase {
         let subject = PassthroughSubject(Int.self)
 
         let counter1 = Counter()
-        let u1 = await subject.asyncPublisher.sink { (result: Publisher<Int>.Result) in
+        let u1 = await subject.asyncPublisher().sink { (result: Publisher<Int>.Result) in
             switch result {
                 case .value:
                     counter1.increment()
@@ -48,7 +48,7 @@ final class MulticastTests: XCTestCase {
         }
 
         let counter2 = Counter()
-        let u2 = await subject.asyncPublisher.sink { (result: Publisher<Int>.Result) in
+        let u2 = await subject.asyncPublisher().sink { (result: Publisher<Int>.Result) in
             switch result {
                 case .value:
                     counter2.increment()
@@ -113,12 +113,12 @@ final class MulticastTests: XCTestCase {
     func testSubjectMulticast() async throws {
         let subj = PassthroughSubject(Int.self)
         let upstream = PassthroughSubject(Int.self)
-        let connectable = await upstream.asyncPublisher.multicast(subj)
+        let connectable = await upstream.asyncPublisher().multicast(subj)
 
         let n = 100
 
         let counter1 = Counter()
-        let u1 = await subj.asyncPublisher.sink { result in
+        let u1 = await subj.asyncPublisher().sink { result in
             switch result {
                 case .value:
                     counter1.increment()
@@ -136,7 +136,7 @@ final class MulticastTests: XCTestCase {
         }
 
         let counter2 = Counter()
-        let u2 = await subj.asyncPublisher.sink { (result: Publisher<Int>.Result) in
+        let u2 = await subj.asyncPublisher().sink { (result: Publisher<Int>.Result) in
             switch result {
                 case .value:
                     counter2.increment()

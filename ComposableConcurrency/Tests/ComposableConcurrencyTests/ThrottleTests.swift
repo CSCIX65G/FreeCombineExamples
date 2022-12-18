@@ -54,7 +54,7 @@ final class ThrottleTests: XCTestCase {
         let values = MutableBox<[Int]>.init(value: [])
 
         let subject = PassthroughSubject(Int.self)
-        let t = await subject.asyncPublisher
+        let t = await subject.asyncPublisher()
             .handleEvents(
                 receiveOutput: { value in
                     inputCounter.increment()
@@ -100,7 +100,7 @@ final class ThrottleTests: XCTestCase {
         let inputCounter = Counter()
         let counter = Counter()
         let subject = PassthroughSubject(Int.self)
-        let t = await subject.asyncPublisher
+        let t = await subject.asyncPublisher()
             .handleEvents(receiveOutput: { _ in inputCounter.increment() })
             .throttle(clock: clock, interval: .milliseconds(100), latest: false)
             .sink({ value in
@@ -145,7 +145,7 @@ final class ThrottleTests: XCTestCase {
         let inputCounter = Counter()
         let counter = Counter()
         let subject = PassthroughSubject(Int.self)
-        let t = await subject.asyncPublisher
+        let t = await subject.asyncPublisher()
             .handleEvents(receiveOutput: { _ in inputCounter.increment() })
             .throttle(clock: clock, interval: .milliseconds(100), latest: true)
             .sink({ value in

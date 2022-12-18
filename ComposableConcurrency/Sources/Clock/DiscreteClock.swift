@@ -111,7 +111,7 @@ public final class DiscreteClock: Clock, @unchecked Sendable {
 
     private let atomicState: ManagedAtomic<State>
     private let channel: Queue<Action>
-    private var cancellable: Cancellable<Void>! = .none
+    private var connector: Cancellable<Void>! = .none
 
     public init(now: Instant = .init(), pendingSuspensions: [Suspension] = []) {
         let localChannel = Queue<Action>.init(buffering: .unbounded)
@@ -119,7 +119,7 @@ public final class DiscreteClock: Clock, @unchecked Sendable {
 
         self.atomicState = localAtomicState
         self.channel = localChannel
-        self.cancellable = .init {
+        self.connector = .init {
             for await action in localChannel.stream {
                 await self.reduce(action)
             }

@@ -26,7 +26,7 @@ class DebounceTests: XCTestCase {
         let counter = Counter()
         let subject = PassthroughSubject(Int.self)
 
-        let t = await subject.asyncPublisher
+        let t = await subject.asyncPublisher()
             .handleEvents(receiveOutput: { _ in inputCounter.increment() })
             .debounce(clock: clock, duration: .milliseconds(100))
             .sink({ value in
@@ -69,7 +69,7 @@ class DebounceTests: XCTestCase {
         let inputCounter = Counter()
         let counter = Counter()
         let subject = PassthroughSubject(Int.self)
-        let t = await subject.asyncPublisher
+        let t = await subject.asyncPublisher()
             .handleEvents(receiveOutput: { _ in inputCounter.increment() })
             .debounce(clock: clock, duration: .milliseconds(100))
             .sink({ value in
@@ -112,7 +112,7 @@ class DebounceTests: XCTestCase {
         let counter = Counter()
         let subject = PassthroughSubject(Int.self, buffering: .unbounded)
 
-        let t = await subject.asyncPublisher
+        let t = await subject.asyncPublisher()
             .handleEvents(receiveOutput: { value in
                 inputCounter.increment()
             })
@@ -161,7 +161,7 @@ class DebounceTests: XCTestCase {
         let counter = Counter()
         let subject = PassthroughSubject(Int.self, buffering: .unbounded)
 
-        let t = await subject.asyncPublisher
+        let t = await subject.asyncPublisher()
             .handleEvents(
                 receiveOutput: { value in
                     guard value != Int.max else { return }
@@ -210,7 +210,7 @@ class DebounceTests: XCTestCase {
         let counter = Counter()
         let subject = PassthroughSubject(Int.self, buffering: .unbounded)
 
-        let t = await subject.asyncPublisher
+        let t = await subject.asyncPublisher()
             .handleEvents(
                 receiveOutput: { value in
                     inputCounter.increment()

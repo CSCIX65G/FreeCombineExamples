@@ -115,7 +115,7 @@ class SubjectTests: XCTestCase {
         let expectation = await Promise<Void>()
 
         let subject = PassthroughSubject(Int.self)
-        let p = subject.asyncPublisher
+        let p = subject.asyncPublisher()
 
         let c1 = await p.sink { result in
             switch result {
@@ -155,9 +155,9 @@ class SubjectTests: XCTestCase {
         let expectation = await Promise<Void>()
 
         let subject = PassthroughSubject(Int.self)
-        let p = subject.asyncPublisher
+        let p = subject.asyncPublisher()
 
-        let c1 = await p.sink({ result in
+        let c1 = await p.sink { result in
             switch result {
                 case let .value(value):
                     let count = counter.increment()
@@ -173,7 +173,7 @@ class SubjectTests: XCTestCase {
                     XCTAssert(count == 5, "Received wrong number of invocations: \(count)")
                     return
             }
-        })
+        }
 
         for i in (1 ... 5) {
             do { try await subject.send(i) }
@@ -246,7 +246,7 @@ class SubjectTests: XCTestCase {
         let expectation = await Promise<Void>()
 
         let subject = CurrentValueSubject(14)
-        let publisher = subject.asyncPublisher
+        let publisher = subject.asyncPublisher()
 
         let counter = Counter()
         let c1 = await publisher.sink { (result: Publisher<Int>.Result) in
@@ -298,7 +298,7 @@ class SubjectTests: XCTestCase {
         let expectation2 = await Promise<Void>()
 
         let subject = CurrentValueSubject(13)
-        let publisher = subject.asyncPublisher
+        let publisher = subject.asyncPublisher()
 
         let counter1 = Counter()
         let c1 = await publisher.sink { (result: Publisher<Int>.Result) in

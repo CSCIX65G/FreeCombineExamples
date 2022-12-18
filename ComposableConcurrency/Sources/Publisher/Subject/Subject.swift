@@ -26,7 +26,7 @@ public final class Subject<Output: Sendable> {
     private let file: StaticString
     private let line: UInt
     
-    let distributor: Distributor<Output>
+    private let distributor: Distributor<Output>
 
     init(
         function: StaticString = #function,
@@ -123,10 +123,6 @@ public extension Publisher {
 }
 
 public extension Subject {
-    var asyncPublisher: Publisher<Output> {
-        asyncPublisher()
-    }
-
     func asyncPublisher(
         function: StaticString = #function,
         file: StaticString = #file,

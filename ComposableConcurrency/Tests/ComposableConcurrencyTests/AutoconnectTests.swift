@@ -189,7 +189,7 @@ class AutoconnectTests: XCTestCase {
          Note that we don't need the `.bufferingOldest(2)` here.  Bc
          we are not trying to simultaneously subscribe and send.
          */
-        let autoconnected = await subject.asyncPublisher
+        let autoconnected = await subject.asyncPublisher()
             .map { $0 % 47 }
             .autoconnect()
 
