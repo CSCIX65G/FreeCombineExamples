@@ -122,7 +122,7 @@ final class ShareTests: XCTestCase {
             }
         }
 
-        try shared.connect()
+        try await shared.connect()
 
         _ = await u1.result
         _ = await u2.result

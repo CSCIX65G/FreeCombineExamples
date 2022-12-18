@@ -80,7 +80,7 @@ class MakeConnectableTests: XCTestCase {
             }
         }
 
-        try connectable.connect()
+        try await connectable.connect()
 
         _ = try await u1.value
         _ = try await u2.value
@@ -95,10 +95,14 @@ class MakeConnectableTests: XCTestCase {
             .makeConnectable()
 
         let counter1 = Counter()
+        let box1 = MutableBox<[Int]>.init(value: [])
         let u1 = await connectable.asyncPublisher().sink { result in
             switch result {
-                case .value:
+                case let .value(value):
                     counter1.increment()
+                    var l = box1.value
+                    l.append(value)
+                    box1.set(value: l)
                     return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
@@ -106,6 +110,7 @@ class MakeConnectableTests: XCTestCase {
                 case .completion(.finished):
                     let count = counter1.count
                     if count != 100 {
+                        print(box1.value)
                         XCTFail("Incorrect count: \(count) in subscription 1")
                     }
                     return
@@ -113,10 +118,14 @@ class MakeConnectableTests: XCTestCase {
         }
 
         let counter2 = Counter()
+        let box2 = MutableBox<[Int]>.init(value: [])
         let u2 = await connectable.asyncPublisher().sink { (result: Publisher<Int>.Result) in
             switch result {
-                case .value:
+                case let .value(value):
                     counter2.increment()
+                    var l = box2.value
+                    l.append(value)
+                    box2.set(value: l)
                     return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
@@ -130,7 +139,7 @@ class MakeConnectableTests: XCTestCase {
             }
         }
 
-        try connectable.connect()
+        try await connectable.connect()
 
         for i in (0 ..< 100) {
             do { try await subj.send(i) }
@@ -139,8 +148,8 @@ class MakeConnectableTests: XCTestCase {
 
         try await subj.finish()
         _ = await subj.result
-        _ = await connectable.result
         _ = try await u1.value
         _ = try await u2.value
+        _ = await connectable.result
     }
 }

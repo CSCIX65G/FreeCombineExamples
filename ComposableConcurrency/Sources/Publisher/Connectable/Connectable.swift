@@ -25,11 +25,12 @@ public class Connectable<Output> {
     private let file: StaticString
     private let line: UInt
     private let upstream: Publisher<Output>
-    private let subject: Subject<Output>
     private let ownsSubject: Bool
     private let autoconnect: Bool
     private let atomicIsComplete: ManagedAtomic<Bool> = .init(false)
     private let promise: Promise<Void>
+
+    let subject: Subject<Output>
 
     private(set) var cancellable: Cancellable<Void>! = .none
     private(set) var upstreamCancellable: Cancellable<Void>! = .none
@@ -116,7 +117,7 @@ public class Connectable<Output> {
         file: StaticString = #file,
         line: UInt = #line
     ) -> Publisher<Output> {
-        return .init { resumption, downstream in
+        .init { resumption, downstream in
             Cancellable<Cancellable<Void>>(function: function, file: file, line: line) {
                 defer { resumption.resume() }
                 guard !self.isComplete else {
@@ -129,7 +130,7 @@ public class Connectable<Output> {
                     .sink(downstream)
 
                 if self.autoconnect {
-                    try? self.connect(function: function, file: file, line: line)
+                    try? await self.connect(function: function, file: file, line: line)
                 }
                 return downstreamCancellable
             }.join()
@@ -157,8 +158,9 @@ public class Connectable<Output> {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line
-    ) throws -> Void {
+    ) async throws -> Void {
         try promise.succeed()
+        _ = await cancellable.result
     }
 
     func cancel() throws -> Void {

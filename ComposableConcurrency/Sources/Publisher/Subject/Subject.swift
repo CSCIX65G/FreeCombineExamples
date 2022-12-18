@@ -25,7 +25,8 @@ public final class Subject<Output: Sendable> {
     private let function: StaticString
     private let file: StaticString
     private let line: UInt
-    private let distributor: Distributor<Output>
+    
+    let distributor: Distributor<Output>
 
     init(
         function: StaticString = #function,
@@ -108,12 +109,12 @@ public extension Publisher {
                 defer { resumption.resume() }
                 do {
                     let cancellable = try await distributor.subscribe { result in
-                        _ = try await downstream(result)
+                        try await downstream(result)
                     }
                     return cancellable
                 } catch {
                     return .init(function: function, file: file, line: line) {
-                        throw error
+                        try await downstream(.completion(.failure(error)))
                     }
                 }
             }.join(function: function, file: file, line: line)

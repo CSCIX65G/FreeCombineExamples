@@ -193,18 +193,27 @@ class AutoconnectTests: XCTestCase {
             .map { $0 % 47 }
             .autoconnect()
 
+        let n = 100
+
         let counter1 = Counter()
+        let box1 = MutableBox<[Int]>.init(value: [])
         let p1 = await autoconnected.asyncPublisher().sink { result in
             switch result {
-                case .value:
+                case let .value(value):
                     counter1.increment()
+                    var l = box1.value
+                    l.append(value)
+                    box1.set(value: l)
                     return
                 case let .completion(.failure(error)):
                     XCTFail("Got an error? \(error)")
                     return
                 case .completion(.finished):
                     let count = counter1.count
-                    XCTAssert(count == 100, "Incorrect count: \(count) in subscription 1")
+                    if count != n {
+                        print(box1.value)
+                        XCTFail("Incorrect count: \(count) in subscription 1")
+                    }
                     return
             }
         }
@@ -221,7 +230,7 @@ class AutoconnectTests: XCTestCase {
             }
         }
 
-        for i in (0 ..< 100) {
+        for i in (0 ..< n) {
             do { try await subject.send(i) }
             catch { XCTFail("Failed to send on \(i)") }
         }

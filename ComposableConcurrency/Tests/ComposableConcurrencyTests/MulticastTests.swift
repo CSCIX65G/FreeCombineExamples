@@ -97,7 +97,7 @@ final class MulticastTests: XCTestCase {
             )
             .multicast(subject)
 
-        try connectable.connect()
+        try await connectable.connect()
         
         _ = await promise1.result
         _ = await promise2.result
@@ -153,7 +153,7 @@ final class MulticastTests: XCTestCase {
             }
         }
 
-        try connectable.connect()
+        try await connectable.connect()
 
         for i in (0 ..< n) {
             do { try await upstream.send(i) }
