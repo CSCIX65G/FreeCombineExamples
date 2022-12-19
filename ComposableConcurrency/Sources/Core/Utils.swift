@@ -33,10 +33,10 @@ precedencegroup ApplicationPrecedence {
   lowerThan: MultiplicationPrecedence, AdditionPrecedence
 }
 
-infix operator |>: ApplicationPrecedence  // Application
-infix operator >>>: CompositionPrecedence // Composition aka map
-infix operator >>=: CompositionPrecedence // Chaining aka flatMap
-infix operator <*>: CompositionPrecedence // Parallel aka zip
+infix operator |>: ApplicationPrecedence  // apply
+infix operator >>>: CompositionPrecedence // compose
+infix operator >>=: CompositionPrecedence // bind
+infix operator <*>: CompositionPrecedence // zip
 
 public func |> <A, B>(
     a: A,
@@ -71,4 +71,16 @@ func <*><A, B, C>(
     _ z2: @escaping (A) -> C
 ) -> (A) -> (B, C) {
     { a in (z1(a), z2(a)) }
+}
+
+func fork<A, B>(
+    _ f: @Sendable @escaping (A) async -> B
+) -> (A) -> Uncancellable<B> {
+    { a in  Uncancellable { await f(a) } }
+}
+
+func join<A, B>(
+    _ f: @Sendable @escaping (A) async -> Uncancellable<B>
+) -> (A) async -> B {
+    { a in await f(a).value }
 }

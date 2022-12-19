@@ -50,3 +50,39 @@ extension Uncancellable {
         .init(function: function, file: file, line: line) { await self.value.value }
     }
 }
+
+extension UnfailingResumption {
+    public func join<T>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        effect: @Sendable @escaping (T) async -> Void = { _ in }
+    ) -> UnfailingResumption<T> where Output == UnfailingResumption<T> {
+        let u: MutableBox<UnfailingResumption<T>?> = .init(value: .none)
+        _ = try? Uncancellable<Void>(function: function, file: file, line: line) {
+            await effect(unfailingPause { r in
+                u.set(value: r)
+                self.resume(returning: r)
+            })
+        }.release()
+        return u.value!
+    }
+}
+
+extension Resumption {
+    public func join<T>(
+        function: StaticString = #function,
+        file: StaticString = #file,
+        line: UInt = #line,
+        effect: @Sendable @escaping (T) async throws -> Void = { _ in }
+    ) -> Resumption<T> where Output == Resumption<T> {
+        let u: MutableBox<Resumption<T>?> = .init(value: .none)
+        _ = try? Cancellable<Void>(function: function, file: file, line: line) {
+            try await effect(pause { r in
+                u.set(value: r)
+                self.resume(returning: r)
+            })
+        }.release()
+        return u.value!
+    }
+}
