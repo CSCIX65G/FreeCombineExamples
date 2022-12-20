@@ -107,7 +107,7 @@ public final class Cancellable<Output: Sendable> {
     }
 }
 
-@available(iOS 13.0, *)
+@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 public struct Channel<Element: Sendable> {
     private let continuation: AsyncStream<Element>.Continuation
     let stream: AsyncStream<Element>

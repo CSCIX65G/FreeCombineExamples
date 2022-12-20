@@ -43,6 +43,11 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		FB8A343029513E5100F144FA /* Timeout.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = Timeout.playground; path = ../Playgrounds/Timeout.playground; sourceTree = "<group>"; };
+		FB8A34312951407300F144FA /* Atomics.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = Atomics.playground; path = ../Atomics.playground; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		FB8A343229514FA500F144FA /* Composition.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = Composition.playground; path = ../Playgrounds/Composition.playground; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		FB8A343329514FAE00F144FA /* Map.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = Map.playground; path = ../Playgrounds/Map.playground; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		FB8A343429514FB500F144FA /* Debounce.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = Debounce.playground; path = ../Playgrounds/Debounce.playground; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 		FBC82375294622A10084250F /* Examples.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Examples.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FBC82378294622A10084250F /* ExamplesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExamplesApp.swift; sourceTree = "<group>"; };
 		FBC8237A294622A10084250F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -92,13 +97,26 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		FB8A342F29513E3800F144FA /* Playgrounds */ = {
+			isa = PBXGroup;
+			children = (
+				FB8A34312951407300F144FA /* Atomics.playground */,
+				FB8A343229514FA500F144FA /* Composition.playground */,
+				FB8A343329514FAE00F144FA /* Map.playground */,
+				FB8A343029513E5100F144FA /* Timeout.playground */,
+				FB8A343429514FB500F144FA /* Debounce.playground */,
+			);
+			name = Playgrounds;
+			sourceTree = "<group>";
+		};
 		FBC8236C294622A10084250F = {
 			isa = PBXGroup;
 			children = (
-				FBC823A3294623040084250F /* Packages */,
 				FBC82377294622A10084250F /* Examples */,
 				FBC82389294622A20084250F /* ExamplesTests */,
 				FBC82393294622A20084250F /* ExamplesUITests */,
+				FBC823A3294623040084250F /* Packages */,
+				FB8A342F29513E3800F144FA /* Playgrounds */,
 				FBC82376294622A10084250F /* Products */,
 				FBC823A62946234C0084250F /* Frameworks */,
 			);

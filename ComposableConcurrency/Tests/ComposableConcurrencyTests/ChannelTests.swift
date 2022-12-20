@@ -40,7 +40,7 @@ final class ChannelTests: XCTestCase {
         _ = await writer.result
     }
 
-    func testMVarCancel() async throws {
+    func testChannelCancel() async throws {
         struct TestError: Error { }
 
         let mvar: Channel<Int> = .init(.none)

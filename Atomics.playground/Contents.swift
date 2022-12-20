@@ -1,7 +1,7 @@
 import PlaygroundSupport
 PlaygroundPage.current.needsIndefiniteExecution = true
 
-import FreeCombine
+import ComposableConcurrency
 
 let promise: Promise<Int> = await .init()
 let c: Cancellable<Void> = .init(operation: {
