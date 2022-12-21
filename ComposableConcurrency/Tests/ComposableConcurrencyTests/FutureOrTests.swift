@@ -17,19 +17,6 @@ final class FutureOrTests: XCTestCase {
 
     override func tearDownWithError() throws {}
 
-    func testOrStateInit() async throws {
-        typealias S = Or<Int, String>
-        let left = Succeeded(13)
-        let right = Succeeded("hello, world!")
-        let channel: Queue<S.Action> = .init(buffering: .bufferingOldest(2))
-        let f = S.initialize(left: left, right: right)
-        let state = await f(channel)
-        _ = await state.leftCancellable?.result
-        _ = await state.rightCancellable?.result
-        XCTAssertNotNil(state.leftCancellable, "Left was wrong")
-        XCTAssertNotNil(state.rightCancellable, "Right was wrong")
-    }
-
     func testSimpleOr() async throws {
         let lVal = 13
         let rVal = "hello, world!"

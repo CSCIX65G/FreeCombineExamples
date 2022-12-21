@@ -96,6 +96,9 @@ public extension UnbreakablePromise {
     func succeed(_ arg: Output) throws {
         try setSucceeded().resume(returning: arg)
     }
+    func callAsFunction(_ arg: Output) throws {
+        try succeed(arg)
+    }
 }
 
 public extension UnbreakablePromise where Output == Void {

@@ -61,7 +61,13 @@ public final class MutableBox<Value> {
         self.value = await value()
         return tmp
     }
+
+    public func set<Tail>(keyPath: WritableKeyPath<Value, Tail>, to newValue: Tail) async -> Void {
+        self.value[keyPath: keyPath] = newValue
+    }
 }
+
+extension MutableBox: AtomicReference { }
 
 extension MutableBox: Identifiable {
     public var id: ObjectIdentifier { ObjectIdentifier(self) }
@@ -84,4 +90,3 @@ extension MutableBox {
         value.append(t)
     }
 }
-

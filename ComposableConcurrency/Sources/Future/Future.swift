@@ -88,3 +88,15 @@ public extension Future {
         await self(downstream)
     }
 }
+
+public extension Future {
+    func consume<A>(
+        into promise : UnbreakablePromise<AsyncResult<A, Swift.Error>>,
+        with f: @Sendable @escaping (Output) -> A
+    ) async -> Cancellable<Void> {
+        await self { switch $0 {
+            case let .success(value): try? promise(.success(f(value)))
+            case let .failure(error): try? promise(.failure(error))
+        } }
+    }
+}
