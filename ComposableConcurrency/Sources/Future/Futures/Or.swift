@@ -18,6 +18,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
+import Atomics
 import Core
 import Queue
 
@@ -26,17 +27,34 @@ public func or<Left, Right>(
     _ right: Future<Right>
 ) -> Future<Either<Left, Right>> {
     .init { resumption, downstream in .init {
-        let fold = Queue(buffering: .bufferingOldest(2))
-            .fold(
-                onStartup: resumption,
-                into: Or<Left, Right>.folder(left: left, right: right)
-            )
-        await withTaskCancellationHandler(
+        var resultCancellable: Cancellable<AsyncResult<Either<Left, Right>, Swift.Error>>!
+        let inner = try! await pause { outer in
+            resultCancellable = .init {
+                try await pause { inner in try! outer.tryResume(returning: inner) }
+            }
+        }
+        let leftCancellable: Cancellable<Void> = await left.sink {
+            switch $0 {
+                case let .success(value): try? inner.tryResume(returning: .success(.left(value)))
+                case let .failure(error): try? inner.tryResume(returning: .failure(error))
+            }
+        }
+        let rightCancellable: Cancellable<Void> = await right.sink {
+            switch $0 {
+                case let .success(value): try? inner.tryResume(returning: .success(.right(value)))
+                case let .failure(error): try? inner.tryResume(returning: .failure(error))
+            }
+        }
+        return try await withTaskCancellationHandler(
             operation: {
-                do { try await downstream(.success(Or<Left, Right>.extract(state: fold.value))) }
-                catch { await downstream(.failure(error)) }
+                resumption.resume()
+                try await downstream(resultCancellable.value)
+                try? leftCancellable.cancel()
+                try? rightCancellable.cancel()
             },
-            onCancel: { try? fold.cancel() }
+            onCancel: {
+                try? inner.tryResume(returning: .failure(CancellationError()))
+            }
         )
     } }
 }
