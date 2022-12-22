@@ -18,28 +18,51 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-import Queue
+import Atomics
+import Core
 
 public func and<Left, Right>(
     _ left: Future<Left>,
     _ right: Future<Right>
 ) -> Future<(Left, Right)> {
-    .init { resumption, downstream in
-        .init {
-            let fold = Queue(buffering: .bufferingOldest(2))
-                .fold(
-                    onStartup: resumption,
-                    into: And<Left, Right>.folder(left: left, right: right)
-                )
-            await withTaskCancellationHandler(
-                operation: {
-                    do { try await downstream(.success(And<Left, Right>.extract(state: fold.value))) }
-                    catch { await downstream(.failure(error)) }
-                },
-                onCancel: { try? fold.cancel() }
-            )
-        }
-    }
+    .init { resumption, downstream in .init {
+        let leftValue = ManagedAtomic(Box(value: Left?.none))
+        let rightValue = ManagedAtomic(Box(value: Right?.none))
+        let promise = await UnbreakablePromise<AsyncResult<(Left, Right), Swift.Error>>()
+        return try await withTaskCancellationHandler(
+            operation: {
+                let leftCancellable = await left { lResult in
+                    switch lResult {
+                        case let .failure(error):
+                            try? promise.succeed(.failure(error))
+                            return
+                        case let .success(lValue):
+                            _ = leftValue.exchange(.init(value: lValue), ordering: .sequentiallyConsistent)
+                            guard let rValue = rightValue.load(ordering: .sequentiallyConsistent).value else { return }
+                            try? promise.succeed(.success((lValue, rValue)))
+                    }
+                }
+                let rightCancellable = await right { rResult in
+                    switch rResult {
+                        case let .failure(error):
+                            try? promise.succeed(.failure(error))
+                            return
+                        case let .success(rValue):
+                            _ = rightValue.exchange(.init(value: rValue), ordering: .sequentiallyConsistent)
+                            guard let lValue = leftValue.load(ordering: .sequentiallyConsistent).value else { return }
+                            try? promise.succeed(.success((lValue, rValue)))
+                    }
+                }
+                resumption.resume()
+                try await downstream(promise.value)
+                try? leftCancellable.cancel()
+                try? rightCancellable.cancel()
+            },
+            onCancel: {
+                try? promise(.failure(CancellationError()))
+            }
+        )
+    } }
 }
 
 public func Anded<Left, Right>(
