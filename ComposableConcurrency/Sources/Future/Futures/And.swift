@@ -35,7 +35,6 @@ public func and<Left, Right>(
                     switch lResult {
                         case let .failure(error):
                             try? promise.succeed(.failure(error))
-                            return
                         case let .success(lValue):
                             _ = leftValue.exchange(.init(value: lValue), ordering: .sequentiallyConsistent)
                             guard let rValue = rightValue.load(ordering: .sequentiallyConsistent).value else { return }
@@ -46,7 +45,6 @@ public func and<Left, Right>(
                     switch rResult {
                         case let .failure(error):
                             try? promise.succeed(.failure(error))
-                            return
                         case let .success(rValue):
                             _ = rightValue.exchange(.init(value: rValue), ordering: .sequentiallyConsistent)
                             guard let lValue = leftValue.load(ordering: .sequentiallyConsistent).value else { return }
