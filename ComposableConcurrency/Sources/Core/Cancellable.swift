@@ -25,7 +25,7 @@ public enum Cancellables {
 
     @inlinable
     public static var isCancelled: Bool {
-        status.load(ordering: .sequentiallyConsistent) == .cancelled
+        status.load(ordering: .relaxed) == .cancelled
     }
 
     @inlinable
@@ -52,7 +52,7 @@ public final class Cancellable<Output: Sendable>: Sendable {
     private let atomicStatus = ManagedAtomic<Status>(.running)
 
     private var status: Status {
-        atomicStatus.load(ordering: .sequentiallyConsistent)
+        atomicStatus.load(ordering: .relaxed)
     }
 
     private var leakFailureString: String {

@@ -134,7 +134,7 @@ public class Connectable<Output> {
     }
 
     var isComplete: Bool {
-        get { atomicIsComplete.load(ordering: .sequentiallyConsistent) }
+        get { atomicIsComplete.load(ordering: .relaxed) }
     }
 
     func complete(_ result: Publisher<Output>.Result) async {

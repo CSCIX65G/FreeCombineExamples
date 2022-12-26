@@ -134,7 +134,7 @@ public final class DiscreteClock: Clock, @unchecked Sendable {
     }
 
     var state: State {
-        atomicState.load(ordering: .sequentiallyConsistent)
+        atomicState.load(ordering: .relaxed)
     }
 
     public var now: Instant {
@@ -150,7 +150,7 @@ public final class DiscreteClock: Clock, @unchecked Sendable {
             let (success, newLocalState) = atomicState.compareExchange(
                 expected: localState,
                 desired: newState,
-                ordering: .sequentiallyConsistent
+                ordering: .relaxed
             )
             if success {
                 releasableSuspensions = newReleasedSuspensions

@@ -15,7 +15,7 @@ extension Publisher {
         _ isDispatchable: ManagedAtomic<Box<DownstreamState>>,
         _ cancellable: Cancellable<Void>? = .none
     ) async throws -> Void {
-        let dispatchError = isDispatchable.load(ordering: .sequentiallyConsistent).value.errored
+        let dispatchError = isDispatchable.load(ordering: .relaxed).value.errored
         guard dispatchError == nil else {
             try await cancellable?.value
             throw dispatchError!

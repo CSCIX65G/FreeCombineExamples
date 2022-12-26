@@ -61,6 +61,7 @@ public final class Channel<Value> {
             if success {
                 readers.forEach { $0.resume(throwing: error) }
                 writers.forEach { $0.resume(throwing: error) }
+                break
             } else {
                 localWrapped = newLocalWrapped
             }
