@@ -20,44 +20,48 @@
 //
 import Atomics
 import Core
+import Queue
 
 public func and<Left, Right>(
     _ left: Future<Left>,
     _ right: Future<Right>
 ) -> Future<(Left, Right)> {
     .init { resumption, downstream in .init {
-        let leftValue = ManagedAtomic(Box(value: Left?.none))
-        let rightValue = ManagedAtomic(Box(value: Right?.none))
-        let promise = await UnbreakablePromise<AsyncResult<(Left, Right), Swift.Error>>()
-        return try await withTaskCancellationHandler(
+        let queue = Queue<AsyncResult<(Left, Right), Swift.Error>>.init(buffering: .bufferingOldest(1))
+        return await withTaskCancellationHandler(
             operation: {
+                var iterator = queue.stream.makeAsyncIterator()
+                let leftValue = ManagedAtomic(Box(value: Left?.none))
+                let rightValue = ManagedAtomic(Box(value: Right?.none))
                 let leftCancellable = await left { lResult in
                     switch lResult {
                         case let .failure(error):
-                            try? promise.succeed(.failure(error))
+                            try? queue.tryYield(.failure(error))
                         case let .success(lValue):
                             _ = leftValue.exchange(.init(value: lValue), ordering: .sequentiallyConsistent)
                             guard let rValue = rightValue.load(ordering: .sequentiallyConsistent).value else { return }
-                            try? promise.succeed(.success((lValue, rValue)))
+                            try? queue.tryYield(.success((lValue, rValue)))
                     }
+                    queue.finish()
                 }
                 let rightCancellable = await right { rResult in
                     switch rResult {
                         case let .failure(error):
-                            try? promise.succeed(.failure(error))
+                            try? queue.tryYield(.failure(error))
                         case let .success(rValue):
                             _ = rightValue.exchange(.init(value: rValue), ordering: .sequentiallyConsistent)
                             guard let lValue = leftValue.load(ordering: .sequentiallyConsistent).value else { return }
-                            try? promise.succeed(.success((lValue, rValue)))
+                            try? queue.tryYield(.success((lValue, rValue)))
                     }
+                    queue.finish()
                 }
                 resumption.resume()
-                try await downstream(promise.value)
+                await downstream(iterator.next() ?? .failure(CancellationError()))
                 try? leftCancellable.cancel()
                 try? rightCancellable.cancel()
             },
             onCancel: {
-                try? promise(.failure(CancellationError()))
+                try? queue.tryYield(.failure(CancellationError()))
             }
         )
     } }
