@@ -9,7 +9,7 @@
 
 import Atomics
 import Core
-import DequeModule
+@_implementationOnly import DequeModule
 
 public final class WriteChannel<Value> {
     private struct Error: Swift.Error {
