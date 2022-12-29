@@ -32,35 +32,28 @@ import PlaygroundSupport
 PlaygroundPage.current.needsIndefiniteExecution = true
 
 
+await Task {
 
+    let t1 = Task<Int, Never> { 13 }
+    let t2 = Task {
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        t1.cancel()
+    }
+    let t3 = Task {
+        try await Task.sleep(nanoseconds: 100_000_000)
+        if t1.isCancelled { "t3 failed"; return }
+        "t3 succeeded, value = \(await t1.value)"
+    }
+    let t4 = Task {
+        try await Task.sleep(nanoseconds: 300_000_000)
+        if t1.isCancelled { "t4 failed"; return }
+        "t4 succeeded, value = \(await t1.value)"
+    }
 
-let t1 = Task<Int, Never> { 13 }
-let t2 = Task {
-    try? await Task.sleep(nanoseconds: 200_000_000)
-    t1.cancel()
-}
-let t3 = Task {
-    try await Task.sleep(nanoseconds: 100_000_000)
-    if t1.isCancelled { "t3 failed"; return }
-    "t3 succeeded, value = \(await t1.value)"
-}
-let t4 = Task {
-    try await Task.sleep(nanoseconds: 300_000_000)
-    if t1.isCancelled { "t4 failed"; return }
-    "t4 succeeded, value = \(await t1.value)"
-}
-
-await t1.result
-await t2.result
-await t3.result
-await t4.result
-
-
-
-
-
-
-PlaygroundPage.current.finishExecution()
+    await t1.result
+    await t2.result
+    await t3.result
+    await t4.result
 
 /*:
  [Swift Evolution Proposal 304: Structured Concurrency / Cancellation](https://github.com/apple/swift-evolution/blob/main/proposals/0304-structured-concurrency.md#cancellation-1)
@@ -100,4 +93,8 @@ func collatz(_ anInt: Int) -> Void {
         ? collatz(anInt / 2)
         : collatz((3 * anInt + 1) / 2)
 }
+
+    PlaygroundPage.current.finishExecution()
+}.result
+
 //: [Next](@next)

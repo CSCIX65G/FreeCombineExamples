@@ -12,9 +12,8 @@ import Core
 @_implementationOnly import DequeModule
 
 public final class SPSCChannel<Value> {
-    private struct ChannelError: Error {
-        let wrapper: Wrapper
-    }
+    private struct ChannelError: Error { let wrapper: Wrapper }
+
     private final class Wrapper: AtomicReference, Identifiable, Hashable, Equatable {
         let value: AsyncResult<Value?, Error>
         let reader: Resumption<Value>?
@@ -72,19 +71,31 @@ public final class SPSCChannel<Value> {
         self.wrapped = ManagedAtomic(Wrapper(value))
     }
 
-    public func write() async throws -> Void where Value == Void {
-        try await write(())
+    public func write(blocking: Bool = true) async throws -> Void where Value == Void {
+        try await write(blocking: blocking, ())
     }
 
-    public func write(_ value: Value) async throws -> Void {
+    public func write(blocking: Bool = true, _ value: Value) async throws -> Void {
         var localWrapped = wrapped.load(ordering: .sequentiallyConsistent)
+        guard localWrapped.writer == nil else { throw ChannelOccupiedError() }
         while true {
-            switch try localWrapped.value.get() {
-                case .some:
+            switch try (localWrapped.value.get(), blocking) {
+                case (.some, true):
                     guard let newLocalWrapped = try await blockForWriting(localWrapped, .none) else { return }
                     localWrapped = newLocalWrapped
-                case .none:
+                case (.none, true):
                     guard let newLocalWrapped = try await dispatchReaderOrBlockForWriting(localWrapped, value) else { return }
+                    localWrapped = newLocalWrapped
+                case (.some, false):
+                    throw FailedWriteError()
+                case (.none, false):
+                    let newVar = Wrapper(value, reader: localWrapped.reader, writer: .none)
+                    let (success, newLocalWrapped) = wrapped.compareExchange(
+                        expected: localWrapped,
+                        desired: newVar,
+                        ordering: .sequentiallyConsistent
+                    )
+                    guard !success else { return }
                     localWrapped = newLocalWrapped
             }
         }
@@ -93,6 +104,7 @@ public final class SPSCChannel<Value> {
     /// Non-blocking, failable read
     public func read(blocking: Bool = true) async throws -> Value {
         var localWrapped = wrapped.load(ordering: .sequentiallyConsistent)
+        guard localWrapped.reader == nil else { throw ChannelOccupiedError() }
         while true {
             switch try localWrapped.value.get() {
                 case let .some(value):

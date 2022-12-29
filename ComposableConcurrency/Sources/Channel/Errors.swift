@@ -6,5 +6,5 @@
 //
 
 public struct FailedReadError: Error { }
-public struct FailedwriteError: Error { }
+public struct FailedWriteError: Error { }
 public struct ChannelOccupiedError: Error { }
