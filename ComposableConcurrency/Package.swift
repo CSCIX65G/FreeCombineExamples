@@ -26,7 +26,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/CSCIX65G/swift-atomics.git", branch: "CSCIX65G/playgrounds"),
 //        .package(url: "https://github.com/apple/swift-atomics.git", .upToNextMajor(from: "1.0.3")),
-        .package(url: "https://github.com/apple/swift-collections.git", .upToNextMajor(from: "1.0.3")),
+        .package(url: "https://github.com/apple/swift-collections.git", branch: "release/1.1"),
     ],
     targets: [
         .target(

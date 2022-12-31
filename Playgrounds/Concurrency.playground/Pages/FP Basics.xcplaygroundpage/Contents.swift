@@ -1,7 +1,12 @@
 //: [Previous](@previous)
 
-// FP Basics
-func identity<T>(_ t: T) -> T { t }
+/// FP Basics
+
+func identity<T>(
+    _ t: T
+) -> T {
+    t
+}
 
 func flip<A, B, C>(
     _ f: @escaping (A, B) async -> C
@@ -34,11 +39,11 @@ func compose<A, B, C>(
     { a in await g(f(a)) }
 }
 
-//func invoke<A, B>(
-//    f: @escaping (A) -> B
-//) -> (A) -> B {
-//    f
-//}
+func uninformativeInvoke<A, B>(
+    f: @escaping (A) -> B
+) -> (A) -> B {
+    f /// just the identity function on f...
+}
 
 func invoke<A, B>(f: @escaping (A) -> B) -> (A) -> B {
     { value in f(value) }
@@ -52,8 +57,18 @@ func uncurriedApply<A, B>(value: A, f: @escaping (A) -> B) -> B {
     f(value)
 }
 
+/// we can make the apply function into a type by storing the value explicitly...
+struct Object<A> {
+    let value: A
+    init(_ value: A) { self.value = value }
+    func apply<B>(_ f: @escaping (A) -> B) -> B { f(value) }
+}
+
+/// we can even make the apply method on _that_ type be a type,
+/// by having the method capture the value...
 struct Continuation<A, B> {
     let apply: (@escaping (A) -> B) -> B
+    /// init + storing the returned func = apply
 //    func apply<A, B>(_ value: A) -> (@escaping (A) -> B) -> B {
 //        { f in f(value) }
 //    }
@@ -61,10 +76,5 @@ struct Continuation<A, B> {
     func callAsFunction(_ f: @escaping (A) -> B) -> B { apply(f) }
 }
 
-struct Object<A> {
-    let value: A
-    init(_ value: A) { self.value = value }
-    func apply<B>(_ f: @escaping (A) -> B) -> B { f(value) }
-}
 
 //: [Next](@next)

@@ -68,6 +68,15 @@
 		FBC823B4294653810084250F /* QueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueView.swift; sourceTree = "<group>"; };
 		FBC823B6294653910084250F /* FutureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FutureView.swift; sourceTree = "<group>"; };
 		FBC823B82946539A0084250F /* PublisherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublisherView.swift; sourceTree = "<group>"; };
+		FBE200F529607B6900F59C1B /* 03 - Race Conditions in Combine.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = "03 - Race Conditions in Combine.playground"; path = "../Playgrounds/03 - Race Conditions in Combine.playground"; sourceTree = "<group>"; };
+		FBE200F629607B6A00F59C1B /* 07 - Operators.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = "07 - Operators.playground"; path = "../Playgrounds/07 - Operators.playground"; sourceTree = "<group>"; };
+		FBE200F729607B6B00F59C1B /* 06 - FreeCombine.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = "06 - FreeCombine.playground"; path = "../Playgrounds/06 - FreeCombine.playground"; sourceTree = "<group>"; };
+		FBE200F829607B6B00F59C1B /* 05 - State.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = "05 - State.playground"; path = "../Playgrounds/05 - State.playground"; sourceTree = "<group>"; };
+		FBE200F929607B6C00F59C1B /* 02 - Continuation Passing Style.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = "02 - Continuation Passing Style.playground"; path = "../Playgrounds/02 - Continuation Passing Style.playground"; sourceTree = "<group>"; };
+		FBE200FA29607B6C00F59C1B /* 01 - Protocol Free Design.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = "01 - Protocol Free Design.playground"; path = "../Playgrounds/01 - Protocol Free Design.playground"; sourceTree = "<group>"; };
+		FBE200FB29607B6D00F59C1B /* 08 - Promises.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = "08 - Promises.playground"; path = "../Playgrounds/08 - Promises.playground"; sourceTree = "<group>"; };
+		FBE200FC29607B6E00F59C1B /* 09 - Publishers.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = "09 - Publishers.playground"; path = "../Playgrounds/09 - Publishers.playground"; sourceTree = "<group>"; };
+		FBE200FD29607B6E00F59C1B /* 04 - RAII - Even More Structured Concurrency.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; name = "04 - RAII - Even More Structured Concurrency.playground"; path = "../Playgrounds/04 - RAII - Even More Structured Concurrency.playground"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,6 +110,15 @@
 		FB8A342F29513E3800F144FA /* Playgrounds */ = {
 			isa = PBXGroup;
 			children = (
+				FBE200FA29607B6C00F59C1B /* 01 - Protocol Free Design.playground */,
+				FBE200F929607B6C00F59C1B /* 02 - Continuation Passing Style.playground */,
+				FBE200F529607B6900F59C1B /* 03 - Race Conditions in Combine.playground */,
+				FBE200FD29607B6E00F59C1B /* 04 - RAII - Even More Structured Concurrency.playground */,
+				FBE200F829607B6B00F59C1B /* 05 - State.playground */,
+				FBE200F729607B6B00F59C1B /* 06 - FreeCombine.playground */,
+				FBE200F629607B6A00F59C1B /* 07 - Operators.playground */,
+				FBE200FB29607B6D00F59C1B /* 08 - Promises.playground */,
+				FBE200FC29607B6E00F59C1B /* 09 - Publishers.playground */,
 				FB25793A29588FD4005001CB /* Concurrency.playground */,
 				FB8A34312951407300F144FA /* Atomics.playground */,
 				FB8A343229514FA500F144FA /* Composition.playground */,
