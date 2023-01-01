@@ -14,7 +14,7 @@ import Core
 public final class SPSCChannel<Value> {
     private struct ChannelError: Error { let wrapper: Wrapper }
 
-    private final class Wrapper: AtomicReference, Identifiable, Hashable, Equatable {
+    private final class Wrapper: AtomicReference, Identifiable, Equatable {
         let value: AsyncResult<Value?, Error>
         let reader: Resumption<Value>?
         let writer: Resumption<Void>?
@@ -41,7 +41,6 @@ public final class SPSCChannel<Value> {
 
         static func == (lhs: SPSCChannel<Value>.Wrapper, rhs: SPSCChannel<Value>.Wrapper) -> Bool { lhs.id == rhs.id }
         var id: ObjectIdentifier { .init(self) }
-        func hash(into hasher: inout Hasher) { hasher.combine(self) }
     }
 
     private let wrapped: ManagedAtomic<Wrapper>

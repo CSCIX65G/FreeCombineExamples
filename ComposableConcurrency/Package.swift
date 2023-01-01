@@ -41,6 +41,7 @@ let package = Package(
                 "Core",
                 .product(name: "Atomics", package: "swift-atomics"),
                 .product(name: "DequeModule", package: "swift-collections"),
+                .product(name: "HashTreeCollections", package: "swift-collections"),
             ]
         ),
         .target(

@@ -3,8 +3,6 @@
 //  
 //
 //  Created by Van Simmons on 11/28/22.
-//  FIXME: This is woefully non-performant and needs to adapt a real MPMC fifo algorithm
-//  But I don't want to invent one and all the ones I can find are C++ header macros.  sigh.
 //
 
 import Atomics
@@ -15,15 +13,16 @@ public final class Channel<Value> {
     private struct ChannelError: Error {
         let wrapper: Wrapper
     }
-    private final class Wrapper: AtomicReference, Identifiable, Hashable, Equatable {
+
+    private final class Wrapper: AtomicReference, Identifiable, Equatable {
         let value: AsyncResult<Value?, Error>
-        let readers: Deque<Resumption<Value>>
-        let writers: Deque<Resumption<Void>>
+        let readers: PersistentQueue<Resumption<Value>>
+        let writers: PersistentQueue<Resumption<Void>>
 
         init(
             _ value: Value?,
-            readers: Deque<Resumption<Value>> = [],
-            writers: Deque<Resumption<Void>> = []
+            readers: PersistentQueue<Resumption<Value>> = .init(),
+            writers: PersistentQueue<Resumption<Void>> = .init()
         ) {
             self.value = .success(value)
             self.readers = readers
@@ -32,8 +31,8 @@ public final class Channel<Value> {
 
         init(
             result: AsyncResult<Value?, Error>,
-            readers: Deque<Resumption<Value>> = [],
-            writers: Deque<Resumption<Void>> = []
+            readers: PersistentQueue<Resumption<Value>> = .init(),
+            writers: PersistentQueue<Resumption<Void>> = .init()
         ) {
             self.value = result
             self.readers = readers
@@ -42,7 +41,6 @@ public final class Channel<Value> {
 
         static func == (lhs: Channel<Value>.Wrapper, rhs: Channel<Value>.Wrapper) -> Bool { lhs.id == rhs.id }
         var id: ObjectIdentifier { .init(self) }
-        func hash(into hasher: inout Hasher) { hasher.combine(self) }
     }
 
     private let wrapped: ManagedAtomic<Wrapper>
@@ -55,7 +53,7 @@ public final class Channel<Value> {
             let writers = localWrapped.writers
             let (success, newLocalWrapped) = wrapped.compareExchange(
                 expected: localWrapped,
-                desired: .init(result: .failure(error), readers: [], writers: []),
+                desired: .init(result: .failure(error), readers: .init(), writers: .init()),
                 ordering: .sequentiallyConsistent
             )
             if success {
@@ -113,12 +111,9 @@ public final class Channel<Value> {
     private func blockForWriting(_ localWrapped: Wrapper, _ value: Value?) async throws -> Wrapper? {
         do {
             let _: Void = try await pause { resumption in
-                var writers = localWrapped.writers
-                writers.append(resumption)
-                let newVar = Wrapper(value, readers: localWrapped.readers, writers: writers)
                 let (success, newLocalWrapped) = wrapped.compareExchange(
                     expected: localWrapped,
-                    desired: newVar,
+                    desired: Wrapper(value, readers: localWrapped.readers, writers: localWrapped.writers.enqueue(resumption)),
                     ordering: .sequentiallyConsistent
                 )
                 if success { return }
@@ -132,9 +127,8 @@ public final class Channel<Value> {
     }
 
     private func dispatchReaderOrBlockForWriting(_ localWrapped: Wrapper, _ value: Value) async throws -> Wrapper? {
-        var readers = localWrapped.readers
-        if !readers.isEmpty {
-            let reader = readers.removeFirst()
+        let (dequeuedReader, readers) = localWrapped.readers.dequeue()
+        if let reader = dequeuedReader {
             let newVar = Wrapper(.none, readers: readers, writers: localWrapped.writers)
             let (success, newLocalWrapped) = wrapped.compareExchange(
                 expected: localWrapped,
@@ -154,8 +148,7 @@ public final class Channel<Value> {
 
     private func blockForReading(_ localWrapped: inout Channel<Value>.Wrapper) async throws -> Value {
         let value: Value = try await pause { resumption in
-            var readers = localWrapped.readers
-            readers.append(resumption)
+            let readers = localWrapped.readers.enqueue(resumption)
             let newVar = Wrapper(.none, readers: readers, writers: localWrapped.writers)
             let (success, newLocalWrapped) = wrapped.compareExchange(
                 expected: localWrapped,
@@ -174,8 +167,7 @@ public final class Channel<Value> {
     }
 
     private func dispatchWriter(_ localWrapped: Wrapper, _ value: Value) throws -> Value {
-        var writers = localWrapped.writers
-        let writer: Resumption<Void>? = writers.isEmpty ? .none : writers.removeFirst()
+        let (writer, writers) = localWrapped.writers.dequeue()
         let newVar = Wrapper(.none, readers: localWrapped.readers, writers: writers)
         let (success, newLocalWrapped) = wrapped.compareExchange(
             expected: localWrapped,

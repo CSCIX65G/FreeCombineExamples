@@ -4,42 +4,53 @@
 //
 //  Created by Van Simmons on 12/31/22.
 //
-public struct PersistentLazyQueue<Element> {
-    private let front : [Element]
-    private let rear : [Element]
+import HashTreeCollections
 
-    public init(front: [Element] = [], rear: [Element] = []) {
-        self.front = front
-        self.rear = rear
-    }
+public struct PersistentQueue<Element> {
+    let range: Range<UInt64>
+    private let storage: TreeDictionary<UInt64, Element>
 
-    public var isEmpty: Bool { front.count == 0 }
-    public var head: Element? { front.first }
-
-    public func tail() -> PersistentLazyQueue<Element> {
-        check(fStream: .init(front.dropFirst()), rStream: rear)
-    }
-
-    public func snoc(_ elem: Element) -> PersistentLazyQueue<Element> {
-        check(fStream: front, rStream: [elem] + rear)
-    }
-
-    public func enqueue(_ elem: Element) -> PersistentLazyQueue<Element> {
-        check(fStream: front, rStream: [elem] + rear)
-    }
-
-    public func dequeue() -> (head: Element?, tail: PersistentLazyQueue<Element>) {
-        (head: head, tail: tail())
+    private init(range: Range<UInt64>, storage: TreeDictionary<UInt64, Element>) {
+        self.range = range
+        self.storage = storage
     }
 }
 
-private extension PersistentLazyQueue {
-    func check(
-        fStream: [Element],
-        rStream: [Element]
-    ) -> PersistentLazyQueue<Element> {
-        rStream.count <= fStream.count
-        ? .init(front: fStream, rear: rStream)
-        : .init(front: fStream + rStream.reversed(), rear: [])
+public extension PersistentQueue {
+    init() { self.init(range: 0 ..< 0, storage: .init()) }
+    
+    var count: Int { range.count }
+    var isEmpty: Bool { count == 0 }
+
+    func enqueue(_ element: Element) -> PersistentQueue<Element> {
+        var newStorage: TreeDictionary<UInt64, Element> = .init(storage)
+        newStorage[range.upperBound] = element
+        return .init(
+            range: range.lowerBound ..< range.upperBound + 1,
+            storage: newStorage
+        )
+    }
+
+    func dequeue() -> (head: Element?, tail: PersistentQueue<Element>) {
+        guard let head = self.storage[range.lowerBound] else {
+            return (head: .none, tail: self)
+        }
+
+        var newStorage: TreeDictionary<UInt64, Element> = .init(storage)
+        newStorage[range.lowerBound] = nil
+
+        let newRange: Range<UInt64> = count == 1 ? 0 ..< 0 : range.lowerBound + 1 ..< range.upperBound
+
+        return (
+            head: head,
+            tail: .init(
+                range: newRange,
+                storage: newStorage
+            )
+        )
+    }
+
+    func forEach(_ action: (Element) -> Void) -> Void {
+        range.forEach { key in action(storage[key]!) }
     }
 }

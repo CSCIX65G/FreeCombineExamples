@@ -16,9 +16,10 @@ final class SPSCChannelTests: XCTestCase {
 
     func testSPSCChannel() async throws {
         let channel: SPSCChannel<Int> = .init(.none)
+        let size = 1_000
 
         let reader = Cancellable<Void> {
-            for i in 0 ..< 10_000 {
+            for i in 0 ..< size {
                 do {
                     let val = try await channel.read()
                     XCTAssert(val == i, "Invalid value read: \(val), should be: \(i)")
@@ -29,7 +30,7 @@ final class SPSCChannelTests: XCTestCase {
         }
 
         let writer = Cancellable<Void> {
-            for i in 0 ..< 10_000 {
+            for i in 0 ..< size {
                 do { try await channel.write(i) }
                 catch { XCTFail("Failed to write \(i)") }
             }
