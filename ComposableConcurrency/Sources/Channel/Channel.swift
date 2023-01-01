@@ -14,10 +14,19 @@ public final class Channel<Value> {
         let wrapper: Wrapper
     }
 
+    private struct WriterNode {
+        let resumption: Resumption<Void>?
+        let value: Value
+    }
+
     private final class Wrapper: AtomicReference, Identifiable, Equatable {
+        static func == (lhs: Channel<Value>.Wrapper, rhs: Channel<Value>.Wrapper) -> Bool { lhs.id == rhs.id }
+
         let value: AsyncResult<Value?, Error>
         let readers: PersistentQueue<Resumption<Value>>
         let writers: PersistentQueue<Resumption<Void>>
+
+        var id: ObjectIdentifier { .init(self) }
 
         init(
             _ value: Value?,
@@ -38,9 +47,6 @@ public final class Channel<Value> {
             self.readers = readers
             self.writers = writers
         }
-
-        static func == (lhs: Channel<Value>.Wrapper, rhs: Channel<Value>.Wrapper) -> Bool { lhs.id == rhs.id }
-        var id: ObjectIdentifier { .init(self) }
     }
 
     private let wrapped: ManagedAtomic<Wrapper>
@@ -111,9 +117,10 @@ public final class Channel<Value> {
     private func blockForWriting(_ localWrapped: Wrapper, _ value: Value?) async throws -> Wrapper? {
         do {
             let _: Void = try await pause { resumption in
+                let (_, writers) = localWrapped.writers.enqueue(resumption)
                 let (success, newLocalWrapped) = wrapped.compareExchange(
                     expected: localWrapped,
-                    desired: Wrapper(value, readers: localWrapped.readers, writers: localWrapped.writers.enqueue(resumption)),
+                    desired: Wrapper(value, readers: localWrapped.readers, writers: writers),
                     ordering: .sequentiallyConsistent
                 )
                 if success { return }
@@ -148,7 +155,7 @@ public final class Channel<Value> {
 
     private func blockForReading(_ localWrapped: inout Channel<Value>.Wrapper) async throws -> Value {
         let value: Value = try await pause { resumption in
-            let readers = localWrapped.readers.enqueue(resumption)
+            let (_, readers) = localWrapped.readers.enqueue(resumption)
             let newVar = Wrapper(.none, readers: readers, writers: localWrapped.writers)
             let (success, newLocalWrapped) = wrapped.compareExchange(
                 expected: localWrapped,

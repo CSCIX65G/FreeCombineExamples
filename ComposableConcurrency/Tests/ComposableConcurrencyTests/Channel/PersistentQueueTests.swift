@@ -18,7 +18,8 @@ final class PersistentQueueTests: XCTestCase {
         var queue = PersistentQueue<Int>()
         for i in 0 ..< size {
             XCTAssert(queue.count == i, "Wrong enqueue count: \(queue.count), should be: \(i)")
-            queue = queue.enqueue(i)
+            let (_, newQueue) = queue.enqueue(i)
+            queue = newQueue
         }
         XCTAssert(queue.count == size, "Wrong queued count: \(queue.count)")
 
@@ -31,7 +32,8 @@ final class PersistentQueueTests: XCTestCase {
 
         for i in 0 ..< size {
             XCTAssert(queue.count == i, "Wrong enqueue count: \(queue.count), should be: \(i)")
-            queue = queue.enqueue(i)
+            let (_, newQueue) = queue.enqueue(i)
+            queue = newQueue
         }
         XCTAssert(queue.range.upperBound == size, "did not reset range at empty, range = \(queue.range)")
     }

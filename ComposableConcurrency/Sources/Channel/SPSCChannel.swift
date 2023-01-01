@@ -15,9 +15,13 @@ public final class SPSCChannel<Value> {
     private struct ChannelError: Error { let wrapper: Wrapper }
 
     private final class Wrapper: AtomicReference, Identifiable, Equatable {
+        static func == (lhs: SPSCChannel<Value>.Wrapper, rhs: SPSCChannel<Value>.Wrapper) -> Bool { lhs.id == rhs.id }
+
         let value: AsyncResult<Value?, Error>
         let reader: Resumption<Value>?
         let writer: Resumption<Void>?
+
+        var id: ObjectIdentifier { .init(self) }
 
         init(
             result: AsyncResult<Value?, Error>,
@@ -38,9 +42,6 @@ public final class SPSCChannel<Value> {
             self.reader = reader
             self.writer = writer
         }
-
-        static func == (lhs: SPSCChannel<Value>.Wrapper, rhs: SPSCChannel<Value>.Wrapper) -> Bool { lhs.id == rhs.id }
-        var id: ObjectIdentifier { .init(self) }
     }
 
     private let wrapped: ManagedAtomic<Wrapper>
@@ -54,7 +55,7 @@ public final class SPSCChannel<Value> {
             let (success, newLocalWrapped) = wrapped.compareExchange(
                 expected: localWrapped,
                 desired: .init(result: .failure(error), reader: .none, writer: .none),
-                ordering: .sequentiallyConsistent
+                ordering: .relaxed
             )
             if success {
                 reader?.resume(throwing: error)
@@ -88,10 +89,9 @@ public final class SPSCChannel<Value> {
                 case (.some, false):
                     throw FailedWriteError()
                 case (.none, false):
-                    let newVar = Wrapper(value, reader: localWrapped.reader, writer: .none)
                     let (success, newLocalWrapped) = wrapped.compareExchange(
                         expected: localWrapped,
-                        desired: newVar,
+                        desired: Wrapper(value, reader: localWrapped.reader, writer: .none),
                         ordering: .sequentiallyConsistent
                     )
                     guard !success else { return }
@@ -130,7 +130,9 @@ public final class SPSCChannel<Value> {
                     desired: newVar,
                     ordering: .sequentiallyConsistent
                 )
-                if success { return }
+                if success {
+                    return
+                }
                 else { resumption.resume(throwing: ChannelError(wrapper: newLocalWrapped)) }
             }
             return .none
