@@ -37,4 +37,66 @@ final class PersistentQueueTests: XCTestCase {
         }
         XCTAssert(queue.range.upperBound == size, "did not reset range at empty, range = \(queue.range)")
     }
+
+    func testFixedSizePersistentQueueNewest() throws {
+        let size = 50
+        let bufferSize = 10
+        var queue = PersistentQueue<Int>(buffering: .newest(bufferSize))
+        for i in 0 ..< size {
+            if i < bufferSize {
+                XCTAssert(queue.count == i, "Wrong enqueue count: \(queue.count), should be: \(i)")
+            } else {
+                XCTAssert(queue.count == bufferSize, "Wrong enqueue count: \(queue.count), should be: \(bufferSize)")
+            }
+            let (_, newQueue) = queue.enqueue(i)
+            queue = newQueue
+        }
+        XCTAssert(queue.count == bufferSize, "Wrong queued count: \(queue.count)")
+
+        for i in 0 ..< bufferSize {
+            XCTAssert(queue.count == bufferSize - i, "Wrong dequeue: \(queue.count), should be: \(bufferSize - i)")
+            let (head, newQueue) = queue.dequeue()
+            queue = newQueue
+            XCTAssert(head == size - bufferSize + i, "Wrong head: \(head ?? Int.max), should be: \(i)")
+        }
+        XCTAssert(queue.range.upperBound == 0, "did not reset range at empty, range = \(queue.range)")
+
+        for i in 0 ..< bufferSize {
+            XCTAssert(queue.count == i, "Wrong enqueue count: \(queue.count), should be: \(i)")
+            let (_, newQueue) = queue.enqueue(i)
+            queue = newQueue
+        }
+        XCTAssert(queue.range.upperBound == bufferSize, "did not reset range at empty, range = \(queue.range)")
+    }
+
+    func testFixedSizePersistentQueueOldest() throws {
+        let size = 50
+        let bufferSize = 10
+        var queue = PersistentQueue<Int>(buffering: .oldest(bufferSize))
+        for i in 0 ..< size {
+            if i < bufferSize {
+                XCTAssert(queue.count == i, "Wrong enqueue count: \(queue.count), should be: \(i)")
+            } else {
+                XCTAssert(queue.count == bufferSize, "Wrong enqueue count: \(queue.count), should be: \(bufferSize)")
+            }
+            let (_, newQueue) = queue.enqueue(i)
+            queue = newQueue
+        }
+        XCTAssert(queue.count == bufferSize, "Wrong queued count: \(queue.count)")
+
+        for i in 0 ..< bufferSize {
+            XCTAssert(queue.count == bufferSize - i, "Wrong dequeue: \(queue.count), should be: \(bufferSize - i)")
+            let (head, newQueue) = queue.dequeue()
+            queue = newQueue
+            XCTAssert(head == i, "Wrong head: \(head ?? Int.max), should be: \(i)")
+        }
+        XCTAssert(queue.range.upperBound == 0, "did not reset range at empty, range = \(queue.range)")
+
+        for i in 0 ..< bufferSize {
+            XCTAssert(queue.count == i, "Wrong enqueue count: \(queue.count), should be: \(i)")
+            let (_, newQueue) = queue.enqueue(i)
+            queue = newQueue
+        }
+        XCTAssert(queue.range.upperBound == bufferSize, "did not reset range at empty, range = \(queue.range)")
+    }
 }

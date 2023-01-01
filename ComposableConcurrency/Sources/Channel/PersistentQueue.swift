@@ -64,6 +64,7 @@ public extension PersistentQueue {
         return (
             dropped: dropped,
             tail: .init(
+                buffering: buffering,
                 range: newRange.lowerBound ..< newRange.upperBound + 1,
                 storage: newStorage
             )
@@ -83,6 +84,7 @@ public extension PersistentQueue {
         return (
             head: head,
             tail: .init(
+                buffering: buffering,
                 range: newRange,
                 storage: newStorage
             )
