@@ -99,4 +99,38 @@ final class PersistentQueueTests: XCTestCase {
         }
         XCTAssert(queue.range.upperBound == bufferSize, "did not reset range at empty, range = \(queue.range)")
     }
+
+    func testSequenceInit() throws {
+        let minVal = 1_000_000
+        let maxVal = 1_000_050
+        let sequence: any Sequence<Int> = minVal ..< maxVal
+        let bufferSize = 10
+        var queue = PersistentQueue<Int>(buffering: .newest(bufferSize), sequence)
+        XCTAssert(queue.count == bufferSize, "Wrong queued count: \(queue.count)")
+
+        for i in 0 ..< bufferSize {
+            XCTAssert(queue.count == bufferSize - i, "Wrong dequeue: \(queue.count), should be: \(bufferSize - i)")
+            let (head, newQueue) = queue.dequeue()
+            queue = newQueue
+            XCTAssert(head == maxVal - bufferSize + i, "Wrong head: \(head ?? Int.max), should be: \(maxVal - bufferSize + i)")
+        }
+        XCTAssert(queue.range.upperBound == 0, "did not reset range at empty, range = \(queue.range)")
+    }
+
+    func testRandomAccessCollectionInit() throws {
+        let minVal = 1_000_000
+        let maxVal = 1_000_050
+        let sequence: [Int] = (minVal ..< maxVal).map { $0 }
+        let bufferSize = 10
+        var queue = PersistentQueue<Int>(buffering: .newest(bufferSize), sequence)
+        XCTAssert(queue.count == bufferSize, "Wrong queued count: \(queue.count)")
+
+        for i in 0 ..< bufferSize {
+            XCTAssert(queue.count == bufferSize - i, "Wrong dequeue: \(queue.count), should be: \(bufferSize - i)")
+            let (head, newQueue) = queue.dequeue()
+            queue = newQueue
+            XCTAssert(head == maxVal - bufferSize + i, "Wrong head: \(head ?? Int.max), should be: \(maxVal - bufferSize + i)")
+        }
+        XCTAssert(queue.range.upperBound == 0, "did not reset range at empty, range = \(queue.range)")
+    }
 }

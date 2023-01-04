@@ -36,7 +36,56 @@ public extension PersistentQueue {
             storage: .init()
         )
     }
-    
+
+    init<S: Sequence>(
+        buffering: Buffering = .unbounded,
+        _ initialValues: S
+    ) where S.Element == Element {
+        var backingStore: TreeDictionary<UInt64, Element> = .init()
+        var range = UInt64.zero ..< .zero
+        for value in initialValues {
+            switch buffering {
+                case let .newest(bound) where backingStore.count >= bound:
+                    backingStore[range.lowerBound] = .none
+                    backingStore[range.upperBound] = value
+                    range = range.lowerBound + 1 ..< range.upperBound + 1
+                case let .oldest(bound) where backingStore.count >= bound:
+                    ()
+                default:
+                    backingStore[range.upperBound] = value
+                    range = range.lowerBound ..< range.upperBound + 1
+            }
+        }
+        self.init(
+            buffering: buffering,
+            range: range,
+            storage: backingStore
+        )
+    }
+
+    init<S: RandomAccessCollection>(
+        buffering: Buffering = .unbounded,
+        _ initialValues: S
+    ) where S.Element == Element {
+        var keysAndValues: [(UInt64, Element)]!
+        var size = initialValues.count
+        switch buffering {
+            case .unbounded:
+                keysAndValues = (0 ..< initialValues.count).map { (UInt64($0), initialValues[_offset: $0]) }
+            case let .newest(bound):
+                size = bound
+                keysAndValues = (0 ..< bound).map { (UInt64($0), initialValues[_offset: initialValues.count - bound + $0]) }
+            case let .oldest(bound):
+                size = bound
+                keysAndValues = (0 ..< bound).map { (UInt64($0), initialValues[_offset: $0]) }
+        }
+        self.init(
+            buffering: buffering,
+            range: 0 ..< UInt64(size),
+            storage: .init(uniqueKeysWithValues: keysAndValues)
+        )
+    }
+
     var count: Int { range.count }
     var isEmpty: Bool { count == 0 }
 
