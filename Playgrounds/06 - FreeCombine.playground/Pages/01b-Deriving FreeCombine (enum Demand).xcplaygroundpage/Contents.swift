@@ -11,7 +11,11 @@ enum Completion<Failure: Error> {
    case finished
 }
 
-protocol Subscription {
+protocol Cancellable {
+    func cancel()
+}
+
+protocol Subscription: Cancellable {
     func request(_ demand: Demand) -> Void
 }
 
@@ -42,6 +46,7 @@ struct Script<S: Subscriber>: Subscription where S.Supply == Int {
         self.iterator = iterator
         self.subscriber = subscriber
     }
+    func cancel() { }
     func request(_ demand: Demand) {
         guard demand == .more else { return }
         print("\nsubscription received request: \(demand)")
@@ -59,7 +64,6 @@ struct Script<S: Subscriber>: Subscription where S.Supply == Int {
         print("subscription sending complete")
         subscriber.receive(completion: .finished)
     }
-
 }
 
 struct P: Publisher {

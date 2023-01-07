@@ -12,7 +12,11 @@ enum Value<Supply, Failure: Error> {
    case finished
 }
 
-//protocol Subscription {
+protocol Cancellable {
+    func cancel() -> Void
+}
+
+//protocol Subscription: Cancellable {
 //    func request(_ demand: Demand) -> Void
 //}
 

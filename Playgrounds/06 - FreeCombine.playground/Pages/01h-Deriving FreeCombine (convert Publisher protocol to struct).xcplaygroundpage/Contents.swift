@@ -13,12 +13,38 @@ enum Value<Supply> {
     case finished
 }
 
+typealias Sink<Output> = (Value<Output>) async throws -> Demand
+
 public struct Publisher<Output> {
-    private let call: (@escaping (Value<Output>) async -> Demand) -> Task<Demand, Swift.Error>
-    init(
-        _ call: @escaping (@escaping (Value<Output>) async -> Demand) -> Task<Demand, Swift.Error>
-    ) {
-        self.call = call
+    let sink: (@escaping Sink<Output>) -> Task<Demand, Swift.Error>
+    init(_ sink: @escaping (@escaping Sink<Output>) -> Task<Demand, Swift.Error>) {
+        self.sink = sink
+    }
+}
+
+public extension Publisher {
+    func map<T>(_ f: @escaping (Output) async -> T) -> Publisher<T> {
+        .init { (downstream: @escaping Sink<T>) -> Task<Demand, Swift.Error> in
+            self.sink { (value: Value<Output>) async throws -> Demand in
+                switch value {
+                    case let .value(output): return try await downstream(.value(f(output)))
+                    case let .failure(error): return try await downstream(.failure(error))
+                    case .finished: return try await downstream(.finished)
+                }
+            }
+        }
+    }
+
+    func flatMap<T>(_ f: @escaping (Output) async -> Publisher<T>) -> Publisher<T> {
+        .init { (downstream: @escaping Sink<T>) -> Task<Demand, Swift.Error> in
+            self.sink { (value: Value<Output>) async throws -> Demand in
+                switch value {
+                    case let .value(output): return try await f(output)(downstream).value
+                    case let .failure(error): return try await downstream(.failure(error))
+                    case .finished: return try await downstream(.finished)
+                }
+            }
+        }
     }
 }
 
@@ -26,8 +52,8 @@ extension Publisher {
     public enum Error: Swift.Error, CaseIterable, Equatable {
         case cancelled
     }
-    func callAsFunction(_ downstream: @escaping (Value<Output>) async -> Demand) -> Task<Demand, Swift.Error> {
-        call(downstream)
+    func callAsFunction(_ downstream: @escaping Sink<Output>) -> Task<Demand, Swift.Error> {
+        sink(downstream)
     }
 }
 
@@ -40,10 +66,10 @@ extension Publisher {
                 guard !Task.isCancelled else { return .done }
                 for a in sequence {
                     guard !Task.isCancelled else { return .done }
-                    guard await downstream(.value(a)) == .more else { return .done }
+                    guard try await downstream(.value(a)) == .more else { return .done }
                 }
                 guard !Task.isCancelled else { return .done }
-                return await downstream(.finished)
+                return try await downstream(.finished)
             }
         }
     }
@@ -51,7 +77,7 @@ extension Publisher {
 
 let publisher: Publisher<Int> = .init((0 ..< 100).shuffled()[0 ..< 50])
 
-let t = publisher { input in
+let t = publisher.sink { input in
     print("subscriber receiving: \(input)")
     guard case let .value(value) = input, value != 57 else {
         print("subscriber replying .done")
@@ -64,5 +90,6 @@ let t = publisher { input in
     print("subscriber replying .more")
     return .more
 }
-
+let result = await t.result
+print(result)
 //: [Next](@next)

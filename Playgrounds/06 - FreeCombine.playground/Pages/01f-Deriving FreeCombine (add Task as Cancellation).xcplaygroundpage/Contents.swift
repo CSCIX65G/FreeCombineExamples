@@ -28,7 +28,9 @@ protocol Publisher { // Publisher is just a thing that takes a callback
     associatedtype Supply
     associatedtype Failure: Error
 
-    func receive(downstream: @escaping (Value<Supply, Failure>) async -> Demand) -> Task<Demand, Swift.Error> // AnyCancellable..
+    func receive(
+        downstream: @escaping (Value<Supply, Failure>) async -> Demand
+    ) -> Task<Demand, Swift.Error> // AnyCancellable..
 }
 
 //struct Script<S: Subscriber> where S.Supply == Int {

@@ -20,7 +20,10 @@ enum Completion<Failure: Error> {
    case failure(Failure)
    case finished
 }
-protocol Subscription {
+protocol Cancellable {
+    func cancel() -> Void
+}
+protocol Subscription: Cancellable {
     func request(_ demand: Demand) -> Void
 }
 protocol Subscriber {
@@ -74,6 +77,7 @@ class Script<S: Subscriber>: Subscription where S.Input == Int {
         self.iterator = iterator
         self.subscriber = subscriber
     }
+    func cancel() { }
     func request(_ demand: Demand) {
         guard demand != .none else { return }
         currentDemand += demand

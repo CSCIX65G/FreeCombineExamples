@@ -98,17 +98,15 @@ public extension PersistentQueue {
             case .unbounded:
                 break
             case let .newest(bound):
-                if newStorage.count > bound {
-                    dropped = newStorage[newRange.lowerBound]
-                    newStorage[newRange.lowerBound] = .none
-                    newRange = newRange.lowerBound + 1 ..< newRange.upperBound
-                }
+                guard newStorage.count > bound else { break }
+                dropped = newStorage[newRange.lowerBound]
+                newStorage[newRange.lowerBound] = .none
+                newRange = newRange.lowerBound + 1 ..< newRange.upperBound
             case let .oldest(bound):
-                if newStorage.count > bound {
-                    dropped = newStorage[newRange.upperBound]
-                    newStorage[newRange.upperBound] = .none
-                    newRange = newRange.lowerBound ..< newRange.upperBound - 1
-                }
+                guard newStorage.count > bound else { break }
+                dropped = newStorage[newRange.upperBound]
+                newStorage[newRange.upperBound] = .none
+                newRange = newRange.lowerBound ..< newRange.upperBound - 1
         }
         return (
             dropped: dropped,
@@ -126,7 +124,7 @@ public extension PersistentQueue {
         }
 
         var newStorage: TreeDictionary<UInt64, Element> = .init(storage)
-        newStorage[range.lowerBound] = nil
+        newStorage[range.lowerBound] = .none
 
         let newRange: Range<UInt64> = count == 1 ? 0 ..< 0 : range.lowerBound + 1 ..< range.upperBound
 
