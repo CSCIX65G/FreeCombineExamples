@@ -17,6 +17,8 @@ let package = Package(
                 "ComposableConcurrency",
                 "Channel",
                 "Clock",
+                "Continuation",
+                "Func",
                 "Future",
                 "Publisher",
                 "Queue"
@@ -54,6 +56,18 @@ let package = Package(
             ]
         ),
         .target(
+            name: "Continuation",
+            dependencies: [
+                "Core"
+            ]
+        ),
+        .target(
+            name: "Func",
+            dependencies: [
+                "Core"
+            ]
+        ),
+        .target(
             name: "Future",
             dependencies: [
                 "Core",
@@ -76,6 +90,7 @@ let package = Package(
             dependencies: [
                 "Core",
                 "Channel",
+                "Func",
                 .product(name: "Atomics", package: "swift-atomics"),
             ]
         ),

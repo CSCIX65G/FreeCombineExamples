@@ -21,8 +21,6 @@
 import Atomics
 
 public enum Uncancellables {
-    @TaskLocal static var status = ManagedAtomic<Bool>(false)
-
     enum Status: UInt8, Sendable, AtomicValue, Equatable {
         case running
         case finished

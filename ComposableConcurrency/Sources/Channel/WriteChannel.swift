@@ -7,9 +7,9 @@
 //  But all the ones I can find are C++ as macros.  sigh.
 //
 
-import Atomics
 import Core
-@_implementationOnly import DequeModule
+import Atomics
+import DequeModule
 
 public final class WriteChannel<Value> {
     private struct Error: Swift.Error {

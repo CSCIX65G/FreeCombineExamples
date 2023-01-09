@@ -43,29 +43,3 @@ extension Uncancellable {
         .init(function: function, file: file, line: line) { await transform(self.value) }
     }
 }
-
-public extension AsyncContinuation {
-    func map<T>(
-        _ transform: @escaping (Output) async -> T
-    ) -> AsyncContinuation<T, Return> {
-        .init { resumption, downstream in
-            self(onStartup: resumption) { a in
-                let t = await transform(a)
-                try Cancellables.checkCancellation()
-                return try await downstream(t)
-            }
-        }
-    }
-}
-
-extension AsyncFunc {
-    public func map<C>(
-        _ transform: @escaping (R) async throws -> C
-    ) -> AsyncFunc<A, C> {
-        .init { a in
-            let b = try await call(a)
-            try Cancellables.checkCancellation()
-            return try await transform(b)
-        }
-    }
-}

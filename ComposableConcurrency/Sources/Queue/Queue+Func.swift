@@ -19,6 +19,7 @@
 //  limitations under the License.
 //
 import Core
+import Func
 
 public func consume<A, R>(
     _ f: @escaping (A) async throws -> R

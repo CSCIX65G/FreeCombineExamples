@@ -5,9 +5,9 @@
 //  Created by Van Simmons on 11/28/22.
 //
 
-import Atomics
 import Core
-@_implementationOnly import DequeModule
+import Atomics
+import DequeModule
 
 public final class Channel<Value> {
     private struct ChannelError: Error {

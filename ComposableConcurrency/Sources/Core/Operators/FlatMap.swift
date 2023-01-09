@@ -41,23 +41,3 @@ extension Uncancellable {
         map(transform).join(function: function, file: file, line: line)
     }
 }
-
-extension AsyncFunc {
-    public func flatMap<T>(
-        _ transform: @escaping (R) async throws -> AsyncFunc<A, T>
-    ) -> AsyncFunc<A, T> {
-        .init { a in try await transform(call(a))(a) }
-    }
-}
-
-public extension AsyncContinuation {
-    func flatMap<T>(
-        _ transform: @escaping (Output) async -> AsyncContinuation<T, Return>
-    ) -> AsyncContinuation<T, Return> {
-        .init { resumption, downstream in
-            self(onStartup: resumption) { a in
-                try await transform(a)(downstream).value
-            }
-        }
-    }
-}

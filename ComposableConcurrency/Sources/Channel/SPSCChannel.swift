@@ -7,9 +7,9 @@
 //  But I don't want to invent one and all the ones I can find are C++ header macros.  sigh.
 //
 
-import Atomics
 import Core
-@_implementationOnly import DequeModule
+import Atomics
+import DequeModule
 
 public final class SPSCChannel<Value> {
     private struct ChannelError: Error { let wrapper: Wrapper }
