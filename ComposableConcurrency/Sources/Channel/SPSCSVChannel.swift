@@ -3,19 +3,17 @@
 //
 //
 //  Created by Van Simmons on 11/28/22.
-//  FIXME: This is woefully non-performant and needs to adapt a real MPMC fifo algorithm
-//  But I don't want to invent one and all the ones I can find are C++ header macros.  sigh.
 //
 
 import Core
 import Atomics
 import DequeModule
 
-public final class SPSCChannel<Value> {
+public final class SPSCSVChannel<Value> {
     private struct ChannelError: Error { let wrapper: Wrapper }
 
     private final class Wrapper: AtomicReference, Identifiable, Equatable {
-        static func == (lhs: SPSCChannel<Value>.Wrapper, rhs: SPSCChannel<Value>.Wrapper) -> Bool { lhs.id == rhs.id }
+        static func == (lhs: SPSCSVChannel<Value>.Wrapper, rhs: SPSCSVChannel<Value>.Wrapper) -> Bool { lhs.id == rhs.id }
 
         let value: AsyncResult<Value?, Error>
         let reader: Resumption<Value>?
@@ -161,7 +159,7 @@ public final class SPSCChannel<Value> {
         }
     }
 
-    private func blockForReading(_ localWrapped: inout SPSCChannel<Value>.Wrapper) async throws -> Value {
+    private func blockForReading(_ localWrapped: inout SPSCSVChannel<Value>.Wrapper) async throws -> Value {
         let value: Value = try await pause { resumption in
             let newVar = Wrapper(.none, reader: resumption, writer: localWrapped.writer)
             let (success, newLocalWrapped) = wrapped.compareExchange(

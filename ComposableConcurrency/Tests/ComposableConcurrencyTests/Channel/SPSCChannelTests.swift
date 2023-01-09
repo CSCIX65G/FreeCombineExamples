@@ -15,7 +15,7 @@ final class SPSCChannelTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSPSCChannel() async throws {
-        let channel: SPSCChannel<Int> = .init(.none)
+        let channel: SPSCSVChannel<Int> = .init(.none)
         let size = 1_000
 
         let reader = Cancellable<Void> {
@@ -40,7 +40,7 @@ final class SPSCChannelTests: XCTestCase {
     }
 
     func testSPSCChannelNonBlockingRead() async throws {
-        let channel: SPSCChannel<Int> = .init(.none)
+        let channel: SPSCSVChannel<Int> = .init(.none)
         let promise = await Promise<Void>()
 
         let reader = Cancellable<Void> {
@@ -69,7 +69,7 @@ final class SPSCChannelTests: XCTestCase {
     }
 
     func testSPSCChannelNonBlockingWrite() async throws {
-        let channel: SPSCChannel<Int> = .init(.none)
+        let channel: SPSCSVChannel<Int> = .init(.none)
         let promise = await Promise<Void>()
 
         let writer = Cancellable<Void> {
@@ -95,7 +95,7 @@ final class SPSCChannelTests: XCTestCase {
     func testSPSCChannelCancel() async throws {
         struct TestError: Error { }
 
-        let mvar: SPSCChannel<Int> = .init(.none)
+        let mvar: SPSCSVChannel<Int> = .init(.none)
 
         let reader = Cancellable<Void> {
             for i in 0 ..< 100 {
