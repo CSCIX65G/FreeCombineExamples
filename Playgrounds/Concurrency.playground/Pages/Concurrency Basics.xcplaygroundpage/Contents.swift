@@ -34,7 +34,6 @@ extension Task where Failure == Never {
     }
 }
 
-
 func forked<A, B>(_ f: @escaping (A) async -> B) -> (A) -> Task<B, Never> {
     { a in .init { await f(a) } }
 }
@@ -68,9 +67,12 @@ extension Task where Failure == Never {
     }
 }
 
-func taskFlattener<A, B>(_ t: Task<A, Never>) -> (@escaping (A) async -> Task<B, Never>) -> Task<B, Never> {
+func flatMap<A, B>(_ t: Task<A, Never>) -> (@escaping (A) async -> Task<B, Never>) -> Task<B, Never> {
     //    { f in .init { await f(t.value).value } }
+    //    { f in .init { await map(f)(t).value.value } }
+    //    { f in .init { await t.map(f).value.value } }
     //    { f in join(map(f)(t)) }
+    //    { f in join(t.map(f)) }
     { f in t.map(f).join() }
 }
 

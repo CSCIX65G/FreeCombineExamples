@@ -24,9 +24,13 @@ and
 
 * [Interesting post on Monads in Swift](https://broomburgo.github.io/fun-ios/post/why-monads/)
 
+### CSP
+
+* [Communicating Haskell Processes](http://twistedsquare.com/thesis.pdf)
 ### Swift Atomics
 
 * [Tutorial on Memory Ordering](http://www.ai.mit.edu/projects/aries/papers/consistency/computer_29_12_dec1996_p66.pdf)
+* [C++ Memory Ordering](https://en.cppreference.com/w/cpp/atomic/memory_order)
 * [Memory Ordering in Modern Microprocessors, Part I](https://www.linuxjournal.com/article/8211)
 * [Memory Ordering in Modern Microprocessors, Part II](https://www.linuxjournal.com/article/8211)
 
@@ -83,6 +87,7 @@ and
 
 * [Guidelines on NIO](https://github.com/swift-server/guides/blob/main/docs/concurrency-adoption-guidelines.md).  The official guidelines that implementors of server-side code are supposed to consider.
 * [NIO Roadmap](https://forums.swift.org/t/future-of-swift-nio-in-light-of-concurrency-roadmap/41633/4).  Basically NIO needs custom executors to build its own version of a ThreadPool.
+* [NIO Roadmap part 2](https://forums.swift.org/t/future-of-swift-nio-in-light-of-concurrency-roadmap/41633/11).  Basically NIO can't use async/await and this is true of all I/O bound processes.  (I'm thinking UI)
 
 ### Theory of Coroutines
 

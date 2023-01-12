@@ -15,7 +15,7 @@ final class ChannelTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testChannel() async throws {
-        let mvar: Channel<Int> = .init(.none)
+        let mvar: Channel<Int> = .init()
         let size = 1_000
 
         let reader = Cancellable<Void> {
@@ -42,7 +42,7 @@ final class ChannelTests: XCTestCase {
     func testChannelCancel() async throws {
         struct TestError: Error { }
 
-        let mvar: Channel<Int> = .init(.none)
+        let mvar: Channel<Int> = .init()
 
         let reader = Cancellable<Void> {
             for i in 0 ..< 100 {
@@ -53,7 +53,7 @@ final class ChannelTests: XCTestCase {
                     XCTAssert(val < 47, "Should not read values > 47.  Value - \(i)")
                 } catch {
                     if !(error is TestError) {
-                        XCTFail("Failed to read \(i)")
+                        XCTFail("Failed to read \(i) with error: \(error)")
                     }
                 }
             }
