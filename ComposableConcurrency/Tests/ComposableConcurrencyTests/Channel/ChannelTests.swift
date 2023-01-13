@@ -52,7 +52,7 @@ final class ChannelTests: XCTestCase {
                     XCTAssert(val == i, "Invalid value read: \(val), should be: \(i)")
                     XCTAssert(val < 47, "Should not read values > 47.  Value - \(i)")
                 } catch {
-                    if !(error is TestError) {
+                    if !(error is ChannelCompleteError) {
                         XCTFail("Failed to read \(i) with error: \(error)")
                     }
                 }
@@ -66,8 +66,8 @@ final class ChannelTests: XCTestCase {
                     if i > 47 { XCTFail("Should not get values > 47.  value = \(i)") }
                 }
                 catch {
-                    if !(error is TestError) || i < 47 {
-                        XCTFail("Failed to write \(i)")
+                    if !(error is ChannelCompleteError) || i < 47 {
+                        XCTFail("Failed to write \(i) with error: \(error)")
                     }
                 }
             }

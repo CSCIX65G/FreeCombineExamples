@@ -9,9 +9,21 @@ import Core
 import Atomics
 import DequeModule
 
+public struct Channels {
+    public enum Buffering {
+        case oldest(Int)
+        case unbounded
+    }
+
+    public enum Completion {
+        case finished
+        case failure(Error)
+    }
+}
+
 public final class Channel<Value> {
     private struct ChannelError: Error {
-        let wrapper: Wrapper
+        let wrapper: State
     }
 
     private struct WriterNode {
@@ -19,44 +31,55 @@ public final class Channel<Value> {
         let value: Value
     }
 
-    private final class Wrapper: AtomicReference, Identifiable, Equatable {
-        static func == (lhs: Channel<Value>.Wrapper, rhs: Channel<Value>.Wrapper) -> Bool { lhs.id == rhs.id }
+    private final class State: AtomicReference, Identifiable, Equatable {
+        static func == (lhs: Channel<Value>.State, rhs: Channel<Value>.State) -> Bool { lhs.id == rhs.id }
 
-        let error: Error?
+        let completion: Channels.Completion?
         let readers: PersistentQueue<Resumption<Value>>
         let writers: PersistentQueue<WriterNode>
 
         var id: ObjectIdentifier { .init(self) }
 
         init(
-            error: Error? = .none,
+            completion: Channels.Completion? = .none,
             readers: PersistentQueue<Resumption<Value>> = .init(),
             writers: PersistentQueue<WriterNode> = .init()
         ) {
-            self.error = error
+            self.completion = completion
             self.readers = readers
             self.writers = writers
         }
 
         init(_ value: Value) {
-            error = .none
+            completion = .none
             readers = .init()
             let (_, initialWriters) = PersistentQueue<WriterNode>().enqueue(.init(resumption: .none, value: value))
             writers = initialWriters
         }
     }
 
-    private let wrapped: ManagedAtomic<Wrapper>
+    private let buffering: Channels.Buffering
+    private let wrapped: ManagedAtomic<State>
+
+    public init(buffering: Channels.Buffering = .unbounded) {
+        self.buffering = buffering
+        self.wrapped = ManagedAtomic(State())
+    }
+
+    public init(buffering: Channels.Buffering = .unbounded, _ value: Value) {
+        self.buffering = buffering
+        self.wrapped = ManagedAtomic(State(value))
+    }
 
     public func cancel(with error: Error = CancellationError()) throws -> Void {
         var localWrapped = wrapped.load(ordering: .sequentiallyConsistent)
         while true {
-            guard localWrapped.error == nil else { throw ChannelCancellationFailureError(error: localWrapped.error!) }
+            guard localWrapped.completion == nil else { throw ChannelCompleteError(completion: localWrapped.completion!) }
             let readers = localWrapped.readers
             let writers = localWrapped.writers
             let (success, newLocalWrapped) = wrapped.compareExchange(
                 expected: localWrapped,
-                desired: .init(error: error, readers: .init(), writers: .init()),
+                desired: .init(completion: .failure(error), readers: .init(), writers: .init()),
                 ordering: .sequentiallyConsistent
             )
             if success {
@@ -69,49 +92,56 @@ public final class Channel<Value> {
         }
     }
 
-    public init() {
-        self.wrapped = ManagedAtomic(Wrapper())
-    }
-
-    public init(_ value: Value) {
-        self.wrapped = ManagedAtomic(Wrapper(value))
-    }
-
     public func write() async throws -> Void where Value == Void {
         try await write(())
     }
 
-    public func write(_ value: Value) async throws -> Void {
-        var localWrapped = wrapped.load(ordering: .acquiring)
+    public func write(blocking: Bool = true, _ value: Value) async throws -> Void {
+        var localWrapped = wrapped.load(ordering: .relaxed)
         while true {
-            guard localWrapped.error == nil else { throw localWrapped.error! }
+            guard localWrapped.completion == nil else { throw ChannelCompleteError(completion: localWrapped.completion!) }
             let (dequeued, newReaders) = localWrapped.readers.dequeue()
             switch dequeued {
                 case .none:
-                    guard let nextLocalWrapped = try await blockForWriting(localWrapped, value) else {
-                        return
-                    }
-                    localWrapped = nextLocalWrapped
+                    let nextLocalWrapped = blocking
+                    ? try await enqueueForWriting(localWrapped, value)
+                    : try await enqueueAsValue(localWrapped, value)
+                    guard nextLocalWrapped != nil else { return }
+                    localWrapped = nextLocalWrapped!
                 case let .some(reader):
                     let (success, newLocalWrapped) = wrapped.compareExchange(
                         expected: localWrapped,
                         desired: .init(readers: newReaders, writers: localWrapped.writers),
-                        ordering: .releasing
+                        ordering: .relaxed
                     )
-                    guard success else { localWrapped = newLocalWrapped; continue }
+                    guard success else {
+                        localWrapped = newLocalWrapped
+                        continue
+                    }
                     reader.resume(returning: value)
                     return
             }
         }
     }
 
-    private func blockForWriting(_ localWrapped: Wrapper, _ value: Value) async throws -> Wrapper? {
+    private func enqueueAsValue(_ localWrapped: State, _ value: Value) async throws -> State? {
+        let (dropped, writers) = localWrapped.writers.enqueue(.init(resumption: .none, value: value))
+        let (success, newLocalWrapped) = wrapped.compareExchange(
+            expected: localWrapped,
+            desired: State(readers: localWrapped.readers, writers: writers),
+            ordering: .relaxed
+        )
+        dropped?.resumption?.resume(throwing: ChannelError(wrapper: newLocalWrapped))
+        return success ? .none : newLocalWrapped
+    }
+
+    private func enqueueForWriting(_ localWrapped: State, _ value: Value) async throws -> State? {
         do {
             let _: Void = try await pause { resumption in
                 let (dropped, writers) = localWrapped.writers.enqueue(.init(resumption: resumption, value: value))
                 let (success, newLocalWrapped) = wrapped.compareExchange(
                     expected: localWrapped,
-                    desired: Wrapper(readers: localWrapped.readers, writers: writers),
+                    desired: State(readers: localWrapped.readers, writers: writers),
                     ordering: .relaxed
                 )
                 switch (success, dropped) {
@@ -134,12 +164,12 @@ public final class Channel<Value> {
     public func read(blocking: Bool = true) async throws -> Value {
         var localWrapped = wrapped.load(ordering: .acquiring)
         while true {
-            guard localWrapped.error == nil else { throw localWrapped.error! }
+            guard localWrapped.completion == nil else { throw ChannelCompleteError(completion: localWrapped.completion!) }
             let (dequeued, newWriters) = localWrapped.writers.dequeue()
             switch dequeued {
                 case .none:
                     if !blocking { throw FailedReadError() }
-                    do { return try await blockForReading(&localWrapped) }
+                    do { return try await enqueueForReading(&localWrapped) }
                     catch { continue }
                 case let .some(writerNode):
                     let (success, newLocalWrapped) = wrapped.compareExchange(
@@ -154,23 +184,18 @@ public final class Channel<Value> {
         }
     }
 
-    private func blockForReading(_ localWrapped: inout Channel<Value>.Wrapper) async throws -> Value {
-        let value: Value = try await pause { resumption in
+    private func enqueueForReading(_ localWrapped: inout Channel<Value>.State) async throws -> Value {
+        try await pause { resumption in
             let (_, readers) = localWrapped.readers.enqueue(resumption)
-            let newVar = Wrapper(readers: readers, writers: localWrapped.writers)
+            let newVar = State(readers: readers, writers: localWrapped.writers)
             let (success, newLocalWrapped) = wrapped.compareExchange(
                 expected: localWrapped,
                 desired: newVar,
                 ordering: .sequentiallyConsistent
             )
-            if success {
-                return
-            }
-            else {
-                localWrapped = newLocalWrapped
-                resumption.resume(throwing: ChannelError(wrapper: newLocalWrapped))
-            }
+            guard !success else { return }
+            localWrapped = newLocalWrapped
+            resumption.resume(throwing: ChannelError(wrapper: newLocalWrapped))
         }
-        return value
     }
 }

@@ -6,19 +6,21 @@
 //
 import HashTreeCollections
 
-public enum Buffering {
-    case newest(Int)
-    case oldest(Int)
-    case unbounded
+public enum PersistentQueues {
+    public enum Buffering {
+        case newest(Int)
+        case oldest(Int)
+        case unbounded
+    }
 }
 
 public struct PersistentQueue<Element> {
-    let buffering: Buffering
+    let buffering: PersistentQueues.Buffering
     let range: Range<UInt64>
     private let storage: TreeDictionary<UInt64, Element>
 
     private init(
-        buffering: Buffering = .unbounded,
+        buffering: PersistentQueues.Buffering = .unbounded,
         range: Range<UInt64>,
         storage: TreeDictionary<UInt64, Element>
     ) {
@@ -29,7 +31,7 @@ public struct PersistentQueue<Element> {
 }
 
 public extension PersistentQueue {
-    init(buffering: Buffering = .unbounded) {
+    init(buffering: PersistentQueues.Buffering = .unbounded) {
         self.init(
             buffering: buffering,
             range: 0 ..< 0,
@@ -38,7 +40,7 @@ public extension PersistentQueue {
     }
 
     init<S: Sequence>(
-        buffering: Buffering = .unbounded,
+        buffering: PersistentQueues.Buffering = .unbounded,
         _ initialValues: S
     ) where S.Element == Element {
         var backingStore: TreeDictionary<UInt64, Element> = .init()
@@ -64,7 +66,7 @@ public extension PersistentQueue {
     }
 
     init<S: RandomAccessCollection>(
-        buffering: Buffering = .unbounded,
+        buffering: PersistentQueues.Buffering = .unbounded,
         _ initialValues: S
     ) where S.Element == Element {
         var keysAndValues: [(UInt64, Element)]!
