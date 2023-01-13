@@ -39,6 +39,18 @@ public extension PersistentQueue {
         )
     }
 
+    init(
+        buffering: PersistentQueues.Buffering = .unbounded,
+        _ value: Element
+    ) {
+        self.init(
+            buffering: buffering,
+            range: 0 ..< 1,
+            storage: .init(dictionaryLiteral: (UInt64(0), value))
+        )
+    }
+
+
     init<S: Sequence>(
         buffering: PersistentQueues.Buffering = .unbounded,
         _ initialValues: S
