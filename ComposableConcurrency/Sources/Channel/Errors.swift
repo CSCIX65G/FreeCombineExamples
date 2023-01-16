@@ -14,6 +14,7 @@ public struct ChannelCancellationFailureError: Error {
 public struct ChannelCompleteError: Error {
     let completion: Channels.Completion
 }
-public struct ChannelDroppedError<Value>: Error {
+public struct ChannelDroppedValueError<Value>: Error {
     let value: Value
 }
+public struct ChannelDroppedResumptionError: Error { }

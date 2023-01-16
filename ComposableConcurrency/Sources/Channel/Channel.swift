@@ -9,6 +9,23 @@ import Core
 import Atomics
 import DequeModule
 
+/*:
+ AsyncStream/AsyncSequence problems:
+
+ 1. AsyncSequence _assumes_ blocking read only.  Documented semantics of AsyncSequence require blocking
+
+ 2. There is no AsyncGenerator
+
+ 2. AsyncStream is:
+    a. Unfair in multi-consumer situations, i.e. consume requests are not queued.
+    b. Blocking consumer only
+    c. Non-blocking producer only
+
+    These are not always what you want
+
+ 3. Cancelled tasks cannot wait empty AsyncStreams
+ */
+
 public struct Channels {
     public enum Buffering {
         case oldest(Int)
@@ -61,37 +78,21 @@ public final class Channel<Value> {
     private let buffering: Channels.Buffering
     private let wrapped: ManagedAtomic<State>
 
-    public init(buffering: Channels.Buffering = .unbounded) {
+    public init(buffering: Channels.Buffering = .unbounded, _ value: Value? = .none) {
         self.buffering = buffering
-        self.wrapped = ManagedAtomic(State())
-    }
-
-    public init(buffering: Channels.Buffering = .unbounded, _ value: Value) {
-        self.buffering = buffering
-        self.wrapped = ManagedAtomic(State(value))
-    }
-
-    private func checkStatus(_ localState: State) throws -> Void {
-        guard localState.completion == nil else {
-            switch localState.completion! {
-                case .finished:
-                    throw ChannelCompleteError(completion: localState.completion!)
-                case let .failure(error):
-                    throw error
-            }
-        }
+        self.wrapped = value == nil ? ManagedAtomic(State()) : ManagedAtomic(State(value!))
     }
 
     public func cancel(with error: Error = CancellationError()) throws -> Void {
         var localState = wrapped.load(ordering: .sequentiallyConsistent)
         while true {
-            guard localState.completion == nil else { throw ChannelCompleteError(completion: localState.completion!) }
+            try checkStatus(localState)
             let readers = localState.readers
             let writers = localState.writers
             let (success, newLocalState) = wrapped.compareExchange(
                 expected: localState,
                 desired: .init(completion: .failure(error), readers: .init(), writers: .init()),
-                ordering: .sequentiallyConsistent
+                ordering: .relaxed
             )
             if success {
                 readers.forEach { $0.resume(throwing: error) }
@@ -135,43 +136,6 @@ public final class Channel<Value> {
         }
     }
 
-    private func enqueueAsValue(_ localState: State, _ value: Value) async throws -> State? {
-        let (dropped, writers) = localState.writers.enqueue(.init(resumption: .none, value: value))
-        let (success, newLocalState) = wrapped.compareExchange(
-            expected: localState,
-            desired: State(readers: localState.readers, writers: writers),
-            ordering: .relaxed
-        )
-        dropped?.resumption?.resume(throwing: ChannelError(wrapper: newLocalState))
-        return success ? .none : newLocalState
-    }
-
-    private func enqueueForWriting(_ localState: State, _ value: Value) async throws -> State? {
-        do {
-            let _: Void = try await pause { resumption in
-                let (dropped, writers) = localState.writers.enqueue(.init(resumption: resumption, value: value))
-                let (success, newLocalState) = wrapped.compareExchange(
-                    expected: localState,
-                    desired: State(readers: localState.readers, writers: writers),
-                    ordering: .relaxed
-                )
-                switch (success, dropped) {
-                    case (true, .none):
-                        return
-                    case let (true, .some(dropped)):
-                        dropped.resumption?.resume(throwing: ChannelError(wrapper: newLocalState))
-                        return
-                    case (false, _):
-                        resumption.resume(throwing: ChannelError(wrapper: newLocalState))
-                }
-            }
-            return .none
-        } catch {
-            guard let error = error as? ChannelError else { throw error }
-            return error.wrapper
-        }
-    }
-
     public func read(blocking: Bool = true) async throws -> Value {
         var localState = wrapped.load(ordering: .acquiring)
         while true {
@@ -192,6 +156,54 @@ public final class Channel<Value> {
                     writerNode.resumption?.resume()
                     return writerNode.value
             }
+        }
+    }
+
+    private func checkStatus(_ localState: State) throws -> Void {
+        guard localState.completion == nil else {
+            switch localState.completion! {
+                case .finished:
+                    throw ChannelCompleteError(completion: localState.completion!)
+                case let .failure(error):
+                    throw error
+            }
+        }
+    }
+
+    private func enqueueAsValue(_ localState: State, _ value: Value) async throws -> State? {
+        let (dropped, writers) = localState.writers.enqueue(.init(resumption: .none, value: value))
+        let (success, newLocalState) = wrapped.compareExchange(
+            expected: localState,
+            desired: State(readers: localState.readers, writers: writers),
+            ordering: .relaxed
+        )
+        dropped?.resumption?.resume(throwing: ChannelDroppedResumptionError())
+        return success ? .none : newLocalState
+    }
+
+    private func enqueueForWriting(_ localState: State, _ value: Value) async throws -> State? {
+        do {
+            let _: Void = try await pause { resumption in
+                let (dropped, writers) = localState.writers.enqueue(.init(resumption: resumption, value: value))
+                let (success, newLocalState) = wrapped.compareExchange(
+                    expected: localState,
+                    desired: State(readers: localState.readers, writers: writers),
+                    ordering: .relaxed
+                )
+                switch (success, dropped) {
+                    case (true, .none):
+                        return
+                    case let (true, .some(dropped)):
+                        dropped.resumption?.resume(throwing: ChannelDroppedResumptionError())
+                        return
+                    case (false, _):
+                        resumption.resume(throwing: ChannelError(wrapper: newLocalState))
+                }
+            }
+            return .none
+        } catch {
+            guard let error = error as? ChannelError else { throw error }
+            return error.wrapper
         }
     }
 

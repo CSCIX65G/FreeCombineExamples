@@ -152,6 +152,10 @@ public extension PersistentQueue {
         )
     }
 
+    func dequeueAll() -> (range: Range<UInt64>, values: TreeDictionary<UInt64, Element>, tail: Self) {
+        (range: range, values: storage, tail: .init(buffering: buffering))
+    }
+
     func forEach(_ action: (Element) -> Void) -> Void {
         range.forEach { key in action(storage[key]!) }
     }
