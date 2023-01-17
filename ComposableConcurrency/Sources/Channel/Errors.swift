@@ -4,6 +4,7 @@
 //
 //  Created by Van Simmons on 12/26/22.
 //
+import Core
 
 public struct FailedReadError: Error { }
 public struct FailedWriteError: Error { }
@@ -17,4 +18,4 @@ public struct ChannelCompleteError: Error {
 public struct ChannelDroppedValueError<Value>: Error {
     let value: Value
 }
-public struct ChannelDroppedResumptionError: Error { }
+public struct ChannelDroppedWriteError: Error { }
