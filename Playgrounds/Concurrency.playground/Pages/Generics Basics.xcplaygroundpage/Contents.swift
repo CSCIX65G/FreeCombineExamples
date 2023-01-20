@@ -6,6 +6,7 @@ enum MyOptional<T> {
 }
 
 func identity<T>(_ t: T) -> T { t }
+func void<T>(_ t: T) -> Void { }
 
 func compose<A, B, C>(
     _ f: @escaping (A) -> B,
@@ -46,16 +47,17 @@ extension MyOptional {
 struct Object<T> {
     let value: T
     init(_ value: T) { self.value = value }
-    func apply<U>(_ f: @escaping (T) -> U) -> U { f(value) }
+    func get() -> T { value }
+    func apply<U>(_ f: (T) -> U) -> U { f(value) }
 }
 
 extension Object {
     func map<U>(_ f: (T) -> U) -> Object<U> {
-        .init(f(value))
+        .init(apply(f))
     }
 
     func join<U>() -> Object<U> where T == Object<U> {
-        value
+        .init(self.value.value)
     }
 
     func flatMap<U>(_ f: (T) -> Object<U>) -> Object<U> {

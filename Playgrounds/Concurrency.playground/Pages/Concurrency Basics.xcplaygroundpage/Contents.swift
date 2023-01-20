@@ -5,6 +5,7 @@ func pure<A>(_ a: A) -> Task<A, Never> {
     .init { a }
 }
 
+// pure == Task.init
 extension Task where Failure == Never {
     init(_ a: Success) { self = .init { a } }
 }

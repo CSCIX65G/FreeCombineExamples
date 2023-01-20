@@ -12,18 +12,20 @@ import DequeModule
 /*:
  AsyncStream/AsyncSequence problems:
 
- 1. AsyncSequence _assumes_ blocking read only.  Documented semantics of AsyncSequence require blocking
+ 1. AsyncSequence _assumes_ blocking read only.
 
- 2. There is no AsyncGenerator
+ 2. Documented semantics of AsyncSequence require blocking
 
- 2. AsyncStream is:
+ 3. There is no AsyncGenerator, i.e. a blocking write
+
+ 4. AsyncStream is:
     a. Unfair in multi-consumer situations, i.e. consume requests are not queued.
     b. Blocking consumer only
     c. Non-blocking producer only
 
     These are not always what you want
 
- 3. Cancelled tasks cannot wait empty AsyncStreams
+ 5. Cancelled tasks cannot await on an empty AsyncStreams
  */
 
 public struct Channels {
@@ -33,20 +35,45 @@ public struct Channels {
         case unbounded
     }
 
-    public enum Completion {
+    public enum Error: Swift.Error {
+        case done
+    }
+
+    public enum Completion: Sendable {
+        case failure(Swift.Error)
         case finished
-        case failure(Error)
+
+        public var error: Swift.Error {
+            get {
+                switch self {
+                    case .finished: return Channels.Error.done
+                    case let .failure(error): return error
+                }
+            }
+        }
     }
 }
 
-public final class Channel<Value> {
+public final class Channel<Value: Sendable> {
+    public enum Result: Sendable {
+        case value(Value)
+        case completion(Channels.Completion)
+
+        func get() throws -> Value {
+            switch self {
+                case let .value(value): return value
+                case let .completion(completion): throw completion.error
+            }
+        }
+    }
+
     private struct ChannelError: Error {
         let wrapper: State
     }
 
     private struct WriterNode {
         let resumption: Resumption<Void>?
-        let value: Value
+        let value: Channel<Value>.Result
     }
 
     private final class State: AtomicReference, Identifiable, Equatable {
@@ -71,7 +98,7 @@ public final class Channel<Value> {
         init(_ value: Value) {
             completion = .none
             readers = .init()
-            writers = PersistentQueue<WriterNode>(.init(resumption: .none, value: value))
+            writers = PersistentQueue<WriterNode>(.init(resumption: .none, value: .value(value)))
         }
     }
 
@@ -105,7 +132,7 @@ public final class Channel<Value> {
     }
 
     public func write() async throws -> Void where Value == Void {
-        try await write(())
+        try await write(.value(()))
     }
 
     /*:
@@ -114,7 +141,7 @@ public final class Channel<Value> {
      if a blocked writer is dropped, it handles the drop, if the write was non-blocking the current
      writer handles the drop
      */
-    public func write(_ value: Value) async throws -> Void {
+    public func write(_ value: Channel<Value>.Result) async throws -> Void {
         var localState = wrapped.load(ordering: .relaxed)
         while true {
             try checkStatus(localState)
@@ -134,18 +161,23 @@ public final class Channel<Value> {
                         localState = newLocalState
                         continue
                     }
-                    reader.resume(returning: value)
+                    switch value {
+                        case let .value(v):
+                            reader.resume(returning: v)
+                        case let .completion(completion):
+                            reader.resume(throwing: completion.error)
+                    }
                     return
             }
         }
     }
 
     public func write() throws -> Void where Value == Void {
-        try write(())
+        try write(.value(()))
     }
 
     // Non-blocking write
-    public func write(_ value: Value) throws -> Void {
+    public func write(_ value: Channel<Value>.Result) throws -> Void {
         var localState = wrapped.load(ordering: .relaxed)
         while true {
             try checkStatus(localState)
@@ -165,7 +197,12 @@ public final class Channel<Value> {
                         localState = newLocalState
                         continue
                     }
-                    reader.resume(returning: value)
+                    switch value {
+                        case let .value(v):
+                            reader.resume(returning: v)
+                        case let .completion(completion):
+                            reader.resume(throwing: completion.error)
+                    }
                     return
             }
         }
@@ -188,7 +225,7 @@ public final class Channel<Value> {
                     )
                     guard success else { localState = newLocalState; continue }
                     writerNode.resumption?.resume()
-                    return writerNode.value
+                    return try writerNode.value.get()
             }
         }
     }
@@ -209,7 +246,7 @@ public final class Channel<Value> {
                     )
                     guard success else { localState = newLocalState; continue }
                     writerNode.resumption?.resume()
-                    return writerNode.value
+                    return try writerNode.value.get()
             }
         }
     }
@@ -225,7 +262,7 @@ public final class Channel<Value> {
         }
     }
 
-    private func enqueueAsValue(_ localState: State, _ value: Value) throws -> State? {
+    private func enqueueAsValue(_ localState: State, _ value: Channel<Value>.Result) throws -> State? {
         let (dropped, writers) = localState.writers.enqueue(.init(resumption: .none, value: value))
         let (success, newLocalState) = wrapped.compareExchange(
             expected: localState,
@@ -247,7 +284,7 @@ public final class Channel<Value> {
         }
     }
 
-    private func enqueueForWriting(_ localState: State, _ value: Value) async throws -> State? {
+    private func enqueueForWriting(_ localState: State, _ value: Channel<Value>.Result) async throws -> State? {
         do {
             let _: Void = try await pause { resumption in
                 let (dropped, writers) = localState.writers.enqueue(.init(resumption: resumption, value: value))

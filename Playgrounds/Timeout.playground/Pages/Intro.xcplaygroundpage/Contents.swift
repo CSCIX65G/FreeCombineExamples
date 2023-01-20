@@ -5,7 +5,7 @@
 
  Write a function with the following signature:
  ```
- func process<Output>(
+ func doProcess<Output>(
      timeout: UInt64,
      _ process: @Sendable @escaping () async throws -> Output
  ) -> Task<Output, Swift.Error>

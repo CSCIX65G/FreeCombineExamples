@@ -31,7 +31,7 @@ final class ChannelTests: XCTestCase {
 
         let writer = Cancellable<Void> {
             for i in 0 ..< size {
-                do { try await channel.write(i) }
+                do { try await channel.write(.value(i)) }
                 catch { XCTFail("Failed to write \(i)") }
             }
         }
@@ -60,7 +60,7 @@ final class ChannelTests: XCTestCase {
         let writers = (0 ..< numberOfProducers).map { _ in
             Cancellable<Void> {
                 for i in 0 ..< size {
-                    do { try await channel.write(i) }
+                    do { try await channel.write(.value(i)) }
                     catch { XCTFail("Failed to write \(i)") }
                 }
             }
@@ -94,7 +94,7 @@ final class ChannelTests: XCTestCase {
         let writers = (0 ..< numberOfProducers).map { _ in
             Cancellable<Void> {
                 for i in 0 ..< size {
-                    do { try await channel.write(i) }
+                    do { try await channel.write(.value(i)) }
                     catch { XCTFail("Failed to write \(i)") }
                 }
             }
@@ -133,7 +133,7 @@ final class ChannelTests: XCTestCase {
         let writer = Cancellable<Void> {
             for i in 0 ..< maxValues {
                 do {
-                    try await channel.write(i)
+                    try await channel.write(.value(i))
                     if i > stopAfter {
                         XCTFail("Should not get values > stopAfter.  value = \(i)")
                     }

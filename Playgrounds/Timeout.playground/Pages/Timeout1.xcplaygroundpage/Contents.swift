@@ -178,8 +178,8 @@ public func withResumption<Output>(
 public struct TimeoutError: Swift.Error, Sendable { }
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
-func process<Output: Sendable>(
-    timeout: UInt64,
+func timeout<Output: Sendable>(
+    after interval: UInt64,
     _ process: @escaping () async -> Output
 ) -> Cancellable<Output> {
     .init {
@@ -194,7 +194,7 @@ func process<Output: Sendable>(
             try? resumption.tryResume(returning: output)
         }
         let timeoutCancellable: Cancellable<Void> = .init {
-            try? await Task.sleep(nanoseconds: timeout)
+            try? await Task.sleep(nanoseconds: interval)
             try? resumption.tryResume(throwing: TimeoutError())
         }
         return try await withTaskCancellationHandler(
@@ -210,7 +210,7 @@ func process<Output: Sendable>(
     }
 }
 
-let cancellable1 = process(timeout: 100_000_000) { 13 }
+let cancellable1 = timeout(after: 100_000_000) { 13 }
 let cancellationResult1 = Result {
     try cancellable1.cancel()
 }
@@ -220,7 +220,7 @@ print(result1)
 
 //=================================================
 
-let cancellable3 = process(timeout: 100_000_000) {
+let cancellable3 = timeout(after: 100_000_000) {
     try? await Task.sleep(nanoseconds: 200_000_000)
     return 13
 }
