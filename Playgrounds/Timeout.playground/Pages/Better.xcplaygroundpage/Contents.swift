@@ -14,6 +14,7 @@ let t1 = Task<Int, Error> {
 let t2 = Task<Void, Never> {
     try? await Task.sleep(nanoseconds: 200_000_000)
     t1.cancel()
+    /// try? await t1.result.get()
     return
 }
 let t3 = Task<Void, Error> {

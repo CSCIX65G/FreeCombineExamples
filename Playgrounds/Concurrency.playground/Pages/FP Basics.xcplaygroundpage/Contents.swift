@@ -1,11 +1,62 @@
 //: [Previous](@previous)
 
-/// FP Basics
 
-func identity<T>(
-    _ t: T
-) -> T {
-    t
+
+/// FP Basics
+func void<T>(_ t: T) -> Void { }
+
+// 1. Functions are implications/deductions. Curry-Howard Correspondance
+// 2. There is only one way to write identity
+func identity<T>(_ t: T) -> T { t }
+
+// 3. There are 256^256 (2^4096) ways of writing the following function
+//    but there is only one way to write `identity`
+func transform(_ byte: UInt8) -> UInt8 { byte }
+
+// 4. functions and closures are equivalent.
+// 4a. functions are named closures
+// 4b. closures are anonymous functions
+// 5. nil and .none are synonyous
+let optArray: [Int?] = [1, Optional<Int>.none, 2, Int?.none, 3, .none, nil]
+let arr1 = optArray.compactMap(identity)
+let arr2 = optArray.compactMap { $0 }
+
+// 6. Functions are 1st class objects
+func fidentity<A, B>(_ f: @escaping (A) -> B) -> (A) -> B {
+    // Again, anywhere I see a func I should be able to plug in a closure
+    //f
+    { a in f(a) }
+}
+
+func invoke<A, B>(_ f: (A) -> B, _ a: (A)) -> B {
+    f(a)
+}
+
+// 7. Line 29 and 33 seem the same.  We can generalize.
+func uncurry<A, B, C>(
+    _ f: @escaping (A) -> (B) async -> C
+) -> (A, B) async -> C {
+    { a, b in await f(a)(b) }
+}
+// 8. Equational reasoning
+// uncurry(fidentity) = invoke
+
+// 9. uncurry is the inverse of curry
+// 10. functional languages all want functions in curried form.
+func curry<A, B, C>(
+    _ f: @escaping (A, B) async -> C
+) -> (A) -> (B) async -> C {
+    { a in { b in await f(a, b) } }
+}
+// curry(invoke) = fidentity
+
+
+// 11. Order of arguments to a function don't matter
+func flippedInvoke<A, B>(
+    _ a: (A),
+    _ f: (A) -> B
+) -> B {
+    f(a)
 }
 
 func flip<A, B, C>(
@@ -13,24 +64,16 @@ func flip<A, B, C>(
 ) -> (B, A) async -> C {
     { b, a in await f(a, b) }
 }
+// flip(invoke) = flippedInvoke
 
-func curry<A, B, C>(
-    _ f: @escaping (A, B) async -> C
-) -> (A) -> (B) async -> C {
-    { a in { b in await f(a, b) } }
-}
 
-func uncurry<A, B, C>(
-    _ f: @escaping (A) -> (B) async -> C
-) -> (A, B) async -> C {
-    { a, b in await f(a)(b) }
-}
-
+// 12. Order of arguments to a _curried_ function doesn't matter
 func flip<A, B, C>(
-    _ f: @escaping (A) async -> (B) async -> C
+    _ f: @escaping (A) -> (B) async -> C
 ) -> (B) -> (A) async -> C {
     { b in  { a in await f(a)(b) } }
 }
+// flip(fidentity) = curry(uncurriedApply)
 
 func compose<A, B, C>(
     _ f: @escaping (A) async -> B,
@@ -39,42 +82,23 @@ func compose<A, B, C>(
     { a in await g(f(a)) }
 }
 
-func uninformativeInvoke<A, B>(
-    f: @escaping (A) -> B
-) -> (A) -> B {
-    f /// just the identity function on f...
-}
-
-func invoke<A, B>(f: @escaping (A) -> B) -> (A) -> B {
-    { value in f(value) }
-}
-
-func apply<A, B>(_ value: A) -> (@escaping (A) -> B) -> B {
-    { f in f(value) }
-}
-
-func uncurriedApply<A, B>(value: A, f: @escaping (A) -> B) -> B {
-    f(value)
+func apply<A, B>(_ a: A) -> (@escaping (A) -> B) -> B {
+    { f in f(a) }
 }
 
 /// we can make the apply function into a type by storing the value explicitly...
+/// This demonstrates how "capture semantics" work
+
 struct Object<A> {
-    let value: A
-    init(_ value: A) { self.value = value }
-    func apply<B>(_ f: @escaping (A) -> B) -> B { f(value) }
+    let a: A
+    init(_ a: A) { self.a = a }
+    func apply<B>(_ f: @escaping (A) -> B) -> B { f(a) }
 }
+// Object<A>.init:  (A) -> Object<A>
+// Object<A>.apply:       (Object<A>) -> ((A) -> B) -> B
 
-/// we can even make the apply method on _that_ type be a type,
-/// by having the method capture the value...
-struct Continuation<A, B> {
-    let apply: (@escaping (A) -> B) -> B
-    /// init + storing the returned func = apply
-//    func apply<A, B>(_ value: A) -> (@escaping (A) -> B) -> B {
-//        { f in f(value) }
-//    }
-    init(_ value: A) { self.apply = { f in f(value) } }
-    func callAsFunction(_ f: @escaping (A) -> B) -> B { apply(f) }
-}
-
+// compose(Object<A>.init, Object<A>.apply):
+//    (A) -> ((A) -> B) -> B
+//
 
 //: [Next](@next)

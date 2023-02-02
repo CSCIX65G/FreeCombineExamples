@@ -28,32 +28,6 @@ import DequeModule
  5. Cancelled tasks cannot await on an empty AsyncStreams
  */
 
-public struct Channels {
-    public enum Buffering {
-        case oldest(Int)
-        case newest(Int)
-        case unbounded
-    }
-
-    public enum Error: Swift.Error {
-        case done
-    }
-
-    public enum Completion: Sendable {
-        case failure(Swift.Error)
-        case finished
-
-        public var error: Swift.Error {
-            get {
-                switch self {
-                    case .finished: return Channels.Error.done
-                    case let .failure(error): return error
-                }
-            }
-        }
-    }
-}
-
 public final class Channel<Value: Sendable> {
     public enum Result: Sendable {
         case value(Value)
@@ -67,7 +41,7 @@ public final class Channel<Value: Sendable> {
         }
     }
 
-    private struct ChannelError: Error {
+    private struct Error: Swift.Error {
         let wrapper: State
     }
 
@@ -76,14 +50,10 @@ public final class Channel<Value: Sendable> {
         let value: Channel<Value>.Result
     }
 
-    private final class State: AtomicReference, Identifiable, Equatable {
-        static func == (lhs: Channel<Value>.State, rhs: Channel<Value>.State) -> Bool { lhs.id == rhs.id }
-
+    private final class State: AtomicReference {
         let completion: Channels.Completion?
         let readers: PersistentQueue<Resumption<Value>>
         let writers: PersistentQueue<WriterNode>
-
-        var id: ObjectIdentifier { .init(self) }
 
         init(
             completion: Channels.Completion? = .none,
@@ -110,25 +80,15 @@ public final class Channel<Value: Sendable> {
         self.wrapped = value == nil ? ManagedAtomic(State()) : ManagedAtomic(State(value!))
     }
 
-    public func cancel(with error: Error = CancellationError()) throws -> Void {
-        var localState = wrapped.load(ordering: .sequentiallyConsistent)
-        while true {
-            try checkStatus(localState)
-            let readers = localState.readers
-            let writers = localState.writers
-            let (success, newLocalState) = wrapped.compareExchange(
-                expected: localState,
-                desired: .init(completion: .failure(error), readers: .init(), writers: .init()),
-                ordering: .relaxed
-            )
-            if success {
-                readers.forEach { $0.resume(throwing: error) }
-                writers.forEach { $0.resumption?.resume(throwing: error) }
-                break
-            } else {
-                localState = newLocalState
+    public func cancel(with error: Swift.Error = CancellationError()) throws -> Void {
+        try wrapped.update(
+            validate: checkStatus,
+            next: { _ in .init(completion: .failure(error), readers: .init(), writers: .init()) },
+            performAfter: { localState in
+                localState.readers.forEach { $0.resume(throwing: error) }
+                localState.writers.forEach { $0.resumption?.resume(throwing: error) }
             }
-        }
+        )
     }
 
     public func write() async throws -> Void where Value == Void {
@@ -198,10 +158,8 @@ public final class Channel<Value: Sendable> {
                         continue
                     }
                     switch value {
-                        case let .value(v):
-                            reader.resume(returning: v)
-                        case let .completion(completion):
-                            reader.resume(throwing: completion.error)
+                        case let .value(v): reader.resume(returning: v)
+                        case let .completion(completion): reader.resume(throwing: completion.error)
                     }
                     return
             }
@@ -302,13 +260,13 @@ public final class Channel<Value: Sendable> {
                         : dropped.resumption?.resume(throwing: ChannelDroppedWriteError())
                     case (false, _):
                         resumption.resume(
-                            throwing: ChannelError(wrapper: newLocalState)
+                            throwing: Error(wrapper: newLocalState)
                         )
                 }
             }
             return .none
         } catch {
-            guard let error = error as? ChannelError else { throw error }
+            guard let error = error as? Error else { throw error }
             return error.wrapper
         }
     }
@@ -324,7 +282,7 @@ public final class Channel<Value: Sendable> {
             )
             guard !success else { return }
             localState = newLocalState
-            resumption.resume(throwing: ChannelError(wrapper: newLocalState))
+            resumption.resume(throwing: Error(wrapper: newLocalState))
         }
     }
 }

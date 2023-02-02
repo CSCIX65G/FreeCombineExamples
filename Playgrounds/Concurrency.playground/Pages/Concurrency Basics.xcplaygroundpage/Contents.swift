@@ -15,6 +15,10 @@ func unpure<A>(_ t: Task<A, Never>) async -> A {
     await t.value
 }
 
+extension Task where Failure == Never {
+    func get() async -> Success { await value }
+}
+
 //func join<A>(_ outer: Task<Task<A, Never>, Never>) async -> Task<A, Never> {
 //    await outer.value
 //}
@@ -28,6 +32,10 @@ func unpure<A>(_ t: Task<A, Never>) async -> A {
 func join<A>(_ outer: Task<Task<A, Never>, Never>) -> Task<A, Never> {
     .init { await outer.value.value }
 }
+
+//func join<A>(_ outer: Task<Task<A, Never>, Never>) async -> Task<A, Never> {
+//    await outer.value
+//}
 
 extension Task where Failure == Never {
     func join<A>() -> Task<A, Never> where Success == Task<A, Never> {
@@ -56,10 +64,6 @@ func flipForked<A, B>(_ a: A) -> (@escaping (A) async -> B) -> Task<B, Never> {
 
 func composedFlipForked<A, B>(_ t: Task<A, Never>) -> (@escaping (A) async -> B) -> Task<B, Never> {
     { f in .init { await f(t.value) } }
-}
-
-func map<A, B>(_ f: @escaping (A) async -> B) -> (Task<A, Never>) -> Task<B, Never> {
-    { t in .init { await f(t.value) } }
 }
 
 extension Task where Failure == Never {

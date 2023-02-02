@@ -53,14 +53,20 @@ struct Object<T> {
 
 extension Object {
     func map<U>(_ f: (T) -> U) -> Object<U> {
+//        .init(f(value))
+        // (Object<T>) -> T                                     unpure(Object<T>)
+        //               (T) -> ((T) -> U) -> U                 apply(f)
+        //                                   (U) -> Object<U>   pure(u)
         .init(apply(f))
     }
 
+    // Object<Object<U>> -> Object<U>
     func join<U>() -> Object<U> where T == Object<U> {
         .init(self.value.value)
     }
 
     func flatMap<U>(_ f: (T) -> Object<U>) -> Object<U> {
+        // map(f).join()
         f(value)
     }
     
@@ -90,6 +96,18 @@ extension Func {
     func zip<C>(_ other: Func<A, C>) -> Func<A, (B, C)> {
         .init { a in (self.call(a), other.call(a)) }
     }
+}
+
+/// we can even make the apply method on _that_ type be a type,
+/// by having the method capture the value...
+struct Continuation<A, B> {
+    let apply: (@escaping (A) -> B) -> B
+    /// init + storing the returned func = apply
+//    func apply<A, B>(_ value: A) -> (@escaping (A) -> B) -> B {
+//        { f in f(value) }
+//    }
+    init(_ value: A) { self.apply = { f in f(value) } }
+    func callAsFunction(_ f: @escaping (A) -> B) -> B { apply(f) }
 }
 
 //: [Next](@next)

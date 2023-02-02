@@ -1,16 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<playground version='6.0' target-platform='macos' display-mode='rendered' buildActiveScheme='true' importAppTypes='true'>
+<playground version='6.0' target-platform='macos' display-mode='raw' buildActiveScheme='true' importAppTypes='true'>
     <pages>
         <page name='Intro'/>
         <page name='Cancellation'/>
         <page name='StreamCancellation'/>
+        <page name='ActorCancellation'/>
         <page name='Simple'/>
         <page name='Better'/>
-        <page name='Cancellable+Atomic'/>
-        <page name='Cancellable+TaskLocal'/>
-        <page name='Resumption'/>
-        <page name='Promise'/>
-        <page name='Channel+Fold'/>
         <page name='Completed'/>
         <page name='Timeout1'/>
         <page name='Timeout2'/>
