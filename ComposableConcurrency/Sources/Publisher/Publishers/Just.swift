@@ -48,7 +48,7 @@ public func Just<Output>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
-    _ generator: @escaping () async -> Output
+    _ generator: @Sendable @escaping () async -> Output
 ) -> Publisher<Output> {
     .init(function: function, file: file, line: line, generator)
 }
@@ -58,7 +58,7 @@ public extension Publisher {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        _ generator: @escaping () async -> Output
+        _ generator: @Sendable @escaping () async -> Output
     ) {
         self = .init { resumption, downstream in
             .init(function: function, file: file, line: line) {
@@ -100,7 +100,7 @@ public func Just<Output>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
-    _ generator: @escaping () async -> Publisher<Output>.Result
+    _ generator: @Sendable @escaping () async -> Publisher<Output>.Result
 ) -> Publisher<Output> {
     .init(generator)
 }
@@ -110,7 +110,7 @@ public extension Publisher {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        _ generator: @escaping () async -> Publisher<Output>.Result
+        _ generator: @Sendable @escaping () async -> Publisher<Output>.Result
     ) {
         self = .init { resumption, downstream in
             .init {

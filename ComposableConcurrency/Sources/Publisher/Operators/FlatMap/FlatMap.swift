@@ -21,8 +21,8 @@
 import Core
 
 public extension Publisher {
-    func flatMap<T>(
-        _ transform: @escaping (Output) async -> Publisher<T>
+    func flatMap<T: Sendable>(
+        _ transform: @Sendable @escaping (Output) async -> Publisher<T>
     ) -> Publisher<T> {
         .init { resumption, downstream in self(onStartup: resumption) { r in switch r {
             case .value(let a):

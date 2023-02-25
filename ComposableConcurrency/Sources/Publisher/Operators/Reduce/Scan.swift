@@ -21,9 +21,9 @@
 import Core
 
 public extension Publisher {
-    func scan<T>(
+    func scan<T: Sendable>(
         _ initialValue: T,
-        _ transform: @escaping (T, Output) async -> T
+        _ transform: @Sendable @escaping (T, Output) async -> T
     ) -> Publisher<T> {
         return .init { resumption, downstream in
             let currentValue: MutableBox<T> = MutableBox(value: initialValue)

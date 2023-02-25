@@ -19,9 +19,9 @@
 //  limitations under the License.
 //
 public extension Publisher {
-    struct TopLevelEncoder<T> {
-        var encoder: (Output) throws -> T
-        init(encoder: @escaping (Output) throws -> T) {
+    struct TopLevelEncoder<T: Sendable> : Sendable {
+        let encoder: @Sendable (Output) throws -> T
+        init(encoder: @Sendable @escaping (Output) throws -> T) {
             self.encoder = encoder
         }
         func encode(_ data: Output) throws -> T {

@@ -22,8 +22,8 @@ import Core
 
 public extension Publisher {
     func handleEvents(
-        receiveDownstream: @escaping (@escaping (Publisher<Output>.Result) async throws -> Void) -> Void = {_ in },
-        receiveResult: @escaping (Publisher<Output>.Result) async -> Void = { _ in }
+        receiveDownstream: @Sendable @escaping (@escaping (Publisher<Output>.Result) async throws -> Void) -> Void = {_ in },
+        receiveResult: @Sendable @escaping (Publisher<Output>.Result) async -> Void = { _ in }
     ) -> Self {
         .init { resumption, downstream in
             receiveDownstream(downstream)
@@ -35,11 +35,11 @@ public extension Publisher {
     }
 
     func handleEvents(
-        receiveDownstream: @escaping (@escaping (Publisher<Output>.Result) async throws -> Void) -> Void = {_ in },
-        receiveOutput: @escaping (Output) async -> Void = { _ in },
-        receiveFinished: @escaping () async -> Void = { },
-        receiveFailure: @escaping (Swift.Error) async -> Void = { _ in },
-        receiveResponse: @escaping (AsyncResult<Void, Swift.Error>) async -> Void = { _ in }
+        receiveDownstream: @Sendable @escaping (@escaping (Publisher<Output>.Result) async throws -> Void) -> Void = {_ in },
+        receiveOutput: @Sendable @escaping (Output) async -> Void = { _ in },
+        receiveFinished: @Sendable @escaping () async -> Void = { },
+        receiveFailure: @Sendable @escaping (Swift.Error) async -> Void = { _ in },
+        receiveResponse: @Sendable @escaping (AsyncResult<Void, Swift.Error>) async -> Void = { _ in }
     ) -> Self {
         .init { resumption, downstream in
             receiveDownstream(downstream)

@@ -63,7 +63,7 @@ public enum OneOfSeven<One, Two, Three, Four, Five, Six, Seven> {
     case seven(Seven)
 }
 
-public enum OneOfEight<One, Two, Three, Four, Five, Six, Seven, Eight> {
+public enum OneOfEight<One: Sendable, Two: Sendable, Three: Sendable, Four: Sendable, Five: Sendable, Six: Sendable, Seven: Sendable, Eight: Sendable>: Sendable {
     case one(One)
     case two(Two)
     case three(Three)

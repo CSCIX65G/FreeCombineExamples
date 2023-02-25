@@ -19,8 +19,8 @@
 //  limitations under the License.
 //
 public extension Publisher {
-    func tryCompactMap<T>(
-        _ transform: @escaping (Output) async throws -> T?
+    func tryCompactMap<T: Sendable>(
+        _ transform: @Sendable @escaping (Output) async throws -> T?
     ) -> Publisher<T> {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in switch r {

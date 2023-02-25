@@ -89,7 +89,7 @@ public struct Merge<Value: Sendable>: Sendable {
         }
     }
 
-    static func reduce(state: inout State, value: (index: Int, value: Value), resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+    @Sendable static func reduce(state: inout State, value: (index: Int, value: Value), resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         switch (state.current) {
             case .nothing:
                 state.current = .hasValue(value.index, value.value, resumption)
@@ -99,7 +99,7 @@ public struct Merge<Value: Sendable>: Sendable {
         }
     }
 
-    static func reduce(state: inout State, error: (index: Int, error: Swift.Error), resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+    @Sendable static func reduce(state: inout State, error: (index: Int, error: Swift.Error), resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         resumption.resume(throwing: error.error)
         switch (state.current) {
             case .nothing:
@@ -110,7 +110,7 @@ public struct Merge<Value: Sendable>: Sendable {
         }
     }
 
-    static func reduce(state: inout State, index: Int, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+    @Sendable static func reduce(state: inout State, index: Int, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
@@ -121,7 +121,7 @@ public struct Merge<Value: Sendable>: Sendable {
         }
     }
 
-    static func reduce(
+    @Sendable static func reduce(
         _ state: inout State,
         _ action: Action
     ) async -> AsyncFolder<State, Action>.Effect {
@@ -135,7 +135,7 @@ public struct Merge<Value: Sendable>: Sendable {
         }
     }
 
-    static func valuePair(_ current: Merge<Value>.Current) -> (Value, Resumption<Void>)? {
+    @Sendable static func valuePair(_ current: Merge<Value>.Current) -> (Value, Resumption<Void>)? {
         switch current {
             case .nothing, .finished, .errored:
                 return .none
@@ -144,7 +144,7 @@ public struct Merge<Value: Sendable>: Sendable {
         }
     }
 
-    static func emit(
+    @Sendable static func emit(
         _ state: inout State
     ) async throws -> Void {
         switch valuePair(state.current) {
@@ -169,7 +169,7 @@ public struct Merge<Value: Sendable>: Sendable {
         }
     }
 
-    static func dispose(
+    @Sendable static func dispose(
         _ action: Action,
         _ completion: AsyncFolder<State, Action>.Completion
     ) async {
@@ -193,7 +193,7 @@ public struct Merge<Value: Sendable>: Sendable {
         }
     }
 
-    static func finalize(
+    @Sendable static func finalize(
         state: inout State,
         completion: AsyncFolder<State, Action>.Completion
     ) async {
@@ -212,7 +212,7 @@ public struct Merge<Value: Sendable>: Sendable {
         state.current = .nothing
     }
 
-    static func folder(
+    @Sendable static func folder(
         publishers: [Publisher<Value>],
         downstream: @Sendable @escaping (Publisher<Value>.Result) async throws -> Void
     ) -> AsyncFolder<State, Action> {

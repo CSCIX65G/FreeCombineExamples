@@ -20,7 +20,7 @@
 //
 public extension Publisher {
     func filter(
-        _ isIncluded: @escaping (Output) async -> Bool
+        _ isIncluded: @Sendable @escaping (Output) async -> Bool
     ) -> Self {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in

@@ -19,9 +19,9 @@
 //  limitations under the License.
 //
 public extension Publisher {
-    struct TopLevelDecoder<T> {
-        var decoder: (T.Type, Output) throws -> T
-        init(decoder: @escaping (T.Type, Output) throws -> T) {
+    struct TopLevelDecoder<T: Sendable>: Sendable {
+        let decoder: @Sendable (T.Type, Output) throws -> T
+        init(decoder: @Sendable @escaping (T.Type, Output) throws -> T) {
             self.decoder = decoder
         }
         func decode(_ t: T.Type, from output: Output) throws -> T {

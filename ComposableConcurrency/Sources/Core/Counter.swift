@@ -20,7 +20,7 @@
 //
 import Atomics
 
-public struct Counter {
+public struct Counter: @unchecked Sendable {
     private let atomicValue: ManagedAtomic<Int> = .init(0)
 
     public init(count: Int = 0) {

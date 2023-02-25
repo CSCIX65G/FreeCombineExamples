@@ -21,8 +21,8 @@
 import Core
 
 public extension Publisher {
-    func map<T>(
-        _ transform: @escaping (Output) async -> T
+    func map<T: Sendable>(
+        _ transform: @Sendable @escaping (Output) async -> T
     ) -> Publisher<T> {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in switch r {

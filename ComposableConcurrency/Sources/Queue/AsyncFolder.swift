@@ -24,7 +24,7 @@ public struct FinishedError: Swift.Error, Sendable, Equatable {
     public init() { }
 }
 
-public struct AsyncFolder<State: Sendable, Action: Sendable> {
+public struct AsyncFolder<State: Sendable, Action: Sendable>: Sendable {
     enum Result: Sendable {
         case value(Action)
         case completion(Queues.Completion)
@@ -39,17 +39,17 @@ public struct AsyncFolder<State: Sendable, Action: Sendable> {
     public typealias Completion = Queues.Completion
     
     let initializer: @Sendable (Queue<Action>) async -> State
-    let reducer: (inout State, Action) async throws -> Effect
-    let emitter: (inout State) async throws -> Void
-    let disposer: (Action, Completion) async -> Void
-    let finalizer: (inout State, Completion) async -> Void
+    let reducer: @Sendable (inout State, Action) async throws -> Effect
+    let emitter: @Sendable (inout State) async throws -> Void
+    let disposer: @Sendable (Action, Completion) async -> Void
+    let finalizer: @Sendable (inout State, Completion) async -> Void
     
     public init(
         initializer: @Sendable @escaping (Queue<Action>) async -> State,
-        reducer: @escaping (inout State, Action) async throws -> Effect,
-        emitter: @escaping (inout State) async throws -> Void = { _ in },
-        disposer: @escaping (Action, Completion) async -> Void = { _, _ in },
-        finalizer: @escaping (inout State, Completion) async -> Void = { _, _ in }
+        reducer: @Sendable @escaping (inout State, Action) async throws -> Effect,
+        emitter: @Sendable @escaping (inout State) async throws -> Void = { _ in },
+        disposer: @Sendable @escaping (Action, Completion) async -> Void = { _, _ in },
+        finalizer: @Sendable @escaping (inout State, Completion) async -> Void = { _, _ in }
     ) {
         self.initializer = initializer
         self.reducer = reducer

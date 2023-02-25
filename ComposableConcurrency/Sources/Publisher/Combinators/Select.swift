@@ -68,7 +68,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
         }
     }
 
-    static func reduceLeft(state: inout State, value: Left, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+    @Sendable static func reduceLeft(state: inout State, value: Left, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         switch (state.current) {
             case .nothing:
                 state.current = .hasLeft(value, resumption)
@@ -77,7 +77,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
                 fatalError("Invalid state")
         }
     }
-    static func reduceLeft(state: inout State, error: Swift.Error, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+    @Sendable static func reduceLeft(state: inout State, error: Swift.Error, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         resumption.resume(throwing: error)
         switch (state.current) {
             case .nothing:
@@ -88,7 +88,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
         }
     }
 
-    static func reduceLeft(state: inout State, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+    @Sendable static func reduceLeft(state: inout State, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
@@ -100,7 +100,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
                 fatalError("Invalid state")
         }
     }
-    static func reduceRight(state: inout State, value: Right, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+    @Sendable static func reduceRight(state: inout State, value: Right, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         switch (state.current) {
             case .nothing:
                 state.current = .hasRight(value, resumption)
@@ -109,7 +109,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
                 fatalError("Invalid state")
         }
     }
-    static func reduceRight(state: inout State, error: Swift.Error, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+    @Sendable static func reduceRight(state: inout State, error: Swift.Error, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         resumption.resume(throwing: error)
         switch (state.current) {
             case .nothing:
@@ -119,7 +119,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
                 fatalError("Invalid state")
         }
     }
-    static func reduceRight(state: inout State, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+    @Sendable static func reduceRight(state: inout State, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
@@ -132,7 +132,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
         }
     }
 
-    static func reduce(
+    @Sendable static func reduce(
         _ state: inout State,
         _ action: Action
     ) async -> AsyncFolder<State, Action>.Effect {
@@ -152,7 +152,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
         }
     }
 
-    static func valuePair(_ current: Select<Left, Right>.Current) -> (Either<Left, Right>, Resumption<Void>)? {
+    @Sendable static func valuePair(_ current: Select<Left, Right>.Current) -> (Either<Left, Right>, Resumption<Void>)? {
         switch current {
             case .nothing, .finished, .errored:
                 return .none
@@ -163,7 +163,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
         }
     }
 
-    static func emit(
+    @Sendable static func emit(
         _ state: inout State
     ) async throws -> Void {
         switch valuePair(state.current) {
@@ -186,7 +186,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
         }
     }
 
-    static func dispose(
+    @Sendable static func dispose(
         _ action: Action,
         _ completion: AsyncFolder<State, Action>.Completion
     ) async {
@@ -201,7 +201,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
         }
     }
 
-    static func resumption(_ current: Select<Left, Right>.Current) -> Resumption<Void>? {
+    @Sendable static func resumption(_ current: Select<Left, Right>.Current) -> Resumption<Void>? {
         switch current {
             case .nothing, .finished, .errored:
                 return .none
@@ -212,7 +212,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
         }
     }
 
-    static func finalize(
+    @Sendable static func finalize(
         state: inout State,
         completion: AsyncFolder<State, Action>.Completion
     ) async {

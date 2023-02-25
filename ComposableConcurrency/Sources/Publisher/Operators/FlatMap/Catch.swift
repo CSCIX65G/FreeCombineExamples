@@ -19,7 +19,9 @@
 //  limitations under the License.
 //
 public extension Publisher {
-    func `catch`(_ transform: @escaping (Swift.Error) async -> Publisher<Output>) -> Publisher<Output> {
+    func `catch`(
+        _ transform: @Sendable @escaping (Swift.Error) async -> Publisher<Output>
+    ) -> Publisher<Output> {
         flatMapError(transform)
     }
 }

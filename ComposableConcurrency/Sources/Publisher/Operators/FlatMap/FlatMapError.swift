@@ -22,7 +22,7 @@ import Core
 
 public extension Publisher {
     func flatMapError(
-        _ transform: @escaping (Swift.Error) async -> Publisher<Output>
+        _ transform: @Sendable @escaping (Swift.Error) async -> Publisher<Output>
     ) -> Publisher<Output> {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in switch r {

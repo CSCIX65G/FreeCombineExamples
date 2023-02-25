@@ -18,7 +18,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-class Deduplicator<A> {
+class Deduplicator<A: Sendable>: @unchecked Sendable {
     let isEquivalent: (A, A) async -> Bool
     var currentValue: A!
 
@@ -48,7 +48,7 @@ extension Publisher where Output: Equatable {
 
 extension Publisher {
     func removeDuplicates(
-        by predicate: @escaping (Output, Output) async -> Bool
+        by predicate: @Sendable @escaping (Output, Output) async -> Bool
     ) -> Publisher<Output> {
         .init { resumption, downstream in
             let deduplicator = Deduplicator<Output>(predicate)

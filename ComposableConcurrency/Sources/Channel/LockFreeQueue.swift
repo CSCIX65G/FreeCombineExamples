@@ -10,7 +10,7 @@ import Atomics
 
 private let nodeCount = ManagedAtomic<Int>(0)
 
-public class LockFreeQueue<Element> {
+public class LockFreeQueue<Element: Sendable> {
     final class Node: AtomicReference {
         let next: ManagedAtomic<Node?>
         var value: Element?

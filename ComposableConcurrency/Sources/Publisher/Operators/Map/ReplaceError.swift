@@ -19,7 +19,7 @@
 //  limitations under the License.
 //
 public extension Publisher {
-    func replaceError(_ replacing: @escaping (Swift.Error) -> Output) -> Publisher<Output> {
+    func replaceError(_ replacing: @Sendable @escaping (Swift.Error) -> Output) -> Publisher<Output> {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in
                 switch r {

@@ -47,7 +47,7 @@ public func Deferred<Element>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
-    flattener: @escaping () async -> Publisher<Element>
+    flattener: @Sendable @escaping () async -> Publisher<Element>
 ) -> Publisher<Element> {
     .init(function: function, file: file, line: line, from: flattener)
 }
@@ -57,7 +57,7 @@ extension Publisher {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        from flattener: @escaping () async throws -> Publisher<Output>
+        from flattener: @Sendable @escaping () async throws -> Publisher<Output>
     ) {
         self = .init { resumption, downstream in
             .init(function: function, file: file, line: line) {
