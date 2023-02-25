@@ -23,10 +23,10 @@ public final class Cancellable<Output: Sendable>: Sendable {
     }
 
     init(
-        cancel: @escaping @Sendable () -> Void,
-        isCancelled: @escaping @Sendable () -> Bool,
-        value: @escaping @Sendable () async throws -> Output,
-        result: @escaping @Sendable () async -> Result<Output, Swift.Error>
+        cancel: @Sendable @escaping () -> Void,
+        isCancelled: @Sendable @escaping () -> Bool,
+        value: @Sendable @escaping () async throws -> Output,
+        result: @Sendable @escaping () async -> Result<Output, Swift.Error>
     ) {
         _cancel = cancel
         _isCancelled = isCancelled
@@ -76,13 +76,13 @@ public enum PublisherError: Swift.Error, Sendable, CaseIterable {
 public struct Publisher<Output: Sendable>: Sendable {
     private let call: @Sendable (
         UnsafeContinuation<Void, Never>?,
-        @escaping @Sendable (AsyncStream<Output>.Result) async throws -> Demand
+        @Sendable @escaping (AsyncStream<Output>.Result) async throws -> Demand
     ) -> Cancellable<Demand>
 
     internal init(
-        _ call: @escaping @Sendable (
+        _ call: @Sendable @escaping (
             UnsafeContinuation<Void, Never>?,
-            @escaping @Sendable (AsyncStream<Output>.Result) async throws -> Demand
+            @Sendable @escaping (AsyncStream<Output>.Result) async throws -> Demand
         ) -> Cancellable<Demand>
     ) {
         self.call = call
@@ -91,7 +91,7 @@ public struct Publisher<Output: Sendable>: Sendable {
     @discardableResult
     func callAsFunction(
         onStartup: UnsafeContinuation<Void, Never>?,
-        _ f: @escaping @Sendable (AsyncStream<Output>.Result) async throws -> Demand
+        _ f: @Sendable @escaping (AsyncStream<Output>.Result) async throws -> Demand
     ) -> Cancellable<Demand> {
         call(onStartup, { result in
             guard !Task.isCancelled else {
@@ -111,7 +111,7 @@ public struct Publisher<Output: Sendable>: Sendable {
 }
 
 func flattener<B>(
-    _ downstream: @escaping @Sendable (AsyncStream<B>.Result) async throws -> Demand
+    _ downstream: @Sendable @escaping (AsyncStream<B>.Result) async throws -> Demand
 ) -> @Sendable (AsyncStream<B>.Result) async throws -> Demand {
     { b in switch b {
         case .completion(.finished):

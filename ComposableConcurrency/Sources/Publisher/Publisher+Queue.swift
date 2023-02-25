@@ -22,7 +22,7 @@ import Core
 import Queue
 
 public extension Queue {
-    func consume<Upstream>(
+    @Sendable func consume<Upstream>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
@@ -31,12 +31,12 @@ public extension Queue {
         await consume(function: function, file: file, line: line, publisher: publisher, using: { ($0, $1) })
     }
 
-    func consume<Upstream>(
+    @Sendable func consume<Upstream>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
         publisher: Publisher<Upstream>,
-        using action: @escaping (Publisher<Upstream>.Result, Resumption<Void>) -> Element
+        using action: @Sendable @escaping (Publisher<Upstream>.Result, Resumption<Void>) -> Element
     ) async -> Cancellable<Void>  {
         await publisher { upstreamValue in
             try await pause(function: function, file: file, line: line) { resumption in
@@ -60,13 +60,13 @@ public extension AsyncStream.Continuation {
         await consume(function: function, file: file, line: line, publisher: publisher, using: { ($0, $1) })
     }
 
-    func consume<Upstream>(
+    func consume<Upstream: Sendable>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
         publisher: Publisher<Upstream>,
-        using action: @escaping (Publisher<Upstream>.Result, Resumption<Void>) -> Element
-    ) async -> Cancellable<Void>  {
+        using action: @Sendable @escaping (Publisher<Upstream>.Result, Resumption<Void>) -> Element
+    ) async -> Cancellable<Void> where Element: Sendable {
         await publisher { upstreamValue in
             try await pause(function: function, file: file, line: line) { resumption in
                 guard !Cancellables.isCancelled else {

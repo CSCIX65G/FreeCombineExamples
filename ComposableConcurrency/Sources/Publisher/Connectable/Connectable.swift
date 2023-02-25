@@ -20,7 +20,7 @@ import Atomics
 import Core
 import Future
 
-public class Connectable<Output> {
+public final class Connectable<Output: Sendable>: @unchecked Sendable {
     private let function: StaticString
     private let file: StaticString
     private let line: UInt

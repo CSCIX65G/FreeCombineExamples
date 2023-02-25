@@ -88,10 +88,10 @@ public final class Cancellable<Output: Sendable>: Sendable {
     }
 
     init(
-        cancel: @escaping @Sendable () -> Void,
-        isCancelled: @escaping @Sendable () -> Bool,
-        value: @escaping @Sendable () async throws -> Output,
-        result: @escaping @Sendable () async -> Result<Output, Swift.Error>
+        cancel: @Sendable @escaping () -> Void,
+        isCancelled: @Sendable @escaping () -> Bool,
+        value: @Sendable @escaping () async throws -> Output,
+        result: @Sendable @escaping () async -> Result<Output, Swift.Error>
     ) {
         _cancel = cancel
         _isCancelled = isCancelled

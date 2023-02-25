@@ -21,8 +21,8 @@
 import Core
 
 extension Future {
-    public func map<T>(
-        _ transform: @escaping (Output) async -> T
+    public func map<T: Sendable>(
+        _ transform: @Sendable @escaping (Output) async -> T
     ) -> Future<T> {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in

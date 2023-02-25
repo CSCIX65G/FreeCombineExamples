@@ -20,16 +20,16 @@
 //
 import Core
 
-public struct AsyncContinuation<Output: Sendable, Return>: Sendable {
+public struct AsyncContinuation<Output: Sendable, Return: Sendable>: Sendable {
     private let call: @Sendable (
         Resumption<Void>,
-        @escaping @Sendable (Output) async throws -> Return
+        @Sendable @escaping (Output) async throws -> Return
     ) -> Cancellable<Return>
 
     public init(
-        _ call: @escaping @Sendable (
+        _ call: @Sendable @escaping (
             Resumption<Void>,
-            @escaping @Sendable (Output) async throws -> Return
+            @Sendable @escaping (Output) async throws -> Return
         ) -> Cancellable<Return>
     ) {
         self.call = call
@@ -40,7 +40,7 @@ public extension AsyncContinuation {
     @discardableResult
     func callAsFunction(
         onStartup: Resumption<Void>,
-        _ downstream: @escaping @Sendable (Output) async throws -> Return
+        _ downstream: @Sendable @escaping (Output) async throws -> Return
     ) -> Cancellable<Return> {
         call(onStartup) { result in
             try Cancellables.checkCancellation()
@@ -51,14 +51,14 @@ public extension AsyncContinuation {
     @discardableResult
     func sink(
         onStartup: Resumption<Void>,
-        _ downstream: @escaping @Sendable (Output) async throws -> Return
+        _ downstream: @Sendable @escaping (Output) async throws -> Return
     ) -> Cancellable<Return> {
         self(onStartup: onStartup, downstream)
     }
 
     @discardableResult
     func callAsFunction(
-        _ downstream: @escaping @Sendable (Output) async throws -> Return
+        _ downstream: @Sendable @escaping (Output) async throws -> Return
     ) async -> Cancellable<Return> {
         var cancellable: Cancellable<Return>!
         let _: Void = try! await pause { resumption in
@@ -69,7 +69,7 @@ public extension AsyncContinuation {
 
     @discardableResult
     func sink(
-        _ downstream: @escaping @Sendable (Output) async throws -> Return
+        _ downstream: @Sendable @escaping (Output) async throws -> Return
     ) async -> Cancellable<Return> {
         await self(downstream)
     }

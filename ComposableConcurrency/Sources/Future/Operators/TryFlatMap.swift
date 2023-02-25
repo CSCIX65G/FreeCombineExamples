@@ -19,8 +19,8 @@
 //  limitations under the License.
 //
 extension Future {
-    func tryFlatMap<T>(
-        _ transform: @escaping (Output) async throws -> Future<T>
+    func tryFlatMap<T: Sendable>(
+        _ transform: @Sendable @escaping (Output) async throws -> Future<T>
     ) -> Future<T> {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in switch r {

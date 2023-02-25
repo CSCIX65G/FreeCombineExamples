@@ -20,14 +20,14 @@
 //
 import Core
 
-func and<Left, Right>(
+@Sendable public func and<Left: Sendable, Right: Sendable>(
     _ left: Cancellable<Left>,
     _ right: Cancellable<Right>
 ) -> Cancellable<(Left, Right)> {
     and(left.future, right.future).futureValue
 }
 
-public func Anded<Left, Right>(
+@Sendable public func Anded<Left: Sendable, Right: Sendable>(
     _ left: Cancellable<Left>,
     _ right: Cancellable<Right>
 ) -> Cancellable<(Left, Right)> {
@@ -35,21 +35,21 @@ public func Anded<Left, Right>(
 }
 
 public extension Cancellable {
-    func and<Other>(
+    @Sendable func and<Other: Sendable>(
         _ other: Cancellable<Other>
     ) -> Cancellable<(Output, Other)> {
         Anded(self, other)
     }
 }
 
-public func &&<Left, Right>(
+@Sendable public func &&<Left: Sendable, Right: Sendable>(
     _ left: Cancellable<Left>,
     _ right: Cancellable<Right>
 ) -> Cancellable<(Left, Right)> {
     Anded(left, right)
 }
 
-public func and<A, B, C>(
+@Sendable public func and<A: Sendable, B: Sendable, C: Sendable>(
     _ one: Cancellable<A>,
     _ two: Cancellable<B>,
     _ three: Cancellable<C>
@@ -58,7 +58,7 @@ public func and<A, B, C>(
         .map { ($0.0.0, $0.0.1, $0.1) }
 }
 
-public func and<A, B, C, D>(
+@Sendable public func and<A: Sendable, B: Sendable, C: Sendable, D: Sendable>(
     _ one: Cancellable<A>,
     _ two: Cancellable<B>,
     _ three: Cancellable<C>,
@@ -68,7 +68,7 @@ public func and<A, B, C, D>(
         .map { ($0.0.0, $0.0.1, $0.1.0, $0.1.1) }
 }
 
-public func and<A, B, C, D, E>(
+@Sendable public func and<A: Sendable, B: Sendable, C: Sendable, D: Sendable, E: Sendable>(
     _ one: Cancellable<A>,
     _ two: Cancellable<B>,
     _ three: Cancellable<C>,
@@ -79,7 +79,7 @@ public func and<A, B, C, D, E>(
         .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1) }
 }
 
-public func and<A, B, C, D, E, F>(
+@Sendable public func and<A: Sendable, B: Sendable, C: Sendable, D: Sendable, E: Sendable, F: Sendable>(
     _ one: Cancellable<A>,
     _ two: Cancellable<B>,
     _ three: Cancellable<C>,
@@ -91,7 +91,7 @@ public func and<A, B, C, D, E, F>(
         .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0, $0.1.1) }
 }
 
-public func and<A, B, C, D, E, F, G>(
+@Sendable public func and<A: Sendable, B: Sendable, C: Sendable, D: Sendable, E: Sendable, F: Sendable, G: Sendable>(
     _ one: Cancellable<A>,
     _ two: Cancellable<B>,
     _ three: Cancellable<C>,
@@ -104,7 +104,7 @@ public func and<A, B, C, D, E, F, G>(
         .map { ($0.0.0.0, $0.0.0.1, $0.0.1.0, $0.0.1.1, $0.1.0.0, $0.1.0.1, $0.1.1) }
 }
 
-public func and<A, B, C, D, E, F, G, H>(
+@Sendable public func and<A: Sendable, B: Sendable, C: Sendable, D: Sendable, E: Sendable, F: Sendable, G: Sendable, H: Sendable>(
     _ one: Cancellable<A>,
     _ two: Cancellable<B>,
     _ three: Cancellable<C>,

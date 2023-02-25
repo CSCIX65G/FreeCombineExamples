@@ -28,7 +28,7 @@ public enum UnbreakablePromises {
     }
 }
 
-public final class UnbreakablePromise<Output> {
+public final class UnbreakablePromise<Output: Sendable>: @unchecked Sendable {
     typealias Status = UnbreakablePromises.Status
     private let function: StaticString
     private let file: StaticString

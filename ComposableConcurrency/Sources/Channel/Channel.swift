@@ -16,7 +16,7 @@ import DequeModule
 
  2. Documented semantics of AsyncSequence require blocking
 
- 3. There is no AsyncGenerator, i.e. a blocking write
+ 3. There is no AsyncGenerator, i.e. a blocking write/non-blocking read
 
  4. AsyncStream is:
     a. Unfair in multi-consumer situations, i.e. consume requests are not queued.
@@ -28,7 +28,7 @@ import DequeModule
  5. Cancelled tasks cannot await on an empty AsyncStreams
  */
 
-public final class Channel<Value: Sendable> {
+public final class Channel<Value: Sendable>: @unchecked Sendable {
     public enum Result: Sendable {
         case value(Value)
         case completion(Channels.Completion)
@@ -50,7 +50,7 @@ public final class Channel<Value: Sendable> {
         let value: Channel<Value>.Result
     }
 
-    private final class State: AtomicReference {
+    private final class State: AtomicReference, Sendable {
         let completion: Channels.Completion?
         let readers: PersistentQueue<Resumption<Value>>
         let writers: PersistentQueue<WriterNode>
@@ -96,7 +96,7 @@ public final class Channel<Value: Sendable> {
     }
 
     /*:
-     write a value and block until read
+     write a value and block until that value is read
      throws if the channel is completed or if writing the value causes a value to be dropped
      if a blocked writer is dropped, it handles the drop, if the write was non-blocking the current
      writer handles the drop
@@ -108,9 +108,10 @@ public final class Channel<Value: Sendable> {
             let (dequeued, newReaders) = localState.readers.dequeue()
             switch dequeued {
                 case .none:
-                    let nextLocalWrapped = try await enqueueForWriting(localState, value)
-                    guard nextLocalWrapped != nil else { return }
-                    localState = nextLocalWrapped!
+                    guard let nextLocalWrapped = try await enqueueForWriting(localState, value) else {
+                        return
+                    }
+                    localState = nextLocalWrapped
                 case let .some(reader):
                     let (success, newLocalState) = wrapped.compareExchange(
                         expected: localState,
@@ -144,9 +145,10 @@ public final class Channel<Value: Sendable> {
             let (dequeued, newReaders) = localState.readers.dequeue()
             switch dequeued {
                 case .none:
-                    let nextLocalWrapped = try enqueueAsValue(localState, value)
-                    guard nextLocalWrapped != nil else { return }
-                    localState = nextLocalWrapped!
+                    guard let nextLocalWrapped = try enqueueAsValue(localState, value) else {
+                        return
+                    }
+                    localState = nextLocalWrapped
                 case let .some(reader):
                     let (success, newLocalState) = wrapped.compareExchange(
                         expected: localState,
@@ -174,14 +176,17 @@ public final class Channel<Value: Sendable> {
             switch dequeued {
                 case .none:
                     do { return try await enqueueForReading(&localState) }
-                    catch { continue }
+                    catch { }
                 case let .some(writerNode):
                     let (success, newLocalState) = wrapped.compareExchange(
                         expected: localState,
                         desired: .init(readers: localState.readers, writers: newWriters),
                         ordering: .releasing
                     )
-                    guard success else { localState = newLocalState; continue }
+                    guard success else {
+                        localState = newLocalState
+                        continue
+                    }
                     writerNode.resumption?.resume()
                     return try writerNode.value.get()
             }
@@ -202,7 +207,10 @@ public final class Channel<Value: Sendable> {
                         desired: .init(readers: localState.readers, writers: newWriters),
                         ordering: .releasing
                     )
-                    guard success else { localState = newLocalState; continue }
+                    guard success else {
+                        localState = newLocalState
+                        continue
+                    }
                     writerNode.resumption?.resume()
                     return try writerNode.value.get()
             }

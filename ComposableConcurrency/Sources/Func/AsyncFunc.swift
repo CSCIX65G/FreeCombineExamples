@@ -20,10 +20,10 @@
 //
 import Core
 
-public struct AsyncFunc<A, R> {
-    public let call: (A) async throws -> R
+public struct AsyncFunc<A: Sendable, R: Sendable>: Sendable {
+    public let call: @Sendable (A) async throws -> R
     public init(
-        _ call: @escaping (A) async throws -> R
+        _ call: @Sendable @escaping (A) async throws -> R
     ) {
         self.call = call
     }
@@ -43,7 +43,7 @@ extension AsyncFunc {
         }
     }
 
-    public func stream(into continuation: AsyncStream<R>.Continuation) -> (A) async throws -> Void {
+    @Sendable public func stream(into continuation: AsyncStream<R>.Continuation) -> @Sendable (A) async throws -> Void {
         { value in try await self(continuation: continuation, value: value) }
     }
 

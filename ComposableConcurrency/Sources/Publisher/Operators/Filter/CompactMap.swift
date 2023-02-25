@@ -19,8 +19,8 @@
 //  limitations under the License.
 //
 public extension Publisher {
-    func compactMap<T>(
-        _ transform: @escaping (Output) async -> T?
+    func compactMap<T: Sendable>(
+        _ transform: @Sendable @escaping (Output) async -> T?
     ) -> Publisher<T> {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in

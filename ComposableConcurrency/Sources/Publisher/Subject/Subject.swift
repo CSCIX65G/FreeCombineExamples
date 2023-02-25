@@ -21,7 +21,7 @@
 import Core
 import Queue
 
-public final class Subject<Output: Sendable> {
+public final class Subject<Output: Sendable>: Sendable {
     private let function: StaticString
     private let file: StaticString
     private let line: UInt

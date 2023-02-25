@@ -18,7 +18,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-@preconcurrency import Atomics
+import Atomics
 
 public enum Cancellables {
     @TaskLocal public static var status = ManagedAtomic<Status>(.running)
@@ -41,7 +41,7 @@ public enum Cancellables {
     }
 }
 
-public final class Cancellable<Output: Sendable>: Sendable {
+public final class Cancellable<Output: Sendable>: @unchecked Sendable {
     typealias Status = Cancellables.Status
 
     private let function: StaticString
@@ -63,7 +63,7 @@ public final class Cancellable<Output: Sendable>: Sendable {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        operation: @escaping @Sendable () async throws -> Output
+        operation: @Sendable @escaping () async throws -> Output
     ) {
         self.function = function
         self.file = file

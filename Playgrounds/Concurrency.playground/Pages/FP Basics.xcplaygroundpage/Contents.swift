@@ -1,17 +1,21 @@
 //: [Previous](@previous)
 
-
-
 /// FP Basics
 func void<T>(_ t: T) -> Void { }
 
-// 1. Functions are implications/deductions. Curry-Howard Correspondance
-// 2. There is only one way to write identity
-func identity<T>(_ t: T) -> T { t }
+// 1. There are 256^256 (2^4096) ways of writing the following function
+func transform(_ byte: UInt8) -> UInt8 {
+    byte
+//    switch byte {
+//        case 47: return 48
+//        case 48: return 47
+//        default: return byte
+//    }
+}
 
-// 3. There are 256^256 (2^4096) ways of writing the following function
-//    but there is only one way to write `identity`
-func transform(_ byte: UInt8) -> UInt8 { byte }
+// 2. There is only one way to write this function though
+// 3. Generic functions are implications/deductions. Curry-Howard Correspondance
+func identity<T>(_ t: T) -> T { t }
 
 // 4. functions and closures are equivalent.
 // 4a. functions are named closures
@@ -88,10 +92,16 @@ func apply<A, B>(_ a: A) -> (@escaping (A) -> B) -> B {
 
 /// we can make the apply function into a type by storing the value explicitly...
 /// This demonstrates how "capture semantics" work
+struct IntWrapper {
+    let i: Int
+    init(_ i: Int) { self.i = i }
+    func transform(_ f: (Int) -> Int) -> Int { f(i) }
+    func apply<B>(_ f: (Int) -> B) -> B { f(i) }
+}
+
 
 struct Object<A> {
     let a: A
-    init(_ a: A) { self.a = a }
     func apply<B>(_ f: @escaping (A) -> B) -> B { f(a) }
 }
 // Object<A>.init:  (A) -> Object<A>
@@ -100,5 +110,5 @@ struct Object<A> {
 // compose(Object<A>.init, Object<A>.apply):
 //    (A) -> ((A) -> B) -> B
 //
-
+print("Compiled 'FP Basics' and ran")
 //: [Next](@next)

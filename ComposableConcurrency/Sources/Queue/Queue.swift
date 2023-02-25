@@ -58,7 +58,7 @@ public struct Queue<Element: Sendable>: Sendable {
     }
 }
 
-public extension AsyncStream.Continuation {
+public extension AsyncStream.Continuation where Element: Sendable {
     @Sendable func tryYield(_ value: Element) throws -> Void {
         switch yield(value) {
             case .enqueued: return

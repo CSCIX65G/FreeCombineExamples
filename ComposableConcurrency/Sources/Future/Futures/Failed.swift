@@ -38,7 +38,7 @@ public extension Future {
 
 public func Fail<Output>(
     _ type: Output.Type = Output.self,
-    generator: @escaping () async -> Swift.Error
+    generator: @Sendable @escaping () async -> Swift.Error
 ) -> Future<Output> {
     .init(type, generator: generator)
 }
@@ -46,7 +46,7 @@ public func Fail<Output>(
 public extension Future {
     init(
          _ type: Output.Type = Output.self,
-         generator: @escaping () async -> Swift.Error
+         generator: @Sendable @escaping () async -> Swift.Error
     ) {
         self = .init { resumption, downstream in  .init {
             resumption.resume()

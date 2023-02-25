@@ -43,7 +43,7 @@ extension Box: Hashable {
 }
 
 
-public final class MutableBox<Value> {
+public final class MutableBox<Value: Sendable> {
     public private(set) var value: Value
 
     public init(value: Value) { self.value = value }

@@ -22,12 +22,12 @@ import Core
 import Queue
 
 public extension Queue {
-    func consume<Upstream>(
+    @Sendable func consume<Upstream: Sendable>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
         future: Future<Upstream>,
-        using action: @escaping (AsyncResult<Upstream, Swift.Error>) -> Element
+        using action: @Sendable @escaping (AsyncResult<Upstream, Swift.Error>) -> Element
     ) async -> Cancellable<Void>  {
         await future {
             guard !Cancellables.isCancelled else { return }
@@ -37,13 +37,13 @@ public extension Queue {
 }
 
 public extension AsyncStream.Continuation {
-    func consume<Upstream>(
+    func consume<Upstream: Sendable>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
         future: Future<Upstream>,
-        using action: @escaping (AsyncResult<Upstream, Swift.Error>) -> Element
-    ) async -> Cancellable<Void>  {
+        using action: @Sendable @escaping (AsyncResult<Upstream, Swift.Error>) -> Element
+    ) async -> Cancellable<Void> where AsyncStream.Element == Sendable {
         await future {
             guard !Cancellables.isCancelled else { return }
             try? self.tryYield(action($0))

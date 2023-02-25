@@ -6,7 +6,7 @@
 //
 
 public enum Channels {
-    public enum Buffering {
+    public enum Buffering: Sendable {
         case oldest(Int)
         case newest(Int)
         case unbounded

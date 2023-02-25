@@ -65,8 +65,7 @@ public final class Resumption<Output: Sendable>: @unchecked Sendable {
      */
     deinit {
         guard status == .resumed else {
-            Assertion.assertionFailure(leakFailureString)
-            continuation.resume(throwing: LeakError())
+            continuation.resume(throwing: LeakedError())
             return
         }
     }
@@ -126,7 +125,7 @@ extension Resumption: Hashable {
     }
 }
 
-public func pause<Output>(
+@Sendable public func pause<Output>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
@@ -142,5 +141,26 @@ public func pause<Output>(
                 continuation: resumption
             )
         )
+    }
+}
+
+@Sendable public func futurePause<Output>(
+    function: StaticString = #function,
+    file: StaticString = #file,
+    line: UInt = #line,
+    for: Output.Type = Output.self,
+    _ resumingWith: @Sendable @escaping (Resumption<Output>) -> Void
+) -> Task<Output, Swift.Error> {
+    .init {
+        try await withUnsafeThrowingContinuation { resumption in
+            resumingWith(
+                .init(
+                    function: function,
+                    file: file,
+                    line: line,
+                    continuation: resumption
+                )
+            )
+        }
     }
 }

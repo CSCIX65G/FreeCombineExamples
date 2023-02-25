@@ -24,7 +24,7 @@ import Queue
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 extension Publisher {
-    public struct Debouncer<C: Clock> {
+    public struct Debouncer<C: Clock>: Sendable {
         let duration: C.Duration
         let downstream: Downstream
         let downstreamState: ManagedAtomic<Box<DownstreamState>>
@@ -69,11 +69,11 @@ extension Publisher {
             }
         }
 
-        static func downstreamSender(
+        @Sendable static func downstreamSender(
             downstream: @escaping Downstream,
             downstreamState: ManagedAtomic<Box<DownstreamState>> = .init(.init(value: .init())),
             queue: Queue<Void> = .init(buffering: .bufferingNewest(1))
-        ) -> (Output) async throws -> Void {
+        ) -> @Sendable (Output) async throws -> Void {
             { value in
                 do { try await downstream(.value(value)) }
                 catch {
@@ -118,7 +118,7 @@ extension Publisher {
     func debounce<C: Clock>(
         clock: C,
         duration: Swift.Duration
-    ) -> Self where C.Duration == Swift.Duration {
+    ) -> Self where C.Duration == Swift.Duration, C: Sendable {
         .init { resumption, downstream in
             let debouncerBox: MutableBox<Debouncer<C>?> = .init(value: .none)
             return self(onStartup: resumption) { r in

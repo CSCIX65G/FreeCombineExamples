@@ -53,10 +53,10 @@ struct Object<T> {
 
 extension Object {
     func map<U>(_ f: (T) -> U) -> Object<U> {
-//        .init(f(value))
         // (Object<T>) -> T                                     unpure(Object<T>)
         //               (T) -> ((T) -> U) -> U                 apply(f)
         //                                   (U) -> Object<U>   pure(u)
+        // .init(f(value))
         .init(apply(f))
     }
 
@@ -109,5 +109,7 @@ struct Continuation<A, B> {
     init(_ value: A) { self.apply = { f in f(value) } }
     func callAsFunction(_ f: @escaping (A) -> B) -> B { apply(f) }
 }
+
+print("Compiled 'Generics Basics' and ran")
 
 //: [Next](@next)

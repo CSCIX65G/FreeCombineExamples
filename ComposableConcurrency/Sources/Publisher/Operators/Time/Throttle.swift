@@ -11,7 +11,7 @@ import Queue
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 extension Publisher {
-    public struct Throttler<C: Clock> {
+    public struct Throttler<C: Clock>: Sendable where C.Duration: Sendable {
         let duration: C.Duration
         let downstream: Downstream
         let downstreamState: ManagedAtomic<Box<DownstreamState>>
@@ -77,11 +77,11 @@ extension Publisher {
             }
         }
 
-        static func downstreamSender(
+        @Sendable static func downstreamSender(
             downstream: @escaping Downstream,
             downstreamState: ManagedAtomic<Box<DownstreamState>> = .init(.init(value: .init())),
             queue: Queue<Void> = .init(buffering: .bufferingNewest(1))
-        ) -> (Output) async throws -> Void {
+        ) -> @Sendable (Output) async throws -> Void {
             { value in
                 do { try await downstream(.value(value)) }
                 catch {

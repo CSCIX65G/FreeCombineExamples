@@ -39,7 +39,7 @@ public func UnfoldedSequence<S: Sequence>(
     file: StaticString = #file,
     line: UInt = #line,
     _ sequence: S
-) -> Publisher<S.Element> {
+) -> Publisher<S.Element> where S: Sendable {
     .init(function: function, file: file, line: line, sequence)
 }
 
@@ -49,7 +49,7 @@ extension Publisher {
         file: StaticString = #file,
         line: UInt = #line,
         _ sequence: S
-    ) where S.Element == Output {
+    ) where S.Element == Output, S: Sendable {
         self = .init { resumption, downstream in
             .init(function: function, file: file, line: line) {
                 resumption.resume()
@@ -69,7 +69,7 @@ public func Unfolded<Output>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
-    _ generator: @escaping () async throws -> Output?
+    _ generator: @Sendable @escaping () async throws -> Output?
 ) -> Publisher<Output> {
     .init(function: function, file: file, line: line, generator)
 }
@@ -79,7 +79,7 @@ extension Publisher {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        _ generator: @escaping () async throws -> Output?
+        _ generator: @Sendable @escaping () async throws -> Output?
     ) {
         self = .init { resumption, downstream in
             .init(function: function, file: file, line: line) {

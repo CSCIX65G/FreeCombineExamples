@@ -20,7 +20,7 @@
 //
 import Atomics
 
-public enum AsyncResult<Success, Failure: Error> {
+public enum AsyncResult<Success: Sendable, Failure: Error>: Sendable {
     case success(Success)
     case failure(Failure)
 }

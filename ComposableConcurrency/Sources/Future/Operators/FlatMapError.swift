@@ -20,7 +20,7 @@
 //
 extension Future {
     func flatMapError(
-        _ transform: @escaping (Error) async -> Self
+        _ transform: @Sendable @escaping (Swift.Error) async -> Self
     ) -> Self {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in switch r {

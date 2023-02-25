@@ -23,13 +23,13 @@ public extension AsyncStream where Element: Sendable {
 public struct Publisher<Output: Sendable>: Sendable {
     private let call: @Sendable (
         UnsafeContinuation<Void, Never>?,
-        @escaping @Sendable (AsyncStream<Output>.Result) async throws -> Demand
+        @Sendable @escaping (AsyncStream<Output>.Result) async throws -> Demand
     ) -> Task<Demand, Swift.Error>
 
     internal init(
-        _ call: @escaping @Sendable (
+        _ call: @Sendable @escaping (
             UnsafeContinuation<Void, Never>?,
-            @escaping @Sendable (AsyncStream<Output>.Result) async throws -> Demand
+            @Sendable @escaping (AsyncStream<Output>.Result) async throws -> Demand
         ) -> Task<Demand, Swift.Error>
     ) {
         self.call = call
@@ -38,7 +38,7 @@ public struct Publisher<Output: Sendable>: Sendable {
     @discardableResult
     func callAsFunction(
         onStartup: UnsafeContinuation<Void, Never>?,
-        _ f: @escaping @Sendable (AsyncStream<Output>.Result) async throws -> Demand
+        _ f: @Sendable @escaping (AsyncStream<Output>.Result) async throws -> Demand
     ) -> Task<Demand, Swift.Error> {
         call(onStartup, { result in
             guard !Task.isCancelled else {
@@ -58,7 +58,7 @@ public struct Publisher<Output: Sendable>: Sendable {
 }
 
 func flattener<B>(
-    _ downstream: @escaping @Sendable (AsyncStream<B>.Result) async throws -> Demand
+    _ downstream: @Sendable @escaping (AsyncStream<B>.Result) async throws -> Demand
 ) -> @Sendable (AsyncStream<B>.Result) async throws -> Demand {
     { b in switch b {
         case .completion(.finished):

@@ -24,28 +24,28 @@ public struct FinishedError: Swift.Error, Sendable, Equatable {
     public init() { }
 }
 
-public struct AsyncFolder<State, Action: Sendable> {
+public struct AsyncFolder<State: Sendable, Action: Sendable> {
     enum Result: Sendable {
         case value(Action)
         case completion(Queues.Completion)
     }
 
-    public enum Effect {
+    public enum Effect: Sendable {
         case none  // Multiply by 1
         case completion(Completion) // Multiply by 0
-        case publish((Queue<Action>) -> Void)
+        case publish(@Sendable (Queue<Action>) -> Void)
     }
     
     public typealias Completion = Queues.Completion
     
-    let initializer: (Queue<Action>) async -> State
+    let initializer: @Sendable (Queue<Action>) async -> State
     let reducer: (inout State, Action) async throws -> Effect
     let emitter: (inout State) async throws -> Void
     let disposer: (Action, Completion) async -> Void
     let finalizer: (inout State, Completion) async -> Void
     
     public init(
-        initializer: @escaping (Queue<Action>) async -> State,
+        initializer: @Sendable @escaping (Queue<Action>) async -> State,
         reducer: @escaping (inout State, Action) async throws -> Effect,
         emitter: @escaping (inout State) async throws -> Void = { _ in },
         disposer: @escaping (Action, Completion) async -> Void = { _, _ in },

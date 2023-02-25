@@ -7,8 +7,8 @@
 import Core
 
 public extension AsyncContinuation {
-    func map<T>(
-        _ transform: @escaping (Output) async -> T
+    func map<T: Sendable>(
+        _ transform: @Sendable @escaping (Output) async -> T
     ) -> AsyncContinuation<T, Return> {
         .init { resumption, downstream in
             self(onStartup: resumption) { a in

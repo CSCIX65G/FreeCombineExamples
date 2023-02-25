@@ -33,18 +33,18 @@ public extension Publisher {
     }
 }
 
-public func Merged<Output, S: Sequence>(
+@Sendable public func Merged<Output: Sendable, S: Sequence>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
     _ upstream1: Publisher<Output>,
     _ upstream2: Publisher<Output>,
     _ otherUpstreams: S
-) -> Publisher<Output> where S.Element == Publisher<Output> {
+) -> Publisher<Output> where S.Element == Publisher<Output>, S: Sendable {
     merge(function: function, file: file, line: line, publishers: upstream1, upstream2, otherUpstreams)
 }
 
-public func Merged<Output>(
+@Sendable public func Merged<Output: Sendable>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
@@ -55,7 +55,7 @@ public func Merged<Output>(
     merge(function: function, file: file, line: line, publishers: upstream1, upstream2, otherUpstreams)
 }
 
-public func merge<Output>(
+@Sendable public func merge<Output: Sendable>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
@@ -66,14 +66,14 @@ public func merge<Output>(
     merge(function: function, file: file, line: line, publishers: upstream1, upstream2, otherUpstreams)
 }
 
-public func merge<Output, S: Sequence>(
+@Sendable public func merge<Output: Sendable, S: Sequence>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
     publishers upstream1: Publisher<Output>,
     _ upstream2: Publisher<Output>,
     _ otherUpstreams: S
-) -> Publisher<Output> where S.Element == Publisher<Output> {
+) -> Publisher<Output> where S.Element == Publisher<Output>, S: Sendable {
     .init { resumption, downstream in
         let cancellable = Queue<Merge<Output>.Action>(buffering: .bufferingOldest(2 + otherUpstreams.underestimatedCount))
             .fold(

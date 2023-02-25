@@ -22,7 +22,7 @@ import Core
 import Queue
 
 public extension Publisher {
-    func zip<Other>(
+    @Sendable func zip<Other: Sendable>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
@@ -32,7 +32,7 @@ public extension Publisher {
     }
 }
 
-public func Zipped<Left, Right>(
+@Sendable public func Zipped<Left, Right>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
@@ -42,7 +42,7 @@ public func Zipped<Left, Right>(
     zip(function: function, file: file, line: line, left, right)
 }
 
-public func zip<Left, Right>(
+@Sendable public func zip<Left: Sendable, Right: Sendable>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,

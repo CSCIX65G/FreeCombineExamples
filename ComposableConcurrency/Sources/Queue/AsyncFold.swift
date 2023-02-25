@@ -19,7 +19,7 @@
 //
 import Core
 
-public final class AsyncFold<State, Action: Sendable> {
+public final class AsyncFold<State: Sendable, Action: Sendable>: Sendable {
     private let function: StaticString
     private let file: StaticString
     private let line: UInt

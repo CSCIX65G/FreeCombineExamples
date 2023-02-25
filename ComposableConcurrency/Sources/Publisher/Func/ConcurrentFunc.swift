@@ -23,7 +23,7 @@ import Queue
 
 public struct InvocationError: Swift.Error, Sendable, Equatable { }
 
-public struct ConcurrentFunc<Arg, Return>: @unchecked Sendable, Identifiable {
+public struct ConcurrentFunc<Arg: Sendable, Return: Sendable>: @unchecked Sendable, Identifiable {
     public let id: ObjectIdentifier
     public let dispatch: ConcurrentFunc<Arg, Return>.Dispatch
     let resumption: Resumption<(Queue<Next>, Publisher<Arg>.Result)>
@@ -41,7 +41,7 @@ public struct ConcurrentFunc<Arg, Return>: @unchecked Sendable, Identifiable {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        _ dispatch: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return
+        _ dispatch: @Sendable @escaping (Publisher<Arg>.Result) async throws -> Return
     ) async {
         var localDispatch: ConcurrentFunc<Arg, Return>.Dispatch!
         let resumption = await unfailingPause(function: function, file: file, line: line) { startup in
@@ -99,7 +99,7 @@ public extension ConcurrentFunc {
             file: StaticString = #file,
             line: UInt = #line,
             resumption: UnfailingResumption<Resumption<(Queue<Next>, Publisher<Arg>.Result)>>,
-            asyncFunction: @escaping @Sendable (Publisher<Arg>.Result) async throws -> Return
+            asyncFunction: @Sendable @escaping (Publisher<Arg>.Result) async throws -> Return
         ) {
             self.function = function
             self.file = file

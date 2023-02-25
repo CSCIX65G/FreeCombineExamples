@@ -18,11 +18,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-class ThrowingDeduplicator<A> {
-    let isEquivalent: (A, A) async throws -> Bool
+final class ThrowingDeduplicator<A: Sendable> {
+    let isEquivalent: @Sendable (A, A) async throws -> Bool
     var currentValue: A!
 
-    init(_ predicate: @escaping (A, A) async throws -> Bool) {
+    init(_ predicate: @Sendable @escaping (A, A) async throws -> Bool) {
         self.isEquivalent = predicate
     }
 
@@ -50,7 +50,7 @@ extension Publisher where Output: Equatable {
 
 extension Publisher {
     func tryRemoveDuplicates(
-        by predicate: @escaping (Output, Output) async throws -> Bool
+        by predicate: @Sendable @escaping (Output, Output) async throws -> Bool
     ) -> Publisher<Output> {
         .init { resumption, downstream in
             let deduplicator = ThrowingDeduplicator<Output>(predicate)

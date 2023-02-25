@@ -9,10 +9,10 @@ import Core
 import Atomics
 import DequeModule
 
-public final class SPSCSVChannel<Value> {
+public final class SPSCSVChannel<Value: Sendable>: @unchecked Sendable {
     private struct ChannelError: Error { let wrapper: Wrapper }
 
-    private final class Wrapper: AtomicReference, Identifiable, Equatable {
+    private final class Wrapper: AtomicReference, Sendable, Identifiable, Equatable {
         static func == (lhs: SPSCSVChannel<Value>.Wrapper, rhs: SPSCSVChannel<Value>.Wrapper) -> Bool { lhs.id == rhs.id }
 
         let value: AsyncResult<Value?, Error>

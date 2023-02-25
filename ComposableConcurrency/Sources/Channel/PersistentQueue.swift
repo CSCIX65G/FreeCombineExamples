@@ -7,19 +7,19 @@
 import HashTreeCollections
 
 public enum PersistentQueues {
-    public enum Buffering {
+    public enum Buffering: Sendable, Equatable {
         case newest(Int)
         case oldest(Int)
         case unbounded
     }
 }
 
-public struct PersistentQueue<Element> {
+public struct PersistentQueue<Element: Sendable>: Sendable {
     let buffering: PersistentQueues.Buffering
     let range: Range<UInt64>
     private let storage: TreeDictionary<UInt64, Element>
 
-    private init(
+    init(
         buffering: PersistentQueues.Buffering = .unbounded,
         range: Range<UInt64>,
         storage: TreeDictionary<UInt64, Element>
@@ -132,7 +132,13 @@ public extension PersistentQueue {
         )
     }
 
-    func dequeue() -> (head: Element?, tail: PersistentQueue<Element>) {
+//    func enqueue(_ elements: Self) -> (dropped: Self, tail: Self) {
+//        var dropped = Self.init()
+//        var tail = Self.init()
+//        return (dropped: dropped, tail: tail)
+//    }
+
+    func dequeue() -> (head: Element?, tail: Self) {
         guard let head = self.storage[range.lowerBound] else {
             return (head: .none, tail: self)
         }
@@ -152,8 +158,22 @@ public extension PersistentQueue {
         )
     }
 
-    func dequeueAll() -> (range: Range<UInt64>, values: TreeDictionary<UInt64, Element>, tail: Self) {
-        (range: range, values: storage, tail: .init(buffering: buffering))
+    func dequeue(count: UInt64) -> (head: Self, tail: Self) {
+        var removed = TreeDictionary<UInt64, Element>()
+        var remaining = storage
+
+        for i in (range.lowerBound + count) ..< range.upperBound {
+            removed[i - count] = remaining.removeValue(forKey: i)!
+        }
+
+        return (
+            head: Self(buffering: buffering, range: UInt64.zero ..< count, storage: removed),
+            tail: Self(buffering: buffering, range: count ..< range.upperBound, storage: remaining)
+        )
+    }
+
+    func dequeueAll() -> (head: Self, tail: Self) {
+        (head: self, tail: .init(buffering: buffering))
     }
 
     func forEach(_ action: (Element) -> Void) -> Void {

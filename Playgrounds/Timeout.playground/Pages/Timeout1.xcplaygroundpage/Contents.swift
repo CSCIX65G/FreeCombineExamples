@@ -66,7 +66,7 @@ public final class Cancellable<Output: Sendable> {
     private let task: Task<Output, Swift.Error>
     private let atomicStatus = ManagedAtomic<Status>(.running)
 
-    public init(operation: @escaping @Sendable () async throws -> Output) {
+    public init(operation: @Sendable @escaping () async throws -> Output) {
         let atomic = atomicStatus
         self.task = .init {
             try await Cancellables.$status.withValue(atomic) {
@@ -179,8 +179,8 @@ public struct TimeoutError: Swift.Error, Sendable { }
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 func timeout<Output: Sendable>(
-    after interval: UInt64,
-    _ process: @escaping () async -> Output
+    _ process: @escaping () async -> Output,
+    after interval: UInt64
 ) -> Cancellable<Output> {
     .init {
         var resultCancellable: Cancellable<Output>!
@@ -210,7 +210,7 @@ func timeout<Output: Sendable>(
     }
 }
 
-let cancellable1 = timeout(after: 100_000_000) { 13 }
+let cancellable1 = timeout({ 13 }, after: 100_000_000)
 let cancellationResult1 = Result {
     try cancellable1.cancel()
 }
@@ -220,10 +220,10 @@ print(result1)
 
 //=================================================
 
-let cancellable3 = timeout(after: 100_000_000) {
-    try? await Task.sleep(nanoseconds: 200_000_000)
-    return 13
-}
+let cancellable3 = timeout(
+    { try? await Task.sleep(nanoseconds: 200_000_000); return 13 },
+    after: 100_000_000
+)
 let cancellationResult3 = Result { try cancellable3.cancel() }
 print(cancellationResult3)
 let result3 = await cancellable3.result

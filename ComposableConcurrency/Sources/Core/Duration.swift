@@ -4,7 +4,7 @@
 //
 //  Created by Van Simmons on 9/17/22.
 //
-public enum Duration {
+public enum Duration: Sendable {
     case seconds(UInt64)
     case milliseconds(UInt64)
     case microseconds(UInt64)

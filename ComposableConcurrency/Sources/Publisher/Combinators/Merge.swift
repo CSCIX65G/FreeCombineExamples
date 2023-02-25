@@ -22,20 +22,20 @@ import Core
 import Queue
 
 public enum Merges {
-    public enum Error: Swift.Error {
+    public enum Error: Swift.Error, Sendable {
         case failure(index: Int, error: Swift.Error)
     }
 }
 
-public struct Merge<Value> {
-    enum Current {
+public struct Merge<Value: Sendable>: Sendable {
+    enum Current: Sendable {
         case nothing
         case hasValue(Int, Value, Resumption<Void>)
         case errored(Int, Swift.Error)
         case finished
     }
 
-    public struct State {
+    public struct State: Sendable {
         var current: Current = .nothing
         var cancellables: [Int: Cancellable<Void>]
         let downstream: @Sendable (Publisher<Value>.Result) async throws -> Void
@@ -48,7 +48,7 @@ public struct Merge<Value> {
         }
     }
 
-    enum Action {
+    enum Action: Sendable {
         case value(Int, Value, Resumption<Void>)
         case finish(Int, Resumption<Void>)
         case failure(Int, Error, Resumption<Void>)
@@ -61,7 +61,7 @@ public struct Merge<Value> {
         }
     }
 
-    static func consume(_ i: Int) -> (Publisher<Value>.Result, Resumption<Void>) -> Action {
+    @Sendable static func consume(_ i: Int) -> @Sendable (Publisher<Value>.Result, Resumption<Void>) -> Action {
         { result, resumption in
             switch result {
                 case let .value(value):
@@ -74,10 +74,10 @@ public struct Merge<Value> {
         }
     }
 
-    static func initialize(
+    @Sendable static func initialize(
         upstreams: [Publisher<Value>],
-        downstream: @escaping @Sendable (Publisher<Value>.Result) async throws -> Void
-    ) -> (Queue<Action>) async -> State {
+        downstream: @Sendable @escaping (Publisher<Value>.Result) async throws -> Void
+    ) -> @Sendable (Queue<Action>) async -> State {
         { channel in
             var cancellables = [Int: Cancellable<Void>]()
             cancellables.reserveCapacity(upstreams.count)
@@ -214,7 +214,7 @@ public struct Merge<Value> {
 
     static func folder(
         publishers: [Publisher<Value>],
-        downstream: @escaping @Sendable (Publisher<Value>.Result) async throws -> Void
+        downstream: @Sendable @escaping (Publisher<Value>.Result) async throws -> Void
     ) -> AsyncFolder<State, Action> {
         .init(
             initializer: initialize(upstreams: publishers, downstream: downstream),

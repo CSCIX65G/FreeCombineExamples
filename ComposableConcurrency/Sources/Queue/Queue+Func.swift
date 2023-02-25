@@ -21,8 +21,8 @@
 import Core
 import Func
 
-public func consume<A, R>(
-    _ f: @escaping (A) async throws -> R
+@Sendable public func consume<A: Sendable, R: Sendable>(
+    _ f: @Sendable @escaping (A) async throws -> R
 ) -> (AsyncStream<R>.Continuation) -> (A) async throws -> Void {
     { continuation in { a in switch try await continuation.yield(f(a)) {
         case .enqueued: return
@@ -35,12 +35,12 @@ public func consume<A, R>(
 
 extension Queue {
     func consume<A>(
-        _ f: @escaping (A) async throws -> Element
+        _ f: @Sendable @escaping (A) async throws -> Element
     ) -> (A) async throws -> Void {
         self.continuation.consume(f)
     }
     func consume<A>(
-        _ f: @escaping (A) async throws -> Element
+        _ f: @Sendable @escaping (A) async throws -> Element
     ) -> AsyncFunc<A, Void> {
         self.continuation.consume(f)
     }
@@ -51,10 +51,10 @@ extension Queue {
     }
 }
 
-extension AsyncStream.Continuation {
-    func consume<A>(
-        _ f: @escaping (A) async throws -> Element
-    ) -> (A) async throws -> Void {
+extension AsyncStream.Continuation where Element: Sendable {
+    @Sendable func consume<A: Sendable>(
+        _ f: @Sendable @escaping (A) async throws -> Element
+    ) -> @Sendable (A) async throws -> Void {
         { a in switch try await self.yield(f(a)) {
             case .enqueued: return
             case .terminated: throw EnqueueError<A>.terminated
@@ -65,7 +65,7 @@ extension AsyncStream.Continuation {
     }
 
     func consume<A>(
-        _ f: @escaping (A) async throws -> Element
+        _ f: @Sendable @escaping (A) async throws -> Element
     ) -> AsyncFunc<A, Void> {
         .init(self.consume(f))
     }
@@ -78,7 +78,7 @@ extension AsyncStream.Continuation {
 }
 
 extension IdentifiedAsyncFunc {
-    func callAsFunction(continuation: AsyncStream<(ObjectIdentifier, R)>.Continuation, value: A) async throws -> Void {
+    @Sendable func callAsFunction(continuation: AsyncStream<(ObjectIdentifier, R)>.Continuation, value: A) async throws -> Void {
         switch try await continuation.yield((id, f(value))) {
             case .enqueued: return
             case .terminated: throw EnqueueError<R>.terminated
@@ -87,7 +87,7 @@ extension IdentifiedAsyncFunc {
                 fatalError("Unimplemented enqueue case")
         }
     }
-    func callAsFunction(continuation: AsyncStream<(ObjectIdentifier, R)>.Continuation) -> (A) async throws -> Void {
+    @Sendable func callAsFunction(continuation: AsyncStream<(ObjectIdentifier, R)>.Continuation) -> @Sendable (A) async throws -> Void {
         { value in try await self(continuation: continuation, value: value)}
     }
     func callAsFunction(continuation: AsyncStream<(ObjectIdentifier, R)>.Continuation) -> AsyncFunc<A, Void> {

@@ -23,7 +23,7 @@ import Queue
 
 public struct SubscriptionError: Swift.Error, Sendable, Equatable { }
 
-public final class Distributor<Output: Sendable> {
+public final class Distributor<Output: Sendable>: Sendable {
     private let function: StaticString
     private let file: StaticString
     private let line: UInt
@@ -68,7 +68,7 @@ public extension Distributor {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        operation: @escaping @Sendable (Publisher<Output>.Result) async throws -> Void
+        operation: @Sendable @escaping (Publisher<Output>.Result) async throws -> Void
     ) -> Cancellable<Cancellable<Void>> {
         .init {
             try await self.subscribe(function: function, file: file, line: line, operation: operation)
@@ -79,7 +79,7 @@ public extension Distributor {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        operation: @escaping @Sendable (Publisher<Output>.Result) async throws -> Void
+        operation: @Sendable @escaping (Publisher<Output>.Result) async throws -> Void
     ) async throws -> Cancellable<Void> {
         let invocation: ConcurrentFunc<Output, Void> = await .init(
             function: function,
@@ -98,6 +98,7 @@ public extension Distributor {
         }
 
         return .init(function: function, file: file, line: line) {
+            let dFold = self.distributionFold
             try await withTaskCancellationHandler(
                 operation: {
                     switch await invocation.dispatch.cancellable.result {
@@ -108,7 +109,7 @@ public extension Distributor {
                     }
                 },
                 onCancel: {
-                    try? self.distributionFold.send(.cancel(subscriptionId))
+                    try? dFold.send(.cancel(subscriptionId))
                 }
             )
         }

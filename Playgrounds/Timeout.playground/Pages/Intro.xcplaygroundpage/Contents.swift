@@ -5,16 +5,16 @@
 
  Write a function with the following signature:
  ```
- func timeut<Output>(
-     _ process: @Sendable @escaping () async throws -> Output,
-     after interval: UInt64
+ func timeout<Output: Sendable>(
+     after interval: Swift.Duration,
+     _ process: @Sendable @escaping () async throws -> Output
  ) -> Task<Output, Swift.Error>
  ```
  where:
 
  1. If `process` completes before `interval`, and before a cancel, the task returns `process`'s Output
- 1. If `interval` completes before `process`, and before a cancel, the task returns TimeoutError
- 1. If the task is cancelled before either `process` or `interval` completes, it returns CancellationError
+ 1. If the amount of time specified by `interval` passes before `process` completes, and before a cancel, the task returns TimeoutError
+ 1. If the task is cancelled before either `process` completes or `interval` passes, it returns CancellationError
  1. The returned task does _not_ wait on either cancelled subtasks to complete
  1. These should go without saying, but...
      * No race conditions

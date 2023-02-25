@@ -29,7 +29,7 @@ public enum Promises {
     }
 }
 
-public final class Promise<Output> {
+public final class Promise<Output: Sendable>: @unchecked Sendable {
     private let function: StaticString
     private let file: StaticString
     private let line: UInt

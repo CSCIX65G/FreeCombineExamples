@@ -12,7 +12,7 @@ func compose<A, B, C>(
 struct AsyncContinuation<A, B> {
     let call: @Sendable (@escaping (A) async -> B) -> Task<B, Never>
 
-    init(_ call: @escaping @Sendable (@escaping (A) async -> B) -> Task<B, Never>) {
+    init(_ call: @Sendable @escaping (@escaping (A) async -> B) -> Task<B, Never>) {
         self.call = call
     }
 
@@ -76,5 +76,7 @@ func flatMap<A, B, C>(
 func join<A, B>(_ outer: AsyncContinuation<AsyncContinuation<A, B>, B>) -> AsyncContinuation<A, B> {
     flatMap(outer)(identity)
 }
+
+print("Compiled 'Chaining Tasks' and ran")
 
 //: [Next](@next)

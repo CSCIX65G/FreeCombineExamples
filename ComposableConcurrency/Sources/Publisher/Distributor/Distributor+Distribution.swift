@@ -22,7 +22,7 @@ import Core
 import Queue
 
 extension Distributor {
-    public struct DistributionState {
+    public struct DistributionState: Sendable {
         var completion: Publishers.Completion? = .none
         var currentValue: Output? = .none
         var invocations: [ObjectIdentifier : ConcurrentFunc<Output, Void>] = [:]

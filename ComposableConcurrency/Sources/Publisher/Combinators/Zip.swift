@@ -21,8 +21,8 @@
 import Core
 import Queue
 
-public struct Zip<Left, Right> {
-    enum Current {
+public struct Zip<Left: Sendable, Right: Sendable> {
+    enum Current: Sendable {
         case nothing
         case hasLeft(Left, Resumption<Void>)
         case hasRight(Right, Resumption<Void>)
@@ -31,7 +31,7 @@ public struct Zip<Left, Right> {
         case errored(Swift.Error)
     }
 
-    public struct State {
+    public struct State : Sendable {
         var leftCancellable: Cancellable<Void>?
         var rightCancellable: Cancellable<Void>?
         var current: Current = .nothing
@@ -50,20 +50,20 @@ public struct Zip<Left, Right> {
         }
     }
 
-    public enum Action {
+    public enum Action: Sendable {
         case left(Publisher<Left>.Result, Resumption<Void>)
         case right(Publisher<Right>.Result, Resumption<Void>)
     }
 
-    static func initialize(
+    @Sendable static func initialize(
         left: Publisher<Left>,
         right: Publisher<Right>,
-        downstream: @escaping @Sendable (Publisher<(Left, Right)>.Result) async throws -> Void
-    ) -> (Queue<Action>) async -> State {
+        downstream: @Sendable @escaping (Publisher<(Left, Right)>.Result) async throws -> Void
+    ) -> @Sendable (Queue<Action>) async -> State {
         { channel in
             await .init(
-                leftCancellable:  channel.consume(publisher: left, using: Action.left),
-                rightCancellable: channel.consume(publisher: right, using: Action.right),
+                leftCancellable:  channel.consume(publisher: left, using: { Action.left($0, $1) }),
+                rightCancellable: channel.consume(publisher: right, using: { Action.right($0, $1) }),
                 downstream: downstream
             )
         }
@@ -244,7 +244,7 @@ public struct Zip<Left, Right> {
     static func folder(
         left: Publisher<Left>,
         right: Publisher<Right>,
-        downstream: @escaping @Sendable (Publisher<(Left, Right)>.Result) async throws -> Void
+        downstream: @Sendable @escaping (Publisher<(Left, Right)>.Result) async throws -> Void
     ) -> AsyncFolder<State, Action> {
         .init(
             initializer: initialize(left: left, right: right, downstream: downstream),

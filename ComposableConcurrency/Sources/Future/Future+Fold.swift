@@ -23,7 +23,7 @@ import Queue
 public extension Future {
     func fold<Other>(
         futures: [Future<Other>],
-        with combiningFunction: @escaping @Sendable (Output, Other) -> Self
+        with combiningFunction: @Sendable @escaping (Output, Other) -> Self
     ) -> Self {
         var this = self
         for future in futures {

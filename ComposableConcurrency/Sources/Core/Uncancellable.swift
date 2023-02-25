@@ -28,7 +28,9 @@ public enum Uncancellables {
     }
 }
 
-public final class Uncancellable<Output: Sendable> {
+extension ManagedAtomic: @unchecked Sendable { }
+
+public final class Uncancellable<Output: Sendable>: @unchecked Sendable {
     typealias Status = Uncancellables.Status
     private let function: StaticString
     private let file: StaticString
@@ -50,7 +52,7 @@ public final class Uncancellable<Output: Sendable> {
         file: StaticString = #file,
         line: UInt = #line,
         released: Bool = false,
-        operation: @escaping @Sendable () async -> Output
+        operation: @Sendable @escaping () async -> Output
     ) {
         self.function = function
         self.file = file
@@ -68,7 +70,7 @@ public final class Uncancellable<Output: Sendable> {
     @Sendable public func release() throws {
         try AsyncResult<Void, Swift.Error>.success(())
             .set(atomic: atomicStatus, from: Status.running, to: Status.released)
-            .mapError {_ in ReleaseError() }
+            .mapError {_ in ReleasedError() }
             .get()
     }
 

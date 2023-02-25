@@ -22,7 +22,9 @@ import Atomics
 import Core
 import Queue
 
-public func and<Left, Right>(
+extension ManagedAtomic: @unchecked Sendable where Value: Sendable { }
+
+@Sendable public func and<Left: Sendable, Right: Sendable>(
     _ left: Future<Left>,
     _ right: Future<Right>
 ) -> Future<(Left, Right)> {

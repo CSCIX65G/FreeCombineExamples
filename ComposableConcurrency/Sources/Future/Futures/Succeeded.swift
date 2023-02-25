@@ -31,12 +31,12 @@ public extension Future {
     }
 }
 
-public func Succeeded<Output>(_ generator: @escaping () async -> Output) -> Future<Output> {
+public func Succeeded<Output>(_ generator: @Sendable @escaping () async -> Output) -> Future<Output> {
     .init(generator)
 }
 
 public extension Future {
-    init(_ generator: @escaping () async -> Output) {
+    init(_ generator: @Sendable @escaping () async -> Output) {
         self = .init { resumption, downstream in .init {
             resumption.resume()
             return await downstream(.success(generator()))

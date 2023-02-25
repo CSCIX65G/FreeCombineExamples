@@ -20,7 +20,7 @@
 //
 extension Future {
     public func mapError(
-        _ transform: @escaping (Error) async -> Error
+        _ transform: @Sendable @escaping (Error) async -> Error
     ) -> Self {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in

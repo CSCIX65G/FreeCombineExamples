@@ -30,7 +30,7 @@ public struct Publisher<Output: Sendable>: Sendable {
     private let call: @Sendable (Resumption<Void>, @escaping Downstream) -> Cancellable<Void>
 
     public init(
-        _ call: @escaping @Sendable (Resumption<Void>, @escaping Downstream) -> Cancellable<Void>
+        _ call: @Sendable @escaping (Resumption<Void>, @escaping Downstream) -> Cancellable<Void>
     ) {
         self.call = call
     }

@@ -66,7 +66,7 @@ public final class Cancellable<Output: Sendable> {
     private let task: Task<Output, Swift.Error>
     private let atomicStatus = ManagedAtomic<UInt8>(Status.running.rawValue)
 
-    public init(operation: @escaping @Sendable () async throws -> Output) {
+    public init(operation: @Sendable @escaping () async throws -> Output) {
         let atomic = atomicStatus
         self.task = .init {
             try await Cancellables.$status.withValue(atomic) {

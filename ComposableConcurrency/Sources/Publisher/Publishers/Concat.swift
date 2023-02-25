@@ -44,7 +44,7 @@ public extension Publisher {
         file: StaticString = #file,
         line: UInt = #line,
         concatenating publishers: S
-    ) where S.Element == Publisher<Output> {
+    ) where S.Element: Sendable, S.Element == Publisher<Output>, S: Sendable {
         self = .init { resumption, downstream  in
             let flattenedDownstream = flattener(downstream)
             return .init(function: function, file: file, line: line) {
@@ -82,7 +82,7 @@ public func Concat<Element>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
-    _ publishers: @escaping () async -> Publisher<Element>?
+    _ publishers: @Sendable @escaping () async -> Publisher<Element>?
 ) -> Publisher<Element> {
     .init(function: function, file: file, line: line, flattening: publishers)
 }
@@ -92,7 +92,7 @@ public extension Publisher {
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        flattening: @escaping () async -> Publisher<Output>?
+        flattening: @Sendable @escaping () async -> Publisher<Output>?
     ) {
         self = .init { resumption, downstream  in
             let flattenedDownstream = flattener(downstream)

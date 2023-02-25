@@ -18,12 +18,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-public class IdentifiedAsyncFunc<A, R>: Identifiable {
-    public let f: (A) async throws -> R
-    private(set) var id: ObjectIdentifier! = .none
+public final class IdentifiedAsyncFunc<A: Sendable, R: Sendable>: Identifiable, Sendable {
+    public let f: @Sendable (A) async throws -> R
+    public var id: ObjectIdentifier { ObjectIdentifier(self) }
 
-    public init(f: @escaping (A) async throws -> R) {
+    public init(f: @Sendable @escaping (A) async throws -> R) {
         self.f = f
-        self.id = ObjectIdentifier(self)
     }
 }

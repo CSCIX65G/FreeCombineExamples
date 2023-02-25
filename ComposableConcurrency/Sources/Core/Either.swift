@@ -18,14 +18,16 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-public enum Either<Left: Sendable, Right: Sendable>: Sendable {
+public enum Either<Left, Right> {
     case left(Left)
     case right(Right)
 
-    @Sendable public static func sendableLeft(_ value: Left) -> Self {
+    @Sendable public static func sendableLeft(_ value: Left) -> Self where Left: Sendable {
         .left(value)
     }
-    @Sendable public static func sendableRight(_ value: Right) -> Self {
+    @Sendable public static func sendableRight(_ value: Right) -> Self where Right: Sendable {
         .right(value)
     }
 }
+
+extension Either: Sendable where Left: Sendable, Right: Sendable { }

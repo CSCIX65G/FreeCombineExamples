@@ -19,11 +19,11 @@
 //  limitations under the License.
 //
 public extension Cancellable {
-    func map<T>(
+    func map<T: Sendable>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        _ transform: @escaping (Output) async -> T
+        _ transform: @Sendable @escaping (Output) async -> T
     ) -> Cancellable<T> {
         .init(function: function, file: file, line: line) {
             let value = try await self.value
@@ -34,11 +34,11 @@ public extension Cancellable {
 }
 
 extension Uncancellable {
-    public func map<T>(
+    public func map<T: Sendable>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        _ transform: @escaping (Output) async -> T
+        _ transform: @Sendable @escaping (Output) async -> T
     ) -> Uncancellable<T> {
         .init(function: function, file: file, line: line) { await transform(self.value) }
     }
