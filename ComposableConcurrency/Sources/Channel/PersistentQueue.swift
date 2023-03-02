@@ -1,6 +1,6 @@
 //
 //  PersistentQueue.swift
-//  
+//
 //
 //  Created by Van Simmons on 12/31/22.
 //
@@ -31,6 +31,15 @@ public struct PersistentQueue<Element: Sendable>: Sendable {
 }
 
 public extension PersistentQueue {
+    subscript(_ offset: UInt64) -> Element? {
+        storage[offset + range.lowerBound]
+    }
+    subscript(_ offset: Int) -> Element? {
+        storage[UInt64(offset) + range.lowerBound]
+    }
+}
+
+public extension PersistentQueue {
     init(buffering: PersistentQueues.Buffering = .unbounded) {
         self.init(
             buffering: buffering,
@@ -47,6 +56,29 @@ public extension PersistentQueue {
             buffering: buffering,
             range: 0 ..< 1,
             storage: .init(dictionaryLiteral: (UInt64(0), value))
+        )
+    }
+
+    init(
+        buffering: PersistentQueues.Buffering? = .none,
+        _ elements: Self
+    ) {
+        var keysAndValues: [(UInt64, Element)]!
+        var size = elements.count
+        switch (buffering ?? elements.buffering) {
+            case .unbounded:
+                keysAndValues = (0 ..< size).map { (UInt64($0), elements[$0]!) }
+            case let .newest(bound):
+                size = bound
+                keysAndValues = (0 ..< bound).map { (UInt64($0), elements[size - bound + $0]!) }
+            case let .oldest(bound):
+                size = bound
+                keysAndValues = (0 ..< bound).map { (UInt64($0), elements[$0]!) }
+        }
+        self.init(
+            buffering: buffering ?? elements.buffering,
+            range: 0 ..< UInt64(size),
+            storage: .init(uniqueKeysWithValues: keysAndValues)
         )
     }
 
@@ -131,12 +163,6 @@ public extension PersistentQueue {
             )
         )
     }
-
-//    func enqueue(_ elements: Self) -> (dropped: Self, tail: Self) {
-//        var dropped = Self.init()
-//        var tail = Self.init()
-//        return (dropped: dropped, tail: tail)
-//    }
 
     func dequeue() -> (head: Element?, tail: Self) {
         guard let head = self.storage[range.lowerBound] else {
