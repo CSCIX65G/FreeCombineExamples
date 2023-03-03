@@ -28,8 +28,8 @@ final class FutureTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleFutureToPublisher() async throws {
-        let expectation = await Promise<Void>()
-        let promise = await Promise<Int>()
+        let expectation = await AsyncPromise<Void>()
+        let promise = await AsyncPromise<Int>()
         let cancellation = await promise.future
             .sink { result in
                 do { try expectation.succeed() }

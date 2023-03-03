@@ -30,7 +30,7 @@ public extension Queue {
         using action: @Sendable @escaping (AsyncResult<Upstream, Swift.Error>) -> Element
     ) async -> Cancellable<Void>  {
         await future {
-            guard !Cancellables.isCancelled else { return }
+            guard !Task.isCancelled else { return }
             try? self.tryYield(action($0))
         }
     }
@@ -45,7 +45,7 @@ public extension AsyncStream.Continuation {
         using action: @Sendable @escaping (AsyncResult<Upstream, Swift.Error>) -> Element
     ) async -> Cancellable<Void> where AsyncStream.Element == Sendable {
         await future {
-            guard !Cancellables.isCancelled else { return }
+            guard !Task.isCancelled else { return }
             try? self.tryYield(action($0))
         }
     }

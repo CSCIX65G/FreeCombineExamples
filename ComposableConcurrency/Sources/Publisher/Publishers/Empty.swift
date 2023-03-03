@@ -40,7 +40,7 @@ public extension Publisher {
     ) {
         self = .init { resumption, downstream in
             .init(function: function, file: file, line: line) {
-                resumption.resume()
+                try resumption.resume()
                 return try await downstream(.completion(.finished))
             }
         }

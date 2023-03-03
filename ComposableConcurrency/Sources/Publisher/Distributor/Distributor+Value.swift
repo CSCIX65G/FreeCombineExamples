@@ -44,20 +44,20 @@ extension Distributor {
                     case let .asyncValue(output):
                         try await pause { resumption in
                             do { try mainChannel.tryYield(.value(output, resumption)) }
-                            catch { state.isFinished = true; resumption.resume(throwing: error) }
+                            catch { state.isFinished = true; try! resumption.resume(throwing: error) }
                         }
                     case let .syncValue(output, resumption):
                         do { try mainChannel.tryYield(.value(output, resumption)) }
-                        catch { state.isFinished = true; resumption.resume(throwing: error) }
+                        catch { state.isFinished = true; try! resumption.resume(throwing: error) }
                     case let .asyncCompletion(completion):
                         try await pause { resumption in
                             do { try mainChannel.tryYield(.finish(completion, resumption)) }
-                            catch { resumption.resume(throwing: error) }
+                            catch { try! resumption.resume(throwing: error) }
                         }
                         throw CompletionError(completion: completion)
                     case let .syncCompletion(completion, resumption):
                         do { try mainChannel.tryYield(.finish(completion, resumption)) }
-                        catch { resumption.resume(throwing: error) }
+                        catch { try! resumption.resume(throwing: error) }
                         throw CompletionError(completion: completion)
                 }
                 return .none
@@ -67,9 +67,9 @@ extension Distributor {
                     case .asyncValue, .asyncCompletion:
                         ()
                     case let .syncValue(_, resumption):
-                        resumption.resume(throwing: CancellationError())
+                        try? resumption.resume(throwing: CancellationError())
                     case let .syncCompletion(_, resumption):
-                        resumption.resume(throwing: CancellationError())
+                        try? resumption.resume(throwing: CancellationError())
                 }
             }
         )

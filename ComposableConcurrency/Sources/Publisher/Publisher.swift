@@ -74,7 +74,7 @@ public extension Publisher {
         _ downstream: @escaping Downstream
     ) -> Cancellable<Void> {
         call(onStartup, { result in
-            guard !Cancellables.isCancelled else {
+            guard !Task.isCancelled else {
                 return try await handleCancellation(of: downstream)
             }
             switch result {

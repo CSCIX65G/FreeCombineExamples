@@ -20,7 +20,7 @@ final class CancellableTests: XCTestCase {
     func testIsCancelledThreadLocal() async throws {
         let c = Cancellable<Void> {
             try? await Task.sleep(nanoseconds: Duration.seconds(10).inNanoseconds)
-            XCTAssert(Cancellables.isCancelled, "Not successfully cancelled")
+            XCTAssert(Task.isCancelled, "Not successfully cancelled")
         }
         XCTAssertNoThrow(try c.cancel(), "Couldn't cancel")
         let can: Void? = try? await c.value
@@ -32,13 +32,13 @@ final class CancellableTests: XCTestCase {
     }
 
     func testCancellable() async throws {
-        let expectation1 = await Promise<Void>()
-        let expectation2 = await Promise<Void>()
-        let expectation3 = await Promise<Void>()
+        let expectation1 = await AsyncPromise<Void>()
+        let expectation2 = await AsyncPromise<Void>()
+        let expectation3 = await AsyncPromise<Void>()
 
-        let expectation1a = await Promise<Bool>()
-        let expectation2a = await Promise<Bool>()
-        let expectation3a = await Promise<Bool>()
+        let expectation1a = await AsyncPromise<Bool>()
+        let expectation2a = await AsyncPromise<Bool>()
+        let expectation3a = await AsyncPromise<Bool>()
 
         var c: Cancellable<(Cancellable<Void>, Cancellable<Void>, Cancellable<Void>)>? = .none
         c = Cancellable {

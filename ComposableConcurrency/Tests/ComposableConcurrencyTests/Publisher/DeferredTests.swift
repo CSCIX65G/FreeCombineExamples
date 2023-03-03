@@ -30,8 +30,8 @@ class DeferTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleDeferred() async throws {
-        let expectation1 = await Promise<Void>()
-        let expectation2 = await Promise<Void>()
+        let expectation1 = await AsyncPromise<Void>()
+        let expectation2 = await AsyncPromise<Void>()
 
         let count1 = Counter()
         let p =  UnfoldedSequence("abc")
@@ -97,8 +97,8 @@ class DeferTests: XCTestCase {
     }
 
     func testDeferredDefer() async throws {
-        let expectation1 = await Promise<Void>()
-        let expectation2 = await Promise<Void>()
+        let expectation1 = await AsyncPromise<Void>()
+        let expectation2 = await AsyncPromise<Void>()
 
         let count1 = Counter()
         let p = Deferred {

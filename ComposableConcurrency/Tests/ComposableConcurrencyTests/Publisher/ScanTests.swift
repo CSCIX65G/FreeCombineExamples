@@ -30,7 +30,7 @@ class ScanTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleScan() async throws {
-        let expectation = await Promise<Void>()
+        let expectation = await AsyncPromise<Void>()
 
         let publisher = [1, 2, 3, 1, 2, 3, 4, 1, 2, 5].asyncPublisher
         let counter = Counter()

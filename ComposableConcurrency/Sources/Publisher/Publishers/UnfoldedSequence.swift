@@ -52,9 +52,9 @@ extension Publisher {
     ) where S.Element == Output, S: Sendable {
         self = .init { resumption, downstream in
             .init(function: function, file: file, line: line) {
-                resumption.resume()
+                try resumption.resume()
                 for a in sequence {
-                    guard !Cancellables.isCancelled else {
+                    guard !Task.isCancelled else {
                         return try await handleCancellation(of: downstream)
                     }
                     try await downstream(.value(a))
@@ -83,9 +83,9 @@ extension Publisher {
     ) {
         self = .init { resumption, downstream in
             .init(function: function, file: file, line: line) {
-                resumption.resume()
+                try resumption.resume()
                 while let a = try await generator() {
-                    guard !Cancellables.isCancelled else {
+                    guard !Task.isCancelled else {
                         return try await handleCancellation(of: downstream)
                     }
                     try await downstream(.value(a))

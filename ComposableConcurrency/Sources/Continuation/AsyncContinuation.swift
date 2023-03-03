@@ -43,7 +43,7 @@ public extension AsyncContinuation {
         _ downstream: @Sendable @escaping (Output) async throws -> Return
     ) -> Cancellable<Return> {
         call(onStartup) { result in
-            try Cancellables.checkCancellation()
+            try Task.checkCancellation()
             return try await downstream(result)
         }
     }

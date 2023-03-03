@@ -20,9 +20,9 @@ final class CancellableOrTests: XCTestCase {
     func testSimpleOr() async throws {
         let lVal = 13
         let rVal = "hello, world!"
-        let expectation: Promise<Void> = await .init()
-        let promise1: Promise<Int> = await .init()
-        let promise2: Promise<String> = await .init()
+        let expectation: AsyncPromise<Void> = .init()
+        let promise1: AsyncPromise<Int> = .init()
+        let promise2: AsyncPromise<String> = .init()
         let isLeft = Bool.random()
 
         let ored = or(promise1.cancellable, promise2.cancellable)
@@ -64,9 +64,9 @@ final class CancellableOrTests: XCTestCase {
     func testCancelOr() async throws {
         let lVal = 13
         let rVal = "hello, world!"
-        let expectation: Promise<Void> = await .init()
-        let promise1: Promise<Int> = await .init()
-        let promise2: Promise<String> = await .init()
+        let expectation: AsyncPromise<Void> = .init()
+        let promise1: AsyncPromise<Int> = .init()
+        let promise2: AsyncPromise<String> = .init()
 
         let ored = or(promise1.cancellable, promise2.cancellable)
         let cancellable: Cancellable<Void> = .init {
@@ -95,10 +95,10 @@ final class CancellableOrTests: XCTestCase {
         }
         let lVal = 13
         let clock = ContinuousClock()
-        let expectation: Promise<Void> = await .init()
-        let promise1: Promise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = await .init()
+        let promise1: AsyncPromise<Int> = await .init()
         let future1 = promise1.future.delay(clock: clock, duration: .seconds(1))
-        let promise2: Promise<String> = await .init()
+        let promise2: AsyncPromise<String> = await .init()
         let future2 = promise2.future
 
         let cancellable = await or(future1, future2).sink { result in
@@ -123,10 +123,10 @@ final class CancellableOrTests: XCTestCase {
             case leftFailure
         }
         let rVal = "Hello, world!"
-        let expectation: Promise<Void> = await .init()
-        let promise1: Promise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = await .init()
+        let promise1: AsyncPromise<Int> = await .init()
         let future1 = promise1.future
-        let promise2: Promise<String> = await .init()
+        let promise2: AsyncPromise<String> = await .init()
         let clock = ContinuousClock()
         let future2 = promise2.future.delay(clock: clock, duration: .seconds(1))
 

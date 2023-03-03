@@ -36,8 +36,8 @@ final class ShareTests: XCTestCase {
          is connected.  The second subscriber will see only those published
          values that occur after it subscribes.  In some cases it will see zero
          */
-        let promise1 = await Promise<Void>()
-        let promise2 = await Promise<Void>()
+        let promise1 = await AsyncPromise<Void>()
+        let promise2 = await AsyncPromise<Void>()
 
         let n = 100
         let upstreamCounter = Counter()

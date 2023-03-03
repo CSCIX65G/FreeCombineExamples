@@ -57,11 +57,11 @@ extension Future {
     ) where Output == C.Instant, C.Duration == Swift.Duration {
         self = Future<C.Instant> { resumption, downstream in
             .init {
-                resumption.resume()
+                try! resumption.resume()
                 do {
                     if clock.now < deadline {
                         try await clock.sleep(until: deadline, tolerance: tolerance)
-                        guard !Cancellables.isCancelled else {
+                        guard !Task.isCancelled else {
                             _ = await downstream(.failure(CancellationError()))
                             return
                         }

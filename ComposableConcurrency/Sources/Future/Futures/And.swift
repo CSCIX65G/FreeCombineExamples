@@ -57,7 +57,7 @@ extension ManagedAtomic: @unchecked Sendable where Value: Sendable { }
                     }
                     queue.finish()
                 }
-                resumption.resume()
+                try! resumption.resume()
                 await downstream(iterator.next() ?? .failure(CancellationError()))
                 try? leftCancellable.cancel()
                 try? rightCancellable.cancel()

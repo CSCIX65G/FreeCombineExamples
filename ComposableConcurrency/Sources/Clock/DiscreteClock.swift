@@ -46,7 +46,7 @@ extension [DiscreteClock.Suspension] {
     @discardableResult
     func fail(with error: Error) async -> Self {
         forEach {
-            $0.resumption.resume(throwing: error)
+            try! $0.resumption.resume(throwing: error)
         }
         return self
     }
@@ -80,13 +80,13 @@ public final class DiscreteClock: Clock, @unchecked Sendable {
         let resumption: Resumption<Void>
 
         public var id: ObjectIdentifier {
-            resumption.id
+            ObjectIdentifier(resumption)
         }
         public func release() -> Void {
-            resumption.resume()
+            try! resumption.resume()
         }
         public func fail(with error: Error) -> Void {
-            resumption.resume(throwing: error)
+            try! resumption.resume(throwing: error)
         }
     }
 
@@ -124,7 +124,7 @@ public final class DiscreteClock: Clock, @unchecked Sendable {
                 await self.reduce(action)
             }
             self.state.pendingSuspensions.forEach {
-                $0.resumption.resume(throwing: SuspensionError())
+                try! $0.resumption.resume(throwing: SuspensionError())
             }
         }
     }
@@ -195,26 +195,26 @@ public final class DiscreteClock: Clock, @unchecked Sendable {
     private func reduce(_ action: Action) async {
         switch action {
             case let .sleepUntil(deadline: deadline, resumption: resumption):
-                guard deadline > self.now, !Cancellables.isCancelled else {
-                    resumption.resume()
+                guard deadline > self.now, !Task.isCancelled else {
+                    try! resumption.resume()
                     return
                 }
                 addSuspension(.init(deadline: deadline, resumption: resumption))
             case let .advanceBy(duration: duration, resumption: resumption):
                 await advanceTo(deadline: state.now.advanced(by: duration)).release()
-                resumption.resume(returning: state.now)
+                try! resumption.resume(returning: state.now)
             case let .advanceTo(deadline: deadline, resumption: resumption):
                 guard deadline > self.now else { return }
                 await advanceTo(deadline: deadline).release()
-                resumption.resume()
+                try! resumption.resume()
             case let .cancelSleep(resumption: resumption):
                 await cancel(resumption: resumption).fail(with: CancellationError())
             case let .runToCompletion(resumption: resumption):
                 guard await !removeAllSuspensions().fail(with: SuspensionError()).isEmpty else {
-                    resumption.resume()
+                    try! resumption.resume()
                     return
                 }
-                resumption.resume(throwing: SuspensionError())
+                try! resumption.resume(throwing: SuspensionError())
         }
     }
 
@@ -238,8 +238,8 @@ public final class DiscreteClock: Clock, @unchecked Sendable {
 
     public func sleep(until deadline: Instant, tolerance: Duration? = nil) async throws -> Void {
         guard deadline > self.now else { return }
-        try Cancellables.checkCancellation()
-        let promise = await Promise<Resumption<Void>>()
+        try Task.checkCancellation()
+        let promise = AsyncPromise<Resumption<Void>>()
         try await withTaskCancellationHandler(
             operation: {
                 try await pause { resumption in
@@ -249,12 +249,12 @@ public final class DiscreteClock: Clock, @unchecked Sendable {
                 }
             },
             onCancel: {
-                try? Uncancellable<Void> {
-                    guard case let .success(resumption) = await promise.result else {
-                        return
-                    }
-                    self.channel.continuation.yield(.cancelSleep(resumption: resumption))
-                }.release()
+//                try? Uncancellable<Void> {
+//                    guard case let .success(resumption) = await promise.result else {
+//                        return
+//                    }
+//                    self.channel.continuation.yield(.cancelSleep(resumption: resumption))
+//                }.release()
             }
         )
         _ = await promise.result

@@ -19,6 +19,7 @@
 //  limitations under the License.
 //
 import Core
+import SendableAtomics
 
 func or<Left, Right>(
     _ left: Cancellable<Left>,

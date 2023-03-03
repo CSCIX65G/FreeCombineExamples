@@ -48,7 +48,7 @@ extension Publisher {
             let downstreamSender = Self.downstreamSender(downstream: downstream, downstreamState: downstreamState, queue: queue)
             await unfailingPause { resumption in
                 self.sender = .init {
-                    resumption.resume()
+                    try resumption.resume()
                     for await _ in queue.stream {
                         var arr: Array<(instant: C.Instant, value: Output)> = .init()
                         while let next = downstreamValue.exchange(.none, ordering: .sequentiallyConsistent)?.value {

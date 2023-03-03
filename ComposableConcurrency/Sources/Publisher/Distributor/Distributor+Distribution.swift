@@ -44,7 +44,7 @@ extension Distributor {
         switch action {
             case let .finish(completion, resumption):
                 state.completion = completion
-                resumption.resume()
+                try resumption.resume()
                 throw completion.error
             case let .value(value, upstreamResumption):
                 if case let .value(output) = value, state.currentValue != nil {
@@ -55,7 +55,7 @@ extension Distributor {
                     resultArg: value,
                     channel: returnChannel
                 )
-                upstreamResumption.resume()
+                try upstreamResumption.resume()
             case let .subscribe(invocation, idResumption):
                 var inv = invocation
                 guard state.invocations[invocation.dispatch.id] == nil else {
@@ -68,12 +68,12 @@ extension Distributor {
                         fatalError("premature stream termination")
                     }
                     switch next.result {
-                        case let .failure(error): try! idResumption.tryResume(throwing: error)
+                        case let .failure(error): try! idResumption.resume(throwing: error)
                         default: inv = next.concurrentFunc
                     }
                 }
                 state.invocations[invocation.id] = inv
-                do { try idResumption.tryResume(returning: invocation.id) }
+                do { try idResumption.resume(returning: invocation.id) }
                 catch { fatalError("Unhandled subscription resumption error") }
             case let .cancel(streamId):
                 guard let invocation = state.invocations.removeValue(forKey: streamId) else {
@@ -94,12 +94,12 @@ extension Distributor {
     static func dispose(_ action: Distributor<Output>.DistributionAction) {
         switch action {
             case let .finish(completion, resumption):
-                resumption.resume(throwing: CompletionError(completion: completion))
+                try! resumption.resume(throwing: CompletionError(completion: completion))
             case let .value(_, upstreamResumption):
-                upstreamResumption.resume()
+                try! upstreamResumption.resume()
             case let .subscribe(invocation, idResumption):
-                invocation.resumption.resume(throwing: CancellationError())
-                idResumption.resume(throwing: CancellationError())
+                try! invocation.resumption.resume(throwing: CancellationError())
+                try! idResumption.resume(throwing: CancellationError())
             case .cancel, .unsubscribe:
                 ()
         }

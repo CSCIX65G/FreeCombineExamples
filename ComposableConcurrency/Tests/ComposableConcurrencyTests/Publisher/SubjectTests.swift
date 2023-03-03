@@ -31,9 +31,9 @@ class SubjectTests: XCTestCase {
 
     func testSimpleCancellation() async throws {
         let counter = Counter()
-        let expectation = await Promise<Void>()
-        let expectation3 = await Promise<Void>()
-        let release = await Promise<Void>()
+        let expectation = await AsyncPromise<Void>()
+        let expectation3 = await AsyncPromise<Void>()
+        let release = await AsyncPromise<Void>()
 
         let subject = PassthroughSubject(Int.self)
         let p = subject.asyncPublisher()
@@ -112,7 +112,7 @@ class SubjectTests: XCTestCase {
 
     func testSimpleTermination() async throws {
         let counter = Counter()
-        let expectation = await Promise<Void>()
+        let expectation = await AsyncPromise<Void>()
 
         let subject = PassthroughSubject(Int.self)
         let p = subject.asyncPublisher()
@@ -152,7 +152,7 @@ class SubjectTests: XCTestCase {
 
     func testSimpleSubjectSend() async throws {
         let counter = Counter()
-        let expectation = await Promise<Void>()
+        let expectation = await AsyncPromise<Void>()
 
         let subject = PassthroughSubject(Int.self)
         let p = subject.asyncPublisher()
@@ -191,7 +191,7 @@ class SubjectTests: XCTestCase {
     }
 
     func testSyncAsync() async throws {
-        let expectation = await Promise<Void>()
+        let expectation = await AsyncPromise<Void>()
         let fsubject1 = PassthroughSubject(Int.self)
         let fsubject2 = PassthroughSubject(String.self)
 
@@ -243,7 +243,7 @@ class SubjectTests: XCTestCase {
     }
 
     func testSimpleSubject() async throws {
-        let expectation = await Promise<Void>()
+        let expectation = await AsyncPromise<Void>()
 
         let subject = CurrentValueSubject(14)
         let publisher = subject.asyncPublisher()
@@ -294,8 +294,8 @@ class SubjectTests: XCTestCase {
     }
 
     func testMultisubscriptionSubject() async throws {
-        let expectation1 = await Promise<Void>()
-        let expectation2 = await Promise<Void>()
+        let expectation1 = await AsyncPromise<Void>()
+        let expectation2 = await AsyncPromise<Void>()
 
         let subject = CurrentValueSubject(13)
         let publisher = subject.asyncPublisher()

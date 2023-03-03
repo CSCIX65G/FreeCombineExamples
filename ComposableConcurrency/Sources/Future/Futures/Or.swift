@@ -21,6 +21,7 @@
 import Atomics
 import Core
 import Queue
+import SendableAtomics
 
 public func or<Left, Right>(
     _ left: Future<Left>,
@@ -32,7 +33,7 @@ public func or<Left, Right>(
             operation: {
                 let leftCancellable = await left.consume(into: promise, with: Either.sendableLeft)
                 let rightCancellable = await right.consume(into: promise, with: Either.sendableRight)
-                resumption.resume()
+                try! resumption.resume()
                 try await downstream(promise.value)
                 try? leftCancellable.cancel()
                 try? rightCancellable.cancel()

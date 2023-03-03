@@ -9,8 +9,8 @@ final class CancellableAndTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleAnd() async throws {
-        let leftPromise: Promise<Int> = await .init()
-        let rightPromise: Promise<String> = await .init()
+        let leftPromise: AsyncPromise<Int> = await .init()
+        let rightPromise: AsyncPromise<String> = await .init()
 
         let anded = and(leftPromise.cancellable, rightPromise.cancellable)
 
@@ -35,8 +35,8 @@ final class CancellableAndTests: XCTestCase {
             case left
             case right
         }
-        let leftPromise: Promise<Int> = await .init()
-        let rightPromise: Promise<String> = await .init()
+        let leftPromise: AsyncPromise<Int> = await .init()
+        let rightPromise: AsyncPromise<String> = await .init()
 
         let anded = and(leftPromise.cancellable, rightPromise.cancellable)
 
@@ -63,8 +63,8 @@ final class CancellableAndTests: XCTestCase {
             case left
             case right
         }
-        let leftPromise: Promise<Int> = await .init()
-        let rightPromise: Promise<String> = await .init()
+        let leftPromise: AsyncPromise<Int> = await .init()
+        let rightPromise: AsyncPromise<String> = await .init()
 
         let anded = and(leftPromise.cancellable, rightPromise.cancellable)
 

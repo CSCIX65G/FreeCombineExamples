@@ -93,14 +93,14 @@ public struct Merge<Value: Sendable>: Sendable {
         switch (state.current) {
             case .nothing:
                 state.current = .hasValue(value.index, value.value, resumption)
-                return Cancellables.isCancelled ? .completion(.failure(CancellationError())): .none
+                return Task.isCancelled ? .completion(.failure(CancellationError())): .none
             case .finished, .errored, .hasValue:
                 fatalError("Invalid state")
         }
     }
 
     @Sendable static func reduce(state: inout State, error: (index: Int, error: Swift.Error), resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
-        resumption.resume(throwing: error.error)
+        try! resumption.resume(throwing: error.error)
         switch (state.current) {
             case .nothing:
                 state.current = .errored(error.index, error.error)
@@ -111,7 +111,7 @@ public struct Merge<Value: Sendable>: Sendable {
     }
 
     @Sendable static func reduce(state: inout State, index: Int, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
-        resumption.resume(throwing: Publishers.Error.done)
+        try! resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
                 try? state.cancel(index)
@@ -153,11 +153,11 @@ public struct Merge<Value: Sendable>: Sendable {
                     try await state.downstream(.value(value))
                 }
                 .map {
-                    resumption.resume()
+                    try! resumption.resume()
                     return Merge<Value>.Current.nothing
                 }
                 .mapError {
-                    resumption.resume(throwing: $0)
+                    try! resumption.resume(throwing: $0)
                     return $0
                 }
                 .get()
@@ -179,8 +179,8 @@ public struct Merge<Value: Sendable>: Sendable {
             default: ()
         }
         switch completion {
-            case .finished: resumption.resume(throwing: Publishers.Error.done)
-            case let .failure(error): resumption.resume(throwing: error)
+            case .finished: try! resumption.resume(throwing: Publishers.Error.done)
+            case let .failure(error): try! resumption.resume(throwing: error)
         }
     }
 
@@ -202,11 +202,11 @@ public struct Merge<Value: Sendable>: Sendable {
         switch completion {
             case .finished:
                 _ = try? await state.downstream(.completion(.finished))
-                do { try resumption?.tryResume(throwing: Publishers.Error.done) }
+                do { try resumption?.resume(throwing: Publishers.Error.done) }
                 catch { fatalError("Failed resumption") }
             case let .failure(error):
                 _ = try? await state.downstream(.completion(.failure(error)))
-                do { try resumption?.tryResume(throwing: error) }
+                do { try resumption?.resume(throwing: error) }
                 catch { fatalError("Failed resumption with error: \(error)") }
         }
         state.current = .nothing

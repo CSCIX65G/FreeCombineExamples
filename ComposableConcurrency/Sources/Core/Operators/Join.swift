@@ -26,7 +26,7 @@ public extension Cancellable {
     ) -> Cancellable<T> where Output == Cancellable<T> {
         .init(function: function, file: file, line: line) {
             let inner = try await self.value
-            guard !Cancellables.isCancelled else {
+            guard !Task.isCancelled else {
                 try? inner.cancel()
                 throw CancellationError()
             }

@@ -25,7 +25,7 @@ public extension Publisher {
         return .init { resumption, downstream in
             let currentValue: MutableBox<[Output]> = MutableBox(value: [])
             return self(onStartup: resumption) { r in
-                guard !Cancellables.isCancelled else {
+                guard !Task.isCancelled else {
                     return try await handleCancellation(of: downstream)
                 }
                 switch r {

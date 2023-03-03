@@ -36,7 +36,7 @@ public extension Future {
 public extension AsyncFold {
     var future: Future<State> {
         .init { resumption, downstream in
-                .init { await downstream(self.cancellable.result) }
+                .init { await downstream(self.cancellable.result.asyncResult) }
         }
     }
 }

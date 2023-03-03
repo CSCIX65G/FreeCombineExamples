@@ -19,10 +19,10 @@ final class FutureAndTests: XCTestCase {
     func testSimpleAnd() async throws {
         let lVal = 13
         let rVal = "hello, world!"
-        let expectation: Promise<Void> = await .init()
-        let promise1: Promise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = await .init()
+        let promise1: AsyncPromise<Int> = await .init()
         let future1 = promise1.future
-        let promise2: Promise<String> = await .init()
+        let promise2: AsyncPromise<String> = await .init()
         let future2 = promise2.future
 
         let cancellable = await and(future1, future2)
@@ -50,10 +50,10 @@ final class FutureAndTests: XCTestCase {
     func testCancelAnd() async throws {
         let lVal = 13
         let rVal = "hello, world!"
-        let expectation: Promise<Void> = await .init()
-        let promise1: Promise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = await .init()
+        let promise1: AsyncPromise<Int> = await .init()
         let future1 = promise1.future
-        let promise2: Promise<String> = await .init()
+        let promise2: AsyncPromise<String> = await .init()
         let future2 = promise2.future
 
         let cancellable = await and(future1, future2)
@@ -79,11 +79,11 @@ final class FutureAndTests: XCTestCase {
             case rightFailure
         }
         let lVal = 13
-        let expectation: Promise<Void> = await .init()
-        let promise1: Promise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = await .init()
+        let promise1: AsyncPromise<Int> = await .init()
         let clock = ContinuousClock()
         let future1 = promise1.future.delay(clock: clock, duration: .seconds(1))
-        let promise2: Promise<String> = await .init()
+        let promise2: AsyncPromise<String> = await .init()
         let future2 = promise2.future
 
         let cancellable = await and(future1, future2)
@@ -109,10 +109,10 @@ final class FutureAndTests: XCTestCase {
             case leftFailure
         }
         let rVal = "Hello, world!"
-        let expectation: Promise<Void> = await .init()
-        let promise1: Promise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = await .init()
+        let promise1: AsyncPromise<Int> = await .init()
         let future1 = promise1.future
-        let promise2: Promise<String> = await .init()
+        let promise2: AsyncPromise<String> = await .init()
         let clock = ContinuousClock()
         let future2 = promise2.future.delay(clock: clock, duration: .seconds(1))
 
@@ -137,10 +137,10 @@ final class FutureAndTests: XCTestCase {
     func testSimpleAndOperator() async throws {
         let lVal = 13
         let rVal = "hello, world!"
-        let expectation: Promise<Void> = await .init()
-        let promise1: Promise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = await .init()
+        let promise1: AsyncPromise<Int> = await .init()
         let future1 = promise1.future
-        let promise2: Promise<String> = await .init()
+        let promise2: AsyncPromise<String> = await .init()
         let future2 = promise2.future
 
         let cancellable = await (future1 && future2)

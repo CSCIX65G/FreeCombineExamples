@@ -46,7 +46,7 @@ public final class AsyncFold<State: Sendable, Action: Sendable>: Sendable {
     }
 
     public var result: AsyncResult<State, Swift.Error> {
-        get async { await cancellable.result }
+        get async { await cancellable.result.asyncResult }
     }
 
     public func send(_ element: Action) throws -> Void {
@@ -115,7 +115,7 @@ extension AsyncFold {
     ) async throws -> State {
         var state = await folder.initialize(channel: channel)
         do {
-            onStartup?.resume()
+            try? onStartup?.resume()
             for await action in channel.stream {
                 try await folder.handle(
                     effect: folder.reduce(state: &state, action: action),
@@ -123,7 +123,7 @@ extension AsyncFold {
                     state: &state,
                     action: action
                 )
-                try Cancellables.checkCancellation()
+                try Task.checkCancellation()
                 try await folder.emit(state: &state)
             }
             channel.finish()

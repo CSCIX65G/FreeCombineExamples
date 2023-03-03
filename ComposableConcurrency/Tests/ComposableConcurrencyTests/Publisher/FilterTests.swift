@@ -30,7 +30,7 @@ class FilterTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleFilter() async throws {
-        let expectation1 = await Promise<Void>()
+        let expectation1 = await AsyncPromise<Void>()
         let unfolded = (0 ..< 100).asyncPublisher
 
         let counter1 = Counter()

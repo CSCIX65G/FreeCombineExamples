@@ -29,7 +29,7 @@ public extension Publisher {
     ) -> Self {
         .init { resumption, downstream in
             self(onStartup: resumption) { r in
-                guard !Cancellables.isCancelled else {
+                guard !Task.isCancelled else {
                     return try await handleCancellation(of: downstream)
                 }
                 if case let .completion(.failure(error)) = r{

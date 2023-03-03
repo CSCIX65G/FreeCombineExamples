@@ -19,8 +19,18 @@
 //  limitations under the License.
 //
 import Future
-public extension Promise {
-    var publisher: Publisher<Output> {
+
+public extension AsyncPromise {
+    var future: Future<Value> {
+        .init { resumption, downstream in .init {
+            try resumption.resume()
+            await downstream(self.result.asyncResult)
+        } }
+    }
+}
+
+public extension AsyncPromise {
+    var publisher: Publisher<Value> {
         future.publisher
     }
 }

@@ -49,7 +49,9 @@ public final class UnbreakablePromise<Output: Sendable>: @unchecked Sendable {
         self.line = line
         var uc: Uncancellable<Output>!
         self.resumption = await unfailingPause { outer in
-            uc = .init(function: function, file: file, line: line) { await unfailingPause(outer.resume) }
+            uc = .init(function: function, file: file, line: line) { await unfailingPause(
+                { try! outer.resume(returning: $0) }
+            ) }
         }
         self.uncancellable = uc
     }

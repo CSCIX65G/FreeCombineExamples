@@ -36,7 +36,7 @@ final class TimeoutTests: XCTestCase {
 
     func testOredTimeout() async throws {
         let clock = DiscreteClock()
-        let promise = await Promise<Void>()
+        let promise = await AsyncPromise<Void>()
         let timeout = Timeout(clock: clock, after: .seconds(10))
         let ticker: Channel<Void> = .init()
 

@@ -36,7 +36,7 @@ public extension Publisher {
     ) {
         self = .init { resumption, downstream in
             .init(function: function, file: file, line: line) {
-                resumption.resume()
+                try resumption.resume()
                 _ = try await downstream(.value(a))
                 return try await downstream(.completion(.finished))
             }
@@ -62,7 +62,7 @@ public extension Publisher {
     ) {
         self = .init { resumption, downstream in
             .init(function: function, file: file, line: line) {
-                resumption.resume()
+                try resumption.resume()
                 _ = try await downstream(.value(generator()))
                 return try await downstream(.completion(.finished))
             }
@@ -88,7 +88,7 @@ public extension Publisher {
     ) {
         self = .init { resumption, downstream in
             .init {
-                resumption.resume()
+                try resumption.resume()
                 _ = try await downstream(result)
                 return try await downstream(.completion(.finished))
             }
@@ -114,7 +114,7 @@ public extension Publisher {
     ) {
         self = .init { resumption, downstream in
             .init {
-                resumption.resume()
+                try resumption.resume()
                 _ = try await downstream(generator())
                 return try await downstream(.completion(.finished))
             }

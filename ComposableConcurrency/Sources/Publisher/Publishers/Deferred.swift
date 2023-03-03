@@ -36,7 +36,7 @@ extension Publisher {
     ) {
         self = .init { resumption, downstream in
             .init(function: function, file: file, line: line) {
-                resumption.resume()
+                try resumption.resume()
                 return try await flattable(downstream).value
             }
         }
@@ -61,7 +61,7 @@ extension Publisher {
     ) {
         self = .init { resumption, downstream in
             .init(function: function, file: file, line: line) {
-                resumption.resume()
+                try resumption.resume()
                 let p = try await flattener()
                 let c = await p(downstream)
                 return try await c.value

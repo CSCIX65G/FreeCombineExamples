@@ -30,9 +30,9 @@ class CancellationTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleZipCancellation() async throws {
-        let expectation = await Promise<Void>()
-        let waiter = await Promise<Void>()
-        let startup = await Promise<Void>()
+        let expectation = await AsyncPromise<Void>()
+        let waiter = await AsyncPromise<Void>()
+        let startup = await AsyncPromise<Void>()
 
         let publisher1 = (0 ... 100).asyncPublisher
         let publisher2 = "abcdefghijklmnopqrstuvwxyz".asyncPublisher
@@ -80,11 +80,11 @@ class CancellationTests: XCTestCase {
     }
 
     func testMultiZipCancellation() async throws {
-        let expectation = await Promise<Void>()
-        let expectation2 = await Promise<Void>()
-        let waiter = await Promise<Void>()
-        let startup1 = await Promise<Void>()
-        let startup2 = await Promise<Void>()
+        let expectation = await AsyncPromise<Void>()
+        let expectation2 = await AsyncPromise<Void>()
+        let waiter = await AsyncPromise<Void>()
+        let startup1 = await AsyncPromise<Void>()
+        let startup2 = await AsyncPromise<Void>()
 
         let publisher1 = UnfoldedSequence(0 ... 100)
         let publisher2 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
@@ -154,9 +154,9 @@ class CancellationTests: XCTestCase {
     }
 
     func testSimpleMergeCancellation() async throws {
-        let expectation = await Promise<Void>()
-        let waiter = await Promise<Void>()
-        let startup = await Promise<Void>()
+        let expectation = await AsyncPromise<Void>()
+        let waiter = await AsyncPromise<Void>()
+        let startup = await AsyncPromise<Void>()
 
         let publisher1 = "zyxwvutsrqponmlkjihgfedcba".asyncPublisher
         let publisher2 = "abcdefghijklmnopqrstuvwxyz".asyncPublisher

@@ -79,7 +79,7 @@ final class ConcurrentFuncTests: XCTestCase {
                 }
                 i += 1
                 if i == max {
-                    next.concurrentFunc.resumption.resume(throwing: CancellationError())
+                    try next.concurrentFunc.resumption.resume(throwing: CancellationError())
                     returnChannel.finish()
                 } else {
                     do { try next.concurrentFunc(returnChannel: returnChannel, .value(i)) }
@@ -134,7 +134,7 @@ final class ConcurrentFuncTests: XCTestCase {
             }
             // Close everything
             for (_, invocation) in functions {
-                invocation.resumption.resume(throwing: CancellationError())
+                try invocation.resumption.resume(throwing: CancellationError())
                 _ = await invocation.dispatch.cancellable.result
             }
         }

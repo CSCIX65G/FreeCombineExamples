@@ -12,7 +12,7 @@ extension AsyncFunc {
     ) -> AsyncFunc<A, C> {
         .init { a in
             let b = try await call(a)
-            try Cancellables.checkCancellation()
+            try Task.checkCancellation()
             return try await transform(b)
         }
     }

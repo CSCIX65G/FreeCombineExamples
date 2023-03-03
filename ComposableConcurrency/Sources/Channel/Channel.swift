@@ -85,8 +85,8 @@ public final class Channel<Value: Sendable>: @unchecked Sendable {
             validate: checkStatus,
             next: { _ in .init(completion: .failure(error), readers: .init(), writers: .init()) },
             performAfter: { localState in
-                localState.readers.forEach { $0.resume(throwing: error) }
-                localState.writers.forEach { $0.resumption?.resume(throwing: error) }
+                localState.readers.forEach { try! $0.resume(throwing: error) }
+                localState.writers.forEach { try! $0.resumption?.resume(throwing: error) }
             }
         )
     }
@@ -124,9 +124,9 @@ public final class Channel<Value: Sendable>: @unchecked Sendable {
                     }
                     switch value {
                         case let .value(v):
-                            reader.resume(returning: v)
+                            try! reader.resume(returning: v)
                         case let .completion(completion):
-                            reader.resume(throwing: completion.error)
+                            try! reader.resume(throwing: completion.error)
                     }
                     return
             }
@@ -160,8 +160,8 @@ public final class Channel<Value: Sendable>: @unchecked Sendable {
                         continue
                     }
                     switch value {
-                        case let .value(v): reader.resume(returning: v)
-                        case let .completion(completion): reader.resume(throwing: completion.error)
+                        case let .value(v): try! reader.resume(returning: v)
+                        case let .completion(completion): try! reader.resume(throwing: completion.error)
                     }
                     return
             }
@@ -187,7 +187,7 @@ public final class Channel<Value: Sendable>: @unchecked Sendable {
                         localState = newLocalState
                         continue
                     }
-                    writerNode.resumption?.resume()
+                    try? writerNode.resumption?.resume()
                     return try writerNode.value.get()
             }
         }
@@ -211,7 +211,7 @@ public final class Channel<Value: Sendable>: @unchecked Sendable {
                         localState = newLocalState
                         continue
                     }
-                    writerNode.resumption?.resume()
+                    try? writerNode.resumption?.resume()
                     return try writerNode.value.get()
             }
         }
@@ -242,7 +242,7 @@ public final class Channel<Value: Sendable>: @unchecked Sendable {
                 if dropped.resumption == nil {
                     throw ChannelDroppedValueError(value: dropped.value)
                 } else {
-                    dropped.resumption?.resume(throwing: ChannelDroppedWriteError())
+                    try? dropped.resumption?.resume(throwing: ChannelDroppedWriteError())
                     return .none
                 }
             case (false, _):
@@ -264,10 +264,10 @@ public final class Channel<Value: Sendable>: @unchecked Sendable {
                         ()
                     case let (true, .some(dropped)):
                         dropped.resumption == nil
-                        ? resumption.resume(throwing: ChannelDroppedValueError(value: dropped.value))
-                        : dropped.resumption?.resume(throwing: ChannelDroppedWriteError())
+                        ? try! resumption.resume(throwing: ChannelDroppedValueError(value: dropped.value))
+                        : try! dropped.resumption?.resume(throwing: ChannelDroppedWriteError())
                     case (false, _):
-                        resumption.resume(
+                        try! resumption.resume(
                             throwing: Error(wrapper: newLocalState)
                         )
                 }
@@ -290,7 +290,7 @@ public final class Channel<Value: Sendable>: @unchecked Sendable {
             )
             guard !success else { return }
             localState = newLocalState
-            resumption.resume(throwing: Error(wrapper: newLocalState))
+            try! resumption.resume(throwing: Error(wrapper: newLocalState))
         }
     }
 }

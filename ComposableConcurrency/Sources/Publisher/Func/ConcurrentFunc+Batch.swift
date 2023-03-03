@@ -35,7 +35,7 @@ public extension ConcurrentFunc {
             guard let invocation = downstreams[next.id] else { fatalError("Lost concurrent function") }
             switch next.result {
                 case let .failure(error):
-                    next.concurrentFunc.resumption.resume(throwing: error)
+                    try! next.concurrentFunc.resumption.resume(throwing: error)
                     _ = await invocation.dispatch.cancellable.result
                     continue
                 case .success:
