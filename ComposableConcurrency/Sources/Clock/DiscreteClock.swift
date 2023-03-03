@@ -270,7 +270,7 @@ public final class DiscreteClock: Clock, @unchecked Sendable {
                 self.channel.continuation.yield(.runToCompletion(resumption: resumption))
             }
         } catch {
-            Assertion.assertionFailure(
+            assertionFailure(
                 """
                 Expected all sleeps to finish, but some are still suspended.  Invoked from:
 

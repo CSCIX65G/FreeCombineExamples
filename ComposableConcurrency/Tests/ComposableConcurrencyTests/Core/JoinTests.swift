@@ -16,7 +16,7 @@ final class JoinTests: XCTestCase {
     override func tearDownWithError() throws {  }
 
     func testSimpleCancellableJoin() async throws {
-        let expectation = await AsyncPromise<Void>()
+        let expectation = AsyncPromise<Void>()
         let canCan: Cancellable<Cancellable<Void>> = .init {
             .init {
                 try await withTaskCancellationHandler(

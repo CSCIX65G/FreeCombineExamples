@@ -30,13 +30,14 @@ class ScanTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleScan() async throws {
-        let expectation = await AsyncPromise<Void>()
+        let expectation = AsyncPromise<Void>()
 
         let publisher = [1, 2, 3, 1, 2, 3, 4, 1, 2, 5].asyncPublisher
         let counter = Counter()
+        let sendableMax: @Sendable (Int, Int) -> Int = { max($0, $1) }
 
         let c1 = await publisher
-            .scan(0, max)
+            .scan(0, sendableMax)
             .removeDuplicates()
             .sink({ result in
                 switch result {

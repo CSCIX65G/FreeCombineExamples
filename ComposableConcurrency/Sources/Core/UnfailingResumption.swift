@@ -46,7 +46,7 @@ public final class UnfailingResumption<Output: Sendable>: Sendable {
         }
     }
 
-    public func resume(returning output: Output) throws -> Void {
+    @Sendable public func resume(returning output: Output) throws -> Void {
         try status(.resumed)
         continuation.resume(returning: output)
     }

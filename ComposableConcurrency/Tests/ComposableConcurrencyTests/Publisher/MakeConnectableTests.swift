@@ -30,8 +30,8 @@ class MakeConnectableTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleMakeConnectable() async throws {
-        let promise1 = await AsyncPromise<Void>()
-        let promise2 = await AsyncPromise<Void>()
+        let promise1 = AsyncPromise<Void>()
+        let promise2 = AsyncPromise<Void>()
 
         let connectable = await UnfoldedSequence(0 ..< 100)
             .makeConnectable()

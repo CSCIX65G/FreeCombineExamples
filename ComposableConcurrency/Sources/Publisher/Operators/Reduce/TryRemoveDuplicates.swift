@@ -44,7 +44,8 @@ final class ThrowingDeduplicator<A: Sendable> {
 
 extension Publisher where Output: Equatable {
     func tryRemoveDuplicates() -> Publisher<Output> {
-        removeDuplicates(by: ==)
+        let sendableEquality: @Sendable (Output, Output) -> Bool = { lhs, rhs in lhs == rhs }
+        return removeDuplicates(by: sendableEquality)
     }
 }
 

@@ -69,7 +69,7 @@ public struct Zip<Left: Sendable, Right: Sendable> {
         }
     }
 
-    static func reduceLeft(state: inout State, value: Left, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+    @Sendable static func reduceLeft(state: inout State, value: Left, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         switch (state.current) {
             case .nothing:
                 state.current = .hasLeft(value, resumption)
@@ -81,7 +81,8 @@ public struct Zip<Left: Sendable, Right: Sendable> {
                 fatalError("Invalid state")
         }
     }
-    static func reduceLeft(state: inout State, error: Swift.Error, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+
+    @Sendable static func reduceLeft(state: inout State, error: Swift.Error, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         try! resumption.resume(throwing: error)
         switch (state.current) {
             case .nothing:
@@ -95,7 +96,8 @@ public struct Zip<Left: Sendable, Right: Sendable> {
                 fatalError("Invalid state")
         }
     }
-    static func reduceLeft(state: inout State, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+
+    @Sendable static func reduceLeft(state: inout State, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         try! resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
@@ -109,7 +111,8 @@ public struct Zip<Left: Sendable, Right: Sendable> {
                 fatalError("Invalid state")
         }
     }
-    static func reduceRight(state: inout State, value: Right, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+
+    @Sendable static func reduceRight(state: inout State, value: Right, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         switch (state.current) {
             case .nothing:
                 state.current = .hasRight(value, resumption)
@@ -121,7 +124,8 @@ public struct Zip<Left: Sendable, Right: Sendable> {
                 fatalError("Invalid state")
         }
     }
-    static func reduceRight(state: inout State, error: Swift.Error, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+
+    @Sendable static func reduceRight(state: inout State, error: Swift.Error, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         try! resumption.resume(throwing: error)
         switch (state.current) {
             case .nothing:
@@ -135,7 +139,8 @@ public struct Zip<Left: Sendable, Right: Sendable> {
                 fatalError("Invalid state")
         }
     }
-    static func reduceRight(state: inout State, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
+
+    @Sendable static func reduceRight(state: inout State, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
         try! resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
@@ -150,7 +155,7 @@ public struct Zip<Left: Sendable, Right: Sendable> {
         }
     }
 
-    static func reduce(
+    @Sendable static func reduce(
         _ state: inout State,
         _ action: Action
     ) async -> AsyncFolder<State, Action>.Effect {
@@ -170,7 +175,7 @@ public struct Zip<Left: Sendable, Right: Sendable> {
         }
     }
 
-    static func emit(
+    @Sendable static func emit(
         _ state: inout State
     ) async throws -> Void {
         switch state.current {
@@ -193,7 +198,7 @@ public struct Zip<Left: Sendable, Right: Sendable> {
         }
     }
 
-    static func dispose(
+    @Sendable static func dispose(
         _ action: Action,
         _ completion: AsyncFolder<State, Action>.Completion
     ) async {
@@ -221,7 +226,7 @@ public struct Zip<Left: Sendable, Right: Sendable> {
         }
     }
 
-    static func finalize(
+    @Sendable static func finalize(
         state: inout State,
         completion: AsyncFolder<State, Action>.Completion
     ) async {

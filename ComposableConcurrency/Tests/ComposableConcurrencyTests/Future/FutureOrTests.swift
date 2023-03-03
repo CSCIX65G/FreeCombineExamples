@@ -20,10 +20,10 @@ final class FutureOrTests: XCTestCase {
     func testSimpleOr() async throws {
         let lVal = 13
         let rVal = "hello, world!"
-        let expectation: AsyncPromise<Void> = await .init()
-        let promise1: AsyncPromise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = .init()
+        let promise1: AsyncPromise<Int> = .init()
         let future1 = promise1.future
-        let promise2: AsyncPromise<String> = await .init()
+        let promise2: AsyncPromise<String> = .init()
         let future2 = promise2.future
         let isLeft = Bool.random()
 
@@ -65,10 +65,10 @@ final class FutureOrTests: XCTestCase {
     func testCancelOr() async throws {
         let lVal = 13
         let rVal = "hello, world!"
-        let expectation: AsyncPromise<Void> = await .init()
-        let promise1: AsyncPromise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = .init()
+        let promise1: AsyncPromise<Int> = .init()
         let future1 = promise1.future
-        let promise2: AsyncPromise<String> = await .init()
+        let promise2: AsyncPromise<String> = .init()
         let future2 = promise2.future
 
         let cancellable = await or(future1, future2)
@@ -94,11 +94,11 @@ final class FutureOrTests: XCTestCase {
             case rightFailure
         }
         let lVal = 13
-        let expectation: AsyncPromise<Void> = await .init()
-        let promise1: AsyncPromise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = .init()
+        let promise1: AsyncPromise<Int> = .init()
         let clock = ContinuousClock()
         let future1 = promise1.future.delay(clock: clock, duration: .seconds(1))
-        let promise2: AsyncPromise<String> = await .init()
+        let promise2: AsyncPromise<String> = .init()
         let future2 = promise2.future
 
         let cancellable = await or(future1, future2).sink { result in
@@ -123,10 +123,10 @@ final class FutureOrTests: XCTestCase {
             case leftFailure
         }
         let rVal = "Hello, world!"
-        let expectation: AsyncPromise<Void> = await .init()
-        let promise1: AsyncPromise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = .init()
+        let promise1: AsyncPromise<Int> = .init()
         let future1 = promise1.future
-        let promise2: AsyncPromise<String> = await .init()
+        let promise2: AsyncPromise<String> = .init()
         let clock = ContinuousClock()
         let future2 = promise2.future.delay(clock: clock, duration: .seconds(1))
 
@@ -150,7 +150,7 @@ final class FutureOrTests: XCTestCase {
     func testSucceedBeforeTimeout() async throws {
         enum Error: Swift.Error { case iFailed }
 
-        let toDo = await AsyncPromise<Int>()
+        let toDo = AsyncPromise<Int>()
         let clock = ContinuousClock()
         let timeout = Failed(Never.self, error: Error.iFailed).delay(clock: clock, duration: .milliseconds(10))
         let toDoFuture = toDo.future
@@ -196,10 +196,10 @@ final class FutureOrTests: XCTestCase {
     func testSimpleOrOperator() async throws {
         let lVal = 13
         let rVal = "hello, world!"
-        let expectation: AsyncPromise<Void> = await .init()
-        let promise1: AsyncPromise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = .init()
+        let promise1: AsyncPromise<Int> = .init()
         let future1 = promise1.future
-        let promise2: AsyncPromise<String> = await .init()
+        let promise2: AsyncPromise<String> = .init()
         let future2 = promise2.future
         let isLeft = Bool.random()
 

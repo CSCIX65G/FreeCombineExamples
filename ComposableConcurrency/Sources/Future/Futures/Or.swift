@@ -28,20 +28,13 @@ public func or<Left, Right>(
     _ right: Future<Right>
 ) -> Future<Either<Left, Right>> {
     .init { resumption, downstream in .init {
-        let promise = await UnbreakablePromise<AsyncResult<Either<Left, Right>, Swift.Error>>()
-        return try await withTaskCancellationHandler(
-            operation: {
-                let leftCancellable = await left.consume(into: promise, with: Either.sendableLeft)
-                let rightCancellable = await right.consume(into: promise, with: Either.sendableRight)
-                try! resumption.resume()
-                try await downstream(promise.value)
-                try? leftCancellable.cancel()
-                try? rightCancellable.cancel()
-            },
-            onCancel: {
-                try? promise(.failure(CancellationError()))
-            }
-        )
+        let promise = UnbreakableAsyncPromise<Either<Left, Right>>()
+        let leftCancellable = await left.consume(into: promise, with: Either.sendableLeft)
+        let rightCancellable = await right.consume(into: promise, with: Either.sendableRight)
+        try! resumption.resume()
+        try! await downstream(.success(promise.value))
+        try? leftCancellable.cancel()
+        try? rightCancellable.cancel()
     } }
 }
 

@@ -30,7 +30,7 @@ class ConcatTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleConcat() async throws {
-        let expectation = await AsyncPromise<Void>()
+        let expectation = AsyncPromise<Void>()
 
         let publisher1 = "0123456789".asyncPublisher
         let publisher2 = "abcdefghijklmnopqrstuvwxyz".asyncPublisher
@@ -69,8 +69,8 @@ class ConcatTests: XCTestCase {
     }
 
     func testMultiConcat() async throws {
-        let expectation1 = await AsyncPromise<Void>()
-        let expectation2 = await AsyncPromise<Void>()
+        let expectation1 = AsyncPromise<Void>()
+        let expectation2 = AsyncPromise<Void>()
 
         let publisher1 = "0123456789".asyncPublisher
         let publisher2 = "abcdefghijklmnopqrstuvwxyz".asyncPublisher

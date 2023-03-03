@@ -18,8 +18,8 @@ final class MulticastTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleMulticast() async throws {
-        let promise1 = await AsyncPromise<Void>()
-        let promise2 = await AsyncPromise<Void>()
+        let promise1 = AsyncPromise<Void>()
+        let promise2 = AsyncPromise<Void>()
 
         let n = 100
         let subject = PassthroughSubject(Int.self)

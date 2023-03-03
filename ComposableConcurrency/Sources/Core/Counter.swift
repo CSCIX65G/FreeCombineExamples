@@ -20,40 +20,32 @@
 //
 import Atomics
 
-public struct Counter: @unchecked Sendable {
-    private let atomicValue: ManagedAtomic<Int> = .init(0)
+public struct Counter {
+    private let atomicValue: ManagedAtomic<Int>
 
     public init(count: Int = 0) {
-        self.atomicValue.store(count, ordering: .relaxed)
+        self.atomicValue = .init(count)
     }
 
     public var count: Int {
-        return atomicValue.load(ordering: .sequentiallyConsistent)
+        atomicValue.load(ordering: .relaxed)
     }
 
     @discardableResult
-    public func increment(by: Int = 1) -> Int {
-        var c = atomicValue.load(ordering: .sequentiallyConsistent)
-        while !atomicValue.compareExchange(
-            expected: c,
-            desired: c + by,
-            ordering: .sequentiallyConsistent
-        ).0 {
-            c = atomicValue.load(ordering: .sequentiallyConsistent)
-        }
-        return c + by
+    @Sendable public func increment(by: Int = 1) -> Int {
+        atomicValue.wrappingIncrementThenLoad(by: by, ordering: .relaxed)
+    }
+
+    public var incremented: Int {
+        atomicValue.wrappingIncrementThenLoad(ordering: .relaxed)
     }
 
     @discardableResult
-    public func decrement(by: Int = 1) -> Int {
-        var c = atomicValue.load(ordering: .sequentiallyConsistent)
-        while !atomicValue.compareExchange(
-            expected: c,
-            desired: c - by,
-            ordering: .sequentiallyConsistent
-        ).0 {
-            c = atomicValue.load(ordering: .sequentiallyConsistent)
-        }
-        return c - by
+    @Sendable public func decrement(by: Int = 1) -> Int {
+        atomicValue.wrappingDecrementThenLoad(by: by, ordering: .relaxed)
+    }
+
+    public var decremented: Int {
+        atomicValue.wrappingDecrementThenLoad(ordering: .relaxed)
     }
 }

@@ -33,7 +33,7 @@ public extension Publisher {
                     return try await handleCancellation(of: downstream)
                 }
                 if case let .completion(.failure(error)) = r{
-                    Assertion.assertionFailure("\(prefix) \(file)@\(line): \(error)")
+                    assertionFailure("\(prefix) \(file)@\(line): \(error)")
                 }
                 return try await downstream(r)
             }

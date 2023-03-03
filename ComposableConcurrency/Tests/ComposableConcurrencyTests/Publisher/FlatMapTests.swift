@@ -30,7 +30,7 @@ class FlatMapTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleFlatMap() async throws {
-        let expectation = await AsyncPromise<Void>()
+        let expectation = AsyncPromise<Void>()
 
         let checksum = Counter()
         let c1 = await UnfoldedSequence(0 ... 3)

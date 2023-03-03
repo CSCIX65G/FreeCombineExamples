@@ -101,6 +101,8 @@ public func pause<Output>(
     _ resumingWith: (Resumption<Output>) -> Void
 ) async throws -> Output {
     try await withUnsafeThrowingContinuation { continuation in
-        resumingWith(.init(function: function, file: file, line: line, deinitBehavior: deinitBehavior, continuation: continuation))
+        resumingWith(
+            .init(function: function, file: file, line: line, deinitBehavior: deinitBehavior, continuation: continuation)
+        )
     }
 }

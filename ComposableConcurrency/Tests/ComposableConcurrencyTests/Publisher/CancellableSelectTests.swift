@@ -95,10 +95,10 @@ final class CancellableOrTests: XCTestCase {
         }
         let lVal = 13
         let clock = ContinuousClock()
-        let expectation: AsyncPromise<Void> = await .init()
-        let promise1: AsyncPromise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = .init()
+        let promise1: AsyncPromise<Int> = .init()
         let future1 = promise1.future.delay(clock: clock, duration: .seconds(1))
-        let promise2: AsyncPromise<String> = await .init()
+        let promise2: AsyncPromise<String> = .init()
         let future2 = promise2.future
 
         let cancellable = await or(future1, future2).sink { result in
@@ -123,10 +123,10 @@ final class CancellableOrTests: XCTestCase {
             case leftFailure
         }
         let rVal = "Hello, world!"
-        let expectation: AsyncPromise<Void> = await .init()
-        let promise1: AsyncPromise<Int> = await .init()
+        let expectation: AsyncPromise<Void> = .init()
+        let promise1: AsyncPromise<Int> = .init()
         let future1 = promise1.future
-        let promise2: AsyncPromise<String> = await .init()
+        let promise2: AsyncPromise<String> = .init()
         let clock = ContinuousClock()
         let future2 = promise2.future.delay(clock: clock, duration: .seconds(1))
 

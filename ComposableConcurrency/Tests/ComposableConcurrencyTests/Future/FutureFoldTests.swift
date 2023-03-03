@@ -29,7 +29,7 @@ final class FutureFoldTests: XCTestCase {
     func testAsyncFoldOrdering() async throws {
         var others = [AsyncPromise<Int>]()
         for _ in (0 ..< 10) {
-            let p = await AsyncPromise<Int>()
+            let p = AsyncPromise<Int>()
             others.append(p)
         }
         let this = Succeeded(0)
@@ -58,7 +58,7 @@ final class FutureFoldTests: XCTestCase {
     func testAsyncFoldOrderingReversed() async throws {
         var others = [AsyncPromise<Int>]()
         for _ in (0 ..< 10) {
-            let p = await AsyncPromise<Int>()
+            let p = AsyncPromise<Int>()
             others.append(p)
         }
         let this = Succeeded(0)
@@ -90,7 +90,7 @@ final class FutureFoldTests: XCTestCase {
         }
         var others = [AsyncPromise<Int>]()
         for _ in (0 ..< 10) {
-            let p = await AsyncPromise<Int>()
+            let p = AsyncPromise<Int>()
             others.append(p)
         }
         let this = Succeeded(0)

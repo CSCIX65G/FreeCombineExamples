@@ -69,22 +69,6 @@ public final class MutableBox<Value: Sendable>: @unchecked Sendable {
 
 extension MutableBox: AtomicReference { }
 
-extension MutableBox: Identifiable {
-    public var id: ObjectIdentifier { ObjectIdentifier(self) }
-}
-
-extension MutableBox: Equatable {
-    public static func == (lhs: MutableBox<Value>, rhs: MutableBox<Value>) -> Bool {
-        lhs.id == rhs.id
-    }
-}
-
-extension MutableBox: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        id.hash(into: &hasher)
-    }
-}
-
 extension MutableBox {
     public func append<T>(_ t: T) throws -> Void where Value == [T] {
         value.append(t)

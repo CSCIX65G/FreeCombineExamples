@@ -46,7 +46,7 @@ public final class Connectable<Output: Sendable>: @unchecked Sendable {
         self.function = function
         self.file = file
         self.line = line
-        let localPromise: AsyncPromise<Void> = await .init()
+        let localPromise: AsyncPromise<Void> = .init()
 
         self.autoconnect = autoconnect
         self.ownsSubject = true
@@ -74,7 +74,7 @@ public final class Connectable<Output: Sendable>: @unchecked Sendable {
         self.function = function
         self.file = file
         self.line = line
-        let localPromise: AsyncPromise<Void> = await .init()
+        let localPromise: AsyncPromise<Void> = .init()
 
         self.downstreamSubject = subject
         self.ownsSubject = ownsSubject

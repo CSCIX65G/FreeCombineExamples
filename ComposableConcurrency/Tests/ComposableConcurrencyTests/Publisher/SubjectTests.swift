@@ -31,9 +31,9 @@ class SubjectTests: XCTestCase {
 
     func testSimpleCancellation() async throws {
         let counter = Counter()
-        let expectation = await AsyncPromise<Void>()
-        let expectation3 = await AsyncPromise<Void>()
-        let release = await AsyncPromise<Void>()
+        let expectation = AsyncPromise<Void>()
+        let expectation3 = AsyncPromise<Void>()
+        let release = AsyncPromise<Void>()
 
         let subject = PassthroughSubject(Int.self)
         let p = subject.asyncPublisher()
@@ -112,7 +112,7 @@ class SubjectTests: XCTestCase {
 
     func testSimpleTermination() async throws {
         let counter = Counter()
-        let expectation = await AsyncPromise<Void>()
+        let expectation = AsyncPromise<Void>()
 
         let subject = PassthroughSubject(Int.self)
         let p = subject.asyncPublisher()
@@ -152,7 +152,7 @@ class SubjectTests: XCTestCase {
 
     func testSimpleSubjectSend() async throws {
         let counter = Counter()
-        let expectation = await AsyncPromise<Void>()
+        let expectation = AsyncPromise<Void>()
 
         let subject = PassthroughSubject(Int.self)
         let p = subject.asyncPublisher()
@@ -191,7 +191,7 @@ class SubjectTests: XCTestCase {
     }
 
     func testSyncAsync() async throws {
-        let expectation = await AsyncPromise<Void>()
+        let expectation = AsyncPromise<Void>()
         let fsubject1 = PassthroughSubject(Int.self)
         let fsubject2 = PassthroughSubject(String.self)
 
@@ -200,9 +200,10 @@ class SubjectTests: XCTestCase {
 
         let fz1 = fseq1.zip(fseq2)
         let fz2 = fz1.map { left, right in String(left) + String(right) }
+        let sendableStringInit: @Sendable (Int) -> String = { String($0) }
 
         let fm1 = fsubject1.asyncPublisher()
-            .map(String.init)
+            .map(sendableStringInit)
             .merge(with: fsubject2.asyncPublisher())
 
         let counter = Counter()
@@ -243,7 +244,7 @@ class SubjectTests: XCTestCase {
     }
 
     func testSimpleSubject() async throws {
-        let expectation = await AsyncPromise<Void>()
+        let expectation = AsyncPromise<Void>()
 
         let subject = CurrentValueSubject(14)
         let publisher = subject.asyncPublisher()
@@ -294,8 +295,8 @@ class SubjectTests: XCTestCase {
     }
 
     func testMultisubscriptionSubject() async throws {
-        let expectation1 = await AsyncPromise<Void>()
-        let expectation2 = await AsyncPromise<Void>()
+        let expectation1 = AsyncPromise<Void>()
+        let expectation2 = AsyncPromise<Void>()
 
         let subject = CurrentValueSubject(13)
         let publisher = subject.asyncPublisher()
