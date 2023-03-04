@@ -20,6 +20,7 @@
 //
 import Core
 import Queue
+import SendableAtomics
 
 public enum Merges {
     public enum Error: Swift.Error, Sendable {

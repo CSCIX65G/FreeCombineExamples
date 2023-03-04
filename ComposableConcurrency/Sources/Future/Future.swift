@@ -31,6 +31,7 @@
  to that.
  */
 import Core
+import SendableAtomics
 
 public struct Future<Output: Sendable>: Sendable {
     private let call: @Sendable (

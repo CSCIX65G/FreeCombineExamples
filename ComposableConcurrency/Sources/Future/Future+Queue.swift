@@ -20,6 +20,7 @@
 //
 import Core
 import Queue
+import SendableAtomics
 
 public extension Queue {
     @Sendable func consume<Upstream: Sendable>(

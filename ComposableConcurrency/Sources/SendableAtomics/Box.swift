@@ -27,9 +27,11 @@ public final class Box<Value: Sendable> {
 
 extension Box: AtomicReference { }
 extension Box: Sendable { }
+
 extension Box: Identifiable {
     public var id: ObjectIdentifier { ObjectIdentifier(self) }
 }
+
 extension Box: Equatable {
     public static func == (lhs: Box<Value>, rhs: Box<Value>) -> Bool {
         lhs.id == rhs.id
@@ -42,27 +44,27 @@ extension Box: Hashable {
     }
 }
 
-
-public final class MutableBox<Value: Sendable>: @unchecked Sendable {
+public final class MutableBox<Value> {
     public private(set) var value: Value
-
     public init(value: Value) { self.value = value }
+}
 
+public extension MutableBox {
     @discardableResult
-    public func set(value: Value) -> Value {
+    func set(value: Value) -> Value {
         let tmp = self.value
         self.value = value
         return tmp
     }
 
     @discardableResult
-    public func set(value: () async -> Value) async -> Value {
+    func set(value: () async -> Value) async -> Value {
         let tmp = self.value
         self.value = await value()
         return tmp
     }
 
-    public func set<Tail>(keyPath: WritableKeyPath<Value, Tail>, to newValue: Tail) async -> Void {
+    func set<Tail>(keyPath: WritableKeyPath<Value, Tail>, to newValue: Tail) async -> Void {
         self.value[keyPath: keyPath] = newValue
     }
 }

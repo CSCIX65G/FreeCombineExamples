@@ -19,6 +19,7 @@
 import Atomics
 import Core
 import Future
+import SendableAtomics
 
 public final class Connectable<Output: Sendable>: @unchecked Sendable {
     private let function: StaticString

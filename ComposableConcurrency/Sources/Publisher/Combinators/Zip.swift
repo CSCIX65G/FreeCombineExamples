@@ -20,6 +20,7 @@
 //
 import Core
 import Queue
+import SendableAtomics
 
 public struct Zip<Left: Sendable, Right: Sendable> {
     enum Current: Sendable {

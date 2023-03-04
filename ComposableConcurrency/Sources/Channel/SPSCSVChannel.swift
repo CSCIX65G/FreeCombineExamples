@@ -8,6 +8,7 @@
 import Core
 import Atomics
 import DequeModule
+import SendableAtomics
 
 public final class SPSCSVChannel<Value: Sendable>: @unchecked Sendable {
     private struct ChannelError: Error { let wrapper: Wrapper }

@@ -20,6 +20,7 @@
 //
 import Core
 import Queue
+import SendableAtomics
 
 public struct SubscriptionError: Swift.Error, Sendable, Equatable { }
 

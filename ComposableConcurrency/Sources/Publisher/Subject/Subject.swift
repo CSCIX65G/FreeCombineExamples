@@ -20,6 +20,7 @@
 //
 import Core
 import Queue
+import SendableAtomics
 
 public final class Subject<Output: Sendable>: Sendable {
     private let function: StaticString

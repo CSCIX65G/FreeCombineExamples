@@ -20,6 +20,7 @@
 //
 import Core
 import Queue
+import SendableAtomics
 
 public struct InvocationError: Swift.Error, Sendable, Equatable { }
 

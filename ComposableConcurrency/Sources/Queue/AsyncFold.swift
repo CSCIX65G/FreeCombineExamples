@@ -18,6 +18,7 @@
 //  limitations under the License.
 //
 import Core
+import SendableAtomics
 
 public final class AsyncFold<State: Sendable, Action: Sendable>: Sendable {
     private let function: StaticString
