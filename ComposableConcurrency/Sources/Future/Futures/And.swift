@@ -21,6 +21,7 @@
 import Atomics
 import Core
 import Queue
+import SendableAtomics
 
 extension ManagedAtomic: @unchecked Sendable where Value: Sendable { }
 

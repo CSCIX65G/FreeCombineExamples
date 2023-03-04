@@ -19,6 +19,7 @@
 //  limitations under the License.
 //
 import Core
+import SendableAtomics
 
 extension Future {
     var value: Output {

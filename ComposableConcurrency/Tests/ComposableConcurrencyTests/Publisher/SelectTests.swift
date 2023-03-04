@@ -9,6 +9,7 @@ import XCTest
 @testable import Core
 @testable import Future
 @testable import Publisher
+@testable import SendableAtomics
 
 final class SelectTests: XCTestCase {
 

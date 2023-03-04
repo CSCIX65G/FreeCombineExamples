@@ -44,6 +44,7 @@ public final class Resumption<Output: Sendable>: Sendable {
     deinit {
         do { try status(.resumed) }
         catch { return }
+        
         switch deinitBehavior {
             case .cancel: // Taking the combine approach...
                 continuation.resume(throwing: LeakedError())

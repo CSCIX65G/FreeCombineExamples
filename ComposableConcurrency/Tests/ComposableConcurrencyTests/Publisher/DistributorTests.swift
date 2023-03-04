@@ -7,6 +7,7 @@
 import XCTest
 @testable import Core
 @testable import Publisher
+@testable import SendableAtomics
 
 final class DistributorTests: XCTestCase {
 

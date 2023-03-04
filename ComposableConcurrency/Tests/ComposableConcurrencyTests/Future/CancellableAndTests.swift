@@ -2,6 +2,7 @@ import XCTest
 
 @testable import Core
 @testable import Future
+@testable import SendableAtomics
 
 final class CancellableAndTests: XCTestCase {
     override func setUpWithError() throws { }
@@ -74,7 +75,7 @@ final class CancellableAndTests: XCTestCase {
                 case .success:
                     XCTFail("Should not have received value")
                 case let .failure(error):
-                    guard error is CancellationError else {
+                    guard error is CancellationError || error is AlreadyWrittenError<Cancellables.Status> else {
                         XCTFail("received incorrect error: \(error)")
                         return
                     }

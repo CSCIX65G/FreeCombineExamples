@@ -11,6 +11,7 @@ import XCTest
 @testable import Core
 @testable import Queue
 @testable import Publisher
+@testable import SendableAtomics
 
 struct DebounceTestError: Error { }
 

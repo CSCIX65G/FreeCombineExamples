@@ -29,6 +29,9 @@ public extension ManagedAtomic {
             desired: .init(once: once),
             ordering: .releasing
         )
-        guard success else { throw AlreadyWrittenError(newOnce!.once) }
+        guard success else {
+            guard let newOnce else { fatalError("Should have value") }
+            throw AlreadyWrittenError(newOnce.once)
+        }
     }
 }

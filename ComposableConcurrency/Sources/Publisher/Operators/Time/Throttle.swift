@@ -8,6 +8,7 @@ import Atomics
 import Channel
 import Core
 import Queue
+import SendableAtomics
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 extension Publisher {
