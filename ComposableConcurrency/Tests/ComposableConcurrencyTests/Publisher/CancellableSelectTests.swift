@@ -9,6 +9,7 @@ import XCTest
 
 @testable import Core
 @testable import Future
+@testable import SendableAtomics
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 final class CancellableOrTests: XCTestCase {
@@ -76,7 +77,7 @@ final class CancellableOrTests: XCTestCase {
                 XCTFail("Failed by succeeding")
                 return
             }
-            guard nil != error as? CancellationError else {
+            guard nil != error as? AlreadyWrittenError<Cancellables.Status> else {
                 XCTFail("Wrong error type in error: \(error)")
                 return
             }

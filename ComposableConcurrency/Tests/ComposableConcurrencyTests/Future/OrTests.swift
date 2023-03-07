@@ -39,6 +39,7 @@ final class OrTests: XCTestCase {
         try promise1.succeed(13)
         try promise2.succeed(14)
 
+        _ = await expectation.result
         _ = await cancellation.result
     }
 
@@ -66,6 +67,7 @@ final class OrTests: XCTestCase {
         try promise2.fail(Error.iFailed)
         try promise1.cancel()
 
+        _ = await expectation.result
         _ = await cancellation.result
     }
 
@@ -119,6 +121,7 @@ final class OrTests: XCTestCase {
         try promise7.succeed(19)
         try promise8.succeed(20)
 
+        _ = await expectation.result
         _ = await cancellation.result
     }
 }

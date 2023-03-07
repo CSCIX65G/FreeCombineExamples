@@ -23,6 +23,7 @@
 import XCTest
 @testable import Core
 @testable import Future
+@testable import SendableAtomics
 
 final class AndTests: XCTestCase {
 
@@ -45,13 +46,16 @@ final class AndTests: XCTestCase {
             }
             XCTAssert(left == 13, "Bad left value")
             XCTAssert(right == "m", "Bad right value")
-            do { try expectation.succeed() }
+            do {
+                try expectation.succeed()
+            }
             catch { XCTFail("expectation failed") }
         }
 
         try promise1.succeed(13)
         try promise2.succeed("m")
 
+        _ = try? await expectation.value
         _ = await cancellation.result
     }
 
@@ -78,7 +82,7 @@ final class AndTests: XCTestCase {
 
         try promise1.succeed(13)
         try promise2.fail(Error.iFailed)
-
+        _ = await expectation.result
         _ = await cancellation.result
     }
 

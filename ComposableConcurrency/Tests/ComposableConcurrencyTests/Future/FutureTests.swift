@@ -38,6 +38,7 @@ final class FutureTests: XCTestCase {
             }
 
         try promise.succeed(13)
+        _ = await expectation.result
         _ = await cancellation.result
     }
 }

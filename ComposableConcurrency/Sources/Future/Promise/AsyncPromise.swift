@@ -36,8 +36,12 @@ public struct AsyncPromise<Value: Sendable>: Sendable {
         self.promise = localPromise
         self.cancellable = .init(function: function, file: file, line: line, deinitBehavior: deinitBehavior) {
             try await pause(for: Value.self) { resumption in
-                do { try localPromise.wait(with: resumption) }
-                catch { try? resumption.resume(throwing: error) }
+                do {
+                    try localPromise.wait(with: resumption)
+                }
+                catch {
+                    try? resumption.resume(throwing: error)
+                }
             }
         }
     }

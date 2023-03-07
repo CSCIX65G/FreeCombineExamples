@@ -1,16 +1,24 @@
 //: [Previous](@previous)
 
 /// FP Basics
-func void<T>(_ t: T) -> Void { }
+func void0() -> Void { }
+func void1<T>(_ t: T) -> Void { }
 
-// 1. There are 256^256 (2^4096) ways of writing the following function
-func transform(_ byte: UInt8) -> UInt8 {
+// 1. There are 256^256 (2^2048) ways of writing the following function
+func transform0(_ byte: UInt8) -> UInt8 {
     byte
-//    switch byte {
-//        case 47: return 48
-//        case 48: return 47
-//        default: return byte
-//    }
+}
+
+func transform1(_ byte: UInt8) -> UInt8 {
+    switch byte {
+        case 0x47: return 0x48
+        case 0x48: return 0x47
+        default:   return byte
+    }
+}
+
+func transform2(_ byte: UInt8) -> UInt8 {
+    (0x41 ... 0x5A).contains(byte) ? byte + 0x20 : byte
 }
 
 // 2. There is only one way to write this function though
@@ -22,8 +30,8 @@ func identity<T>(_ t: T) -> T { t }
 // 4b. closures are anonymous functions
 // 5. nil and .none are synonyous
 let optArray: [Int?] = [1, Optional<Int>.none, 2, Int?.none, 3, .none, nil]
-let arr1 = optArray.compactMap(identity)
-let arr2 = optArray.compactMap { $0 }
+let arr1 = optArray.compactMap { $0 }
+let arr2 = optArray.compactMap(identity)
 
 // 6. Functions are 1st class objects
 func fidentity<A, B>(_ f: @escaping (A) -> B) -> (A) -> B {

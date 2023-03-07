@@ -6,6 +6,7 @@
 //
 
 import XCTest
+@testable import Clock
 @testable import Core
 @testable import Future
 
@@ -40,15 +41,15 @@ final class CancellableTests: XCTestCase {
 
         var c: Cancellable<(Cancellable<Void>, Cancellable<Void>, Cancellable<Void>)>? = .none
         c = Cancellable {
-            let t1 = Cancellable() {
+            let t1 = Cancellable(deinitBehavior: .cancel) {
                 try await expectation1.value
                 try expectation1a.succeed(true)
             }
-            let t2 = Cancellable() {
+            let t2 = Cancellable(deinitBehavior: .cancel) {
                 try await expectation2.value
                 try expectation2a.succeed(true)
             }
-            let t3 = Cancellable() {
+            let t3 = Cancellable(deinitBehavior: .cancel) {
                 try await expectation3.value
                 try expectation3a.succeed(true)
             }

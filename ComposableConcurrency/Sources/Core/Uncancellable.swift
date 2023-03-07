@@ -50,7 +50,12 @@ public final class Uncancellable<Output: Sendable>: Sendable {
         self.task = .init {
             let value = await operation()
             do { try localSetStatus(.finished) }
-            catch { fatalError("Cannot fail") }
+            catch {
+                guard Output.self == Void.self else {
+                    fatalError("Cannot fail")
+                }
+                return value
+            }
             return value
         }
     }
@@ -69,4 +74,10 @@ public final class Uncancellable<Output: Sendable>: Sendable {
 
 public extension Uncancellable {
     var value: Output { get async { await task.value } }
+}
+
+public extension Uncancellable where Output == Void {
+    func release() throws -> Void {
+        try setStatus(.finished)
+    }
 }

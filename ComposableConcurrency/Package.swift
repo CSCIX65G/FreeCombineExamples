@@ -79,6 +79,7 @@ let package = Package(
         .target(
             name: "Publisher",
             dependencies: [
+                "Clock",
                 "Core",
                 "Channel",
                 "Future",

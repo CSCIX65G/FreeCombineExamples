@@ -20,22 +20,50 @@
 //
 import Atomics
 import Core
-import Queue
 import SendableAtomics
 
 public func or<Left, Right>(
     _ left: Future<Left>,
     _ right: Future<Right>
 ) -> Future<Either<Left, Right>> {
-    .init { resumption, downstream in .init {
-        let promise = UnbreakableAsyncPromise<Either<Left, Right>>()
-        let leftCancellable = await left.consume(into: promise, with: Either.sendableLeft)
-        let rightCancellable = await right.consume(into: promise, with: Either.sendableRight)
-        try! resumption.resume()
-        try! await downstream(.success(promise.value))
-        try? leftCancellable.cancel()
-        try? rightCancellable.cancel()
-    } }
+    .init { resumption, downstream in
+        let promise = Promise<Either<Left, Right>>()
+        return .init {
+            let leftCancellable: Cancellable<Void> = await left { result in
+                switch result {
+                    case let .success(value):
+                        do { try promise.succeed(.left(value)) }
+                        catch { try? promise.fail(error) }
+                    case let .failure(error):
+                        try? promise.fail(error)
+                }
+            }
+
+            let rightCancellable: Cancellable<Void> = await right { result in
+                switch result {
+                    case let .success(value):
+                        do { try promise.succeed(.right(value)) }
+                        catch { try? promise.fail(error) }
+                    case let .failure(error):
+                        try? promise.fail(error)
+                }
+            }
+
+            try? resumption.resume()
+
+            await withTaskCancellationHandler(
+                operation: {
+                    let result = await promise.result.asyncResult
+                    try? leftCancellable.cancel()
+                    try? rightCancellable.cancel()
+                    return await downstream(result)
+                },
+                onCancel: {
+                    try? promise.fail(CancellationError())
+                }
+            )
+        }
+    }
 }
 
 @inlinable

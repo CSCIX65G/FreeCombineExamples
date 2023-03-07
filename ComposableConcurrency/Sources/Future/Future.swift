@@ -92,7 +92,7 @@ public extension Future {
 
 public extension Future {
     func consume<A>(
-        into promise : UnbreakableAsyncPromise<A>,
+        into promise : AsyncPromise<A>,
         with f: @Sendable @escaping (Output) -> A
     ) async -> Cancellable<Void> {
         await self { result in
@@ -101,7 +101,7 @@ public extension Future {
                     let a = f(value)
                     try? promise.succeed(a)
                 case let .failure(error):
-                    fatalError("should not have been able to get \(error)")
+                    try? promise.fail(error)
             }
         }
     }

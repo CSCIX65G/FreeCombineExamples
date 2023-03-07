@@ -23,7 +23,7 @@
   2. Corollary: No import Foundation, uses Atomics instead
   3. No "megaYield"
   4. Uses Resumption<Void> instead of AsyncStream<Never>
-  5. Uses Cancellable and Resumption from FreeCombine to avoid races
+  5. Uses Cancellable and Resumption from this package to avoid races
   6. Optionally allows each suspension to signal that the clock can now tick again
   7. Gathers performance information at advances
   8. Follows real clock behavior of not allowing sleeping in cancelled tasks
@@ -249,12 +249,10 @@ public final class DiscreteClock: Clock, @unchecked Sendable {
                 }
             },
             onCancel: {
-//                try? Uncancellable<Void> {
-//                    guard case let .success(resumption) = await promise.result else {
-//                        return
-//                    }
-//                    self.channel.continuation.yield(.cancelSleep(resumption: resumption))
-//                }.release()
+                try? Uncancellable<Void> {
+                    guard case let .success(resumption) = await promise.result else { return }
+                    self.channel.continuation.yield(.cancelSleep(resumption: resumption))
+                }.release()
             }
         )
         _ = await promise.result

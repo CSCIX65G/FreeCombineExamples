@@ -9,6 +9,7 @@ import XCTest
 @testable import Channel
 @testable import Clock
 @testable import Core
+@testable import SendableAtomics
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 final class DiscreteClockTests: XCTestCase {
@@ -32,7 +33,7 @@ final class DiscreteClockTests: XCTestCase {
             case .success:
                 XCTFail("Should not have advanced after cancellation")
             case let .failure(error):
-                guard let _ = error as? CancellationError else {
+                guard let _ = error as? AlreadyWrittenError<Cancellables.Status> else {
                     XCTFail("Received \(error) instead of CancellationError")
                     return
                 }

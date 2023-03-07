@@ -77,6 +77,7 @@ class CancellationTests: XCTestCase {
         try z1.cancel()
         try waiter.succeed()
 
+        _ = await expectation.result
         _ = await z1.result
     }
 
@@ -150,6 +151,9 @@ class CancellationTests: XCTestCase {
         try z2.cancel()
         try waiter.succeed()
 
+        _ = await expectation.result
+        _ = await expectation2.result
+
         _ = await z1.result
         _ = await z2.result
     }
@@ -198,6 +202,7 @@ class CancellationTests: XCTestCase {
         try await startup.value
         try z1.cancel()
         try waiter.succeed()
+        _ = await expectation.result
         _ = await z1.result
     }
 }

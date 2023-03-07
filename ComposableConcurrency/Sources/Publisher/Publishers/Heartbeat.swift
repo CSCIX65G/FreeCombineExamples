@@ -18,8 +18,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-import Dispatch
+import Clock
 import Core
+import Dispatch
 
 #if swift(>=5.7)
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
