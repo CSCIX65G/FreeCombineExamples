@@ -7,15 +7,22 @@
 
 import Atomics
 
-public typealias Once<Value: Sendable> = ManagedAtomic<Box<Value>?>
+public struct Once<Value> {
+    public let set: @Sendable (Value) throws -> Void
+    public init() {
+        set = ManagedAtomic<Box<Value>?>().set
+    }
+}
 
-public extension ManagedAtomic {
+extension Once: Sendable where Value: Sendable { }
+
+private extension ManagedAtomic {
     @Sendable convenience init<Once: Sendable>(once: Once.Type = Once.self) where Value == Box<Once>? {
         self.init(.none)
     }
 }
 
-public extension ManagedAtomic {
+private extension ManagedAtomic {
     @Sendable func set<Once: Sendable>(_ once: Once) throws -> Void where Value == Box<Once>? {
         let (success, newBox) = compareExchange(
             expected: .none,

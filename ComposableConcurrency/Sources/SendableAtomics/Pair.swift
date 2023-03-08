@@ -7,7 +7,7 @@
 
 import Atomics
 
-public final class PairBox<Left, Right> {
+private final class PairBox<Left, Right> {
     fileprivate let left: Left?
     fileprivate let right: Right?
 
@@ -25,9 +25,19 @@ public final class PairBox<Left, Right> {
 extension PairBox: Sendable where Left: Sendable, Right: Sendable { }
 extension PairBox: AtomicReference { }
 
-public typealias Pair<Left: Sendable, Right: Sendable> = ManagedAtomic<PairBox<Left, Right>>
+public struct Pair<Left, Right> {
+    public let setLeft: @Sendable (Left) throws -> (Left, Right)?
+    public let setRight: @Sendable (Right) throws -> (Left, Right)?
+    public init(left: Left? = .none, right: Right? = .none) {
+        let atomic = ManagedAtomic(left: left, right: right)
+        setLeft = atomic.setLeft
+        setRight = atomic.setRight
+    }
+}
 
-public extension ManagedAtomic {
+extension Pair: Sendable where Left: Sendable, Right: Sendable { }
+
+private extension ManagedAtomic {
     @Sendable convenience init<Left: Sendable, Right: Sendable> (
         left: Left? = .none,
         right: Right? = .none
@@ -36,7 +46,7 @@ public extension ManagedAtomic {
     }
 }
 
-public extension ManagedAtomic {
+private extension ManagedAtomic {
     @Sendable func setLeft<
         Left: Sendable,
         Right: Sendable
