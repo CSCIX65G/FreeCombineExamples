@@ -19,6 +19,7 @@
 import Atomics
 import Core
 import Future
+import SendableAtomics
 
 public final class Connectable<Output: Sendable>: @unchecked Sendable {
     private let function: StaticString
@@ -28,7 +29,7 @@ public final class Connectable<Output: Sendable>: @unchecked Sendable {
     private let ownsSubject: Bool
     private let autoconnect: Bool
     private let atomicIsComplete: ManagedAtomic<Bool> = .init(false)
-    private let promise: Promise<Void>
+    private let promise: AsyncPromise<Void>
 
     private let downstreamSubject: Subject<Output>
 
@@ -46,7 +47,7 @@ public final class Connectable<Output: Sendable>: @unchecked Sendable {
         self.function = function
         self.file = file
         self.line = line
-        let localPromise: Promise<Void> = await .init()
+        let localPromise: AsyncPromise<Void> = .init()
 
         self.autoconnect = autoconnect
         self.ownsSubject = true
@@ -74,7 +75,7 @@ public final class Connectable<Output: Sendable>: @unchecked Sendable {
         self.function = function
         self.file = file
         self.line = line
-        let localPromise: Promise<Void> = await .init()
+        let localPromise: AsyncPromise<Void> = .init()
 
         self.downstreamSubject = subject
         self.ownsSubject = ownsSubject
@@ -95,7 +96,7 @@ public final class Connectable<Output: Sendable>: @unchecked Sendable {
         get async {
             if ownsSubject { _ = await downstreamSubject.result  }
             _ = await connector.result
-            return await upstreamCancellable.result
+            return await upstreamCancellable.result.asyncResult
         }
     }
 
@@ -115,7 +116,7 @@ public final class Connectable<Output: Sendable>: @unchecked Sendable {
     ) -> Publisher<Output> {
         .init { resumption, downstream in
             Cancellable<Cancellable<Void>>(function: function, file: file, line: line) {
-                defer { resumption.resume() }
+                defer { try! resumption.resume() }
                 guard !self.isComplete else {
                     return .init {
                         try await downstream(.completion(.failure(ConnectableCompletionError())))

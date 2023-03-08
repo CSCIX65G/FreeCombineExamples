@@ -20,6 +20,7 @@
 //
 import Core
 import Queue
+import SendableAtomics
 
 public final class Subject<Output: Sendable>: Sendable {
     private let function: StaticString
@@ -106,7 +107,7 @@ public extension Publisher {
     ) {
         self = .init { resumption, downstream in
             Cancellable<Cancellable<Void>>(function: function, file: file, line: line) {
-                defer { resumption.resume() }
+                defer { try! resumption.resume() }
                 do {
                     let cancellable = try await distributor.subscribe { result in
                         try await downstream(result)

@@ -8,6 +8,7 @@
 import Core
 import Atomics
 import DequeModule
+import SendableAtomics
 
 public final class SPSCSVChannel<Value: Sendable>: @unchecked Sendable {
     private struct ChannelError: Error { let wrapper: Wrapper }
@@ -56,8 +57,8 @@ public final class SPSCSVChannel<Value: Sendable>: @unchecked Sendable {
                 ordering: .relaxed
             )
             if success {
-                reader?.resume(throwing: error)
-                writer?.resume(throwing: error)
+                try reader?.resume(throwing: error)
+                try writer?.resume(throwing: error)
                 break
             } else {
                 localWrapped = newLocalWrapped
@@ -128,10 +129,8 @@ public final class SPSCSVChannel<Value: Sendable>: @unchecked Sendable {
                     desired: newVar,
                     ordering: .sequentiallyConsistent
                 )
-                if success {
-                    return
-                }
-                else { resumption.resume(throwing: ChannelError(wrapper: newLocalWrapped)) }
+                if success { return }
+                else { try! resumption.resume(throwing: ChannelError(wrapper: newLocalWrapped)) }
             }
             return .none
         } catch {
@@ -149,7 +148,7 @@ public final class SPSCSVChannel<Value: Sendable>: @unchecked Sendable {
                 ordering: .sequentiallyConsistent
             )
             if success {
-                reader.resume(returning: value)
+                try! reader.resume(returning: value)
                 return .none
             } else {
                 return newLocalWrapped
@@ -172,7 +171,7 @@ public final class SPSCSVChannel<Value: Sendable>: @unchecked Sendable {
             }
             else {
                 localWrapped = newLocalWrapped
-                resumption.resume(throwing: ChannelError(wrapper: newLocalWrapped))
+                try! resumption.resume(throwing: ChannelError(wrapper: newLocalWrapped))
             }
         }
         return value
@@ -187,7 +186,7 @@ public final class SPSCSVChannel<Value: Sendable>: @unchecked Sendable {
             ordering: .sequentiallyConsistent
         )
         if success {
-            writer?.resume()
+            try? writer?.resume()
             return value
         } else {
             throw ChannelError(wrapper: newLocalWrapped)

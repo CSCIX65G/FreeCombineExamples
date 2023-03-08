@@ -27,7 +27,7 @@ public extension Cancellable {
     ) -> Cancellable<T> {
         .init(function: function, file: file, line: line) {
             let value = try await self.value
-            try Cancellables.checkCancellation()
+            try Task.checkCancellation()
             return await transform(value)
         }
     }

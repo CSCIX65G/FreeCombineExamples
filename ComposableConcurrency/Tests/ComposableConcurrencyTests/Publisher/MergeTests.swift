@@ -22,6 +22,7 @@ import XCTest
 @testable import Core
 @testable import Future
 @testable import Publisher
+@testable import SendableAtomics
 
 class MergeTests: XCTestCase {
 
@@ -30,7 +31,7 @@ class MergeTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleMerge() async throws {
-        let expectation = await Promise<Void>()
+        let expectation = AsyncPromise<Void>()
 
         let publisher1 = "01234567890123".asyncPublisher
         let publisher2 = "abcdefghijklmnopqrstuvwxyz".asyncPublisher
@@ -60,7 +61,7 @@ class MergeTests: XCTestCase {
     }
 
     func testInlineMerge() async throws {
-        let expectation = await Promise<Void>()
+        let expectation = AsyncPromise<Void>()
 
         let fseq1 = (101 ... 150).asyncPublisher
         let fseq2 = (1 ... 100).asyncPublisher

@@ -19,13 +19,14 @@
 //  limitations under the License.
 //
 import Core
+import SendableAtomics
 
 public extension Publisher {
     func collect() -> Publisher<[Output]> {
         return .init { resumption, downstream in
             let currentValue: MutableBox<[Output]> = MutableBox(value: [])
             return self(onStartup: resumption) { r in
-                guard !Cancellables.isCancelled else {
+                guard !Task.isCancelled else {
                     return try await handleCancellation(of: downstream)
                 }
                 switch r {

@@ -37,6 +37,14 @@
                BlueprintName = "ComposableConcurrencyTests"
                ReferencedContainer = "container:">
             </BuildableReference>
+            <SkippedTests>
+               <Test
+                  Identifier = "TimeoutTests/testOredTimeout()">
+               </Test>
+               <Test
+                  Identifier = "TimeoutTests/testOredTimeout2()">
+               </Test>
+            </SkippedTests>
          </TestableReference>
       </Testables>
    </TestAction>

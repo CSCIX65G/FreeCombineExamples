@@ -8,6 +8,7 @@
 @testable import Core
 @testable import Future
 @testable import Publisher
+@testable import SendableAtomics
 
 import XCTest
 
@@ -18,8 +19,8 @@ final class MulticastTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleMulticast() async throws {
-        let promise1 = await Promise<Void>()
-        let promise2 = await Promise<Void>()
+        let promise1 = AsyncPromise<Void>()
+        let promise2 = AsyncPromise<Void>()
 
         let n = 100
         let subject = PassthroughSubject(Int.self)

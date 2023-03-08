@@ -19,7 +19,7 @@ final class LockFreeQueueTests: XCTestCase {
         let cancellables: [Cancellable<Void>] = (0 ..< 100).map { _ in
             .init {
                 for i in (0 ..< 10) {
-                    guard !Cancellables.isCancelled else { return }
+                    guard !Task.isCancelled else { return }
                     queue.enqueue(i)
                     await Task.yield()
                 }

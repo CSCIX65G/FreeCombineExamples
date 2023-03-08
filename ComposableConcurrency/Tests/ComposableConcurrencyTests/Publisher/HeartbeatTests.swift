@@ -11,6 +11,7 @@ import XCTest
 @testable import Core
 @testable import Future
 @testable import Publisher
+@testable import SendableAtomics
 
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
 final class HeartbeatTests: XCTestCase {

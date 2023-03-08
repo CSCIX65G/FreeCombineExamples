@@ -7,7 +7,7 @@
 
 import Atomics
 
-public final class PairReference<Left: Sendable, Right: Sendable>: AtomicReference, Sendable {
+public final class PairBox<Left, Right> {
     fileprivate let left: Left?
     fileprivate let right: Right?
 
@@ -22,21 +22,25 @@ public final class PairReference<Left: Sendable, Right: Sendable>: AtomicReferen
     }
 }
 
-public typealias Pair<Left: Sendable, Right: Sendable> = ManagedAtomic<PairReference<Left, Right>>
+extension PairBox: Sendable where Left: Sendable, Right: Sendable { }
+extension PairBox: AtomicReference { }
+
+public typealias Pair<Left: Sendable, Right: Sendable> = ManagedAtomic<PairBox<Left, Right>>
 
 public extension ManagedAtomic {
-    @Sendable convenience init<Left: Sendable, Right: Sendable>(
+    @Sendable convenience init<Left: Sendable, Right: Sendable> (
         left: Left? = .none,
         right: Right? = .none
-    ) where Value == PairReference<Left, Right> {
-        self.init(PairReference(left: left, right: right))
+    ) where Value == PairBox<Left, Right> {
+        self.init(PairBox(left: left, right: right))
     }
 }
 
 public extension ManagedAtomic {
-    @Sendable func setLeft<Left: Sendable, Right: Sendable>(
-        _ lValue: Left
-    ) throws -> (Left, Right)? where Value == PairReference<Left, Right> {
+    @Sendable func setLeft<
+        Left: Sendable,
+        Right: Sendable
+    >(_ lValue: Left) throws -> (Left, Right)? where Value == PairBox<Left, Right> {
         let current = load(ordering: .acquiring)
         guard current.left == nil else { throw AlreadyWrittenError(Either<Left, Right>.left(current.left!)) }
         let (success, newCurrent) = compareExchange(
@@ -54,7 +58,7 @@ public extension ManagedAtomic {
     @Sendable func setRight<
         Left: Sendable,
         Right: Sendable
-    >(_ rValue: Right) throws -> (Left, Right)? where Value == PairReference<Left, Right> {
+    >(_ rValue: Right) throws -> (Left, Right)? where Value == PairBox<Left, Right> {
         let current = load(ordering: .acquiring)
         guard current.right == nil else { throw AlreadyWrittenError(Either<Left, Right>.right(current.right!)) }
         let (success, newCurrent) = compareExchange(

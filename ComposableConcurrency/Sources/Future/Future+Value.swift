@@ -19,6 +19,7 @@
 //  limitations under the License.
 //
 import Core
+import SendableAtomics
 
 extension Future {
     var value: Output {
@@ -26,7 +27,7 @@ extension Future {
     }
 
     var result: AsyncResult<Output, Swift.Error> {
-        get async { await futureValue.result }
+        get async { await futureValue.result.asyncResult }
     }
 
     var futureValue: Cancellable<Output> {

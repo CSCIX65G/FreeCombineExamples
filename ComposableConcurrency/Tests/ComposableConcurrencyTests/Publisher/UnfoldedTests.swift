@@ -22,6 +22,7 @@ import XCTest
 @testable import Core
 @testable import Future
 @testable import Publisher
+@testable import SendableAtomics
 
 class UnfoldedTests: XCTestCase {
 
@@ -30,8 +31,8 @@ class UnfoldedTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleUnfolded() async throws {
-        let expectation1 = await Promise<Void>()
-        let expectation2 = await Promise<Void>()
+        let expectation1 = AsyncPromise<Void>()
+        let expectation2 = AsyncPromise<Void>()
 
         let unfolded = UnfoldedSequence(0 ..< 10)
 
@@ -85,11 +86,13 @@ class UnfoldedTests: XCTestCase {
         }
         _ = await u1.result
         _ = await u2.result
+        _ = await expectation1.result
+        _ = await expectation2.result
     }
 
     func testVariableUnfolded() async throws {
-        let expectation1 = await Promise<Void>()
-        let expectation2 = await Promise<Void>()
+        let expectation1 = AsyncPromise<Void>()
+        let expectation2 = AsyncPromise<Void>()
 
         let unfolded = (0 ..< 10).asyncPublisher
 
@@ -143,5 +146,7 @@ class UnfoldedTests: XCTestCase {
         }
         let _ = await u1.result
         let _ = await u2.result
+        _ = await expectation1.result
+        _ = await expectation2.result
     }
 }

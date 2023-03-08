@@ -23,6 +23,7 @@
 import XCTest
 @testable import Core
 @testable import Future
+@testable import SendableAtomics
 
 final class AndTests: XCTestCase {
 
@@ -31,10 +32,10 @@ final class AndTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleAnd() async throws {
-        let expectation = await Promise<Void>()
-        let promise1 = await Promise<Int>()
+        let expectation = AsyncPromise<Void>()
+        let promise1 = AsyncPromise<Int>()
         let future1 = promise1.future
-        let promise2 = await Promise<String>()
+        let promise2 = AsyncPromise<String>()
         let future2 = promise2.future
 
         let andFuture = and(future1, future2)
@@ -45,13 +46,16 @@ final class AndTests: XCTestCase {
             }
             XCTAssert(left == 13, "Bad left value")
             XCTAssert(right == "m", "Bad right value")
-            do { try expectation.succeed() }
+            do {
+                try expectation.succeed()
+            }
             catch { XCTFail("expectation failed") }
         }
 
         try promise1.succeed(13)
         try promise2.succeed("m")
 
+        _ = try? await expectation.value
         _ = await cancellation.result
     }
 
@@ -60,10 +64,10 @@ final class AndTests: XCTestCase {
             case iFailed
         }
 
-        let expectation = await Promise<Void>()
-        let promise1 = await Promise<Int>()
+        let expectation = AsyncPromise<Void>()
+        let promise1 = AsyncPromise<Int>()
         let future1 = promise1.future
-        let promise2 = await Promise<String>()
+        let promise2 = AsyncPromise<String>()
         let future2 = promise2.future
 
         let andFuture = and(future1, future2)
@@ -78,27 +82,27 @@ final class AndTests: XCTestCase {
 
         try promise1.succeed(13)
         try promise2.fail(Error.iFailed)
-
+        _ = await expectation.result
         _ = await cancellation.result
     }
 
     func testComplexAnd() async throws {
-        let expectation = await Promise<Void>()
-        let promise1 = await Promise<Int>()
+        let expectation = AsyncPromise<Void>()
+        let promise1 = AsyncPromise<Int>()
         let future1 = promise1.future
-        let promise2 = await Promise<String>()
+        let promise2 = AsyncPromise<String>()
         let future2 = promise2.future
-        let promise3 = await Promise<Int>()
+        let promise3 = AsyncPromise<Int>()
         let future3 = promise3.future
-        let promise4 = await Promise<String>()
+        let promise4 = AsyncPromise<String>()
         let future4 = promise4.future
-        let promise5 = await Promise<Int>()
+        let promise5 = AsyncPromise<Int>()
         let future5 = promise5.future
-        let promise6 = await Promise<String>()
+        let promise6 = AsyncPromise<String>()
         let future6 = promise6.future
-        let promise7 = await Promise<Int>()
+        let promise7 = AsyncPromise<Int>()
         let future7 = promise7.future
-        let promise8 = await Promise<String>()
+        let promise8 = AsyncPromise<String>()
         let future8 = promise8.future
 
         let andFuture = and(future1, future2, future3, future4, future5, future6, future7, future8)

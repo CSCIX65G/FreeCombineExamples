@@ -27,9 +27,9 @@ final class FutureFoldTests: XCTestCase {
     // is correct regardless of the order of promise completion
     // and that all promises are running in parallel
     func testAsyncFoldOrdering() async throws {
-        var others = [Promise<Int>]()
+        var others = [AsyncPromise<Int>]()
         for _ in (0 ..< 10) {
-            let p = await Promise<Int>()
+            let p = AsyncPromise<Int>()
             others.append(p)
         }
         let this = Succeeded(0)
@@ -56,9 +56,9 @@ final class FutureFoldTests: XCTestCase {
     }
 
     func testAsyncFoldOrderingReversed() async throws {
-        var others = [Promise<Int>]()
+        var others = [AsyncPromise<Int>]()
         for _ in (0 ..< 10) {
-            let p = await Promise<Int>()
+            let p = AsyncPromise<Int>()
             others.append(p)
         }
         let this = Succeeded(0)
@@ -88,9 +88,9 @@ final class FutureFoldTests: XCTestCase {
         enum Error: Swift.Error, Equatable {
             case iFailed
         }
-        var others = [Promise<Int>]()
+        var others = [AsyncPromise<Int>]()
         for _ in (0 ..< 10) {
-            let p = await Promise<Int>()
+            let p = AsyncPromise<Int>()
             others.append(p)
         }
         let this = Succeeded(0)

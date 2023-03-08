@@ -19,6 +19,7 @@
 //  limitations under the License.
 //
 import Core
+import SendableAtomics
 
 public extension Publisher {
     func dropFirst(

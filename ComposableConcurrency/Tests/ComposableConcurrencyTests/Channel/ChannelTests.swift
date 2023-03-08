@@ -9,6 +9,7 @@ import XCTest
 @testable import Core
 @testable import Channel
 @testable import Future
+@testable import SendableAtomics
 
 final class ChannelTests: XCTestCase {
     override func setUpWithError() throws { }

@@ -48,7 +48,7 @@ public extension Publisher {
         self = .init { resumption, downstream  in
             let flattenedDownstream = flattener(downstream)
             return .init(function: function, file: file, line: line) {
-                resumption.resume()
+                try! resumption.resume()
                 for p in publishers {
                     try await p(flattenedDownstream).value
                 }
@@ -97,7 +97,7 @@ public extension Publisher {
         self = .init { resumption, downstream  in
             let flattenedDownstream = flattener(downstream)
             return .init(function: function, file: file, line: line) {
-                resumption.resume()
+                try! resumption.resume()
                 while let p = await flattening() { try await p(flattenedDownstream).value }
                 return try await downstream(.completion(.finished))
             }

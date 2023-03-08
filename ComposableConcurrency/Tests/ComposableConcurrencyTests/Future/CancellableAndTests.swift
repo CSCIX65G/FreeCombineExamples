@@ -2,6 +2,7 @@ import XCTest
 
 @testable import Core
 @testable import Future
+@testable import SendableAtomics
 
 final class CancellableAndTests: XCTestCase {
     override func setUpWithError() throws { }
@@ -9,8 +10,8 @@ final class CancellableAndTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleAnd() async throws {
-        let leftPromise: Promise<Int> = await .init()
-        let rightPromise: Promise<String> = await .init()
+        let leftPromise: AsyncPromise<Int> = .init()
+        let rightPromise: AsyncPromise<String> = .init()
 
         let anded = and(leftPromise.cancellable, rightPromise.cancellable)
 
@@ -35,8 +36,8 @@ final class CancellableAndTests: XCTestCase {
             case left
             case right
         }
-        let leftPromise: Promise<Int> = await .init()
-        let rightPromise: Promise<String> = await .init()
+        let leftPromise: AsyncPromise<Int> = .init()
+        let rightPromise: AsyncPromise<String> = .init()
 
         let anded = and(leftPromise.cancellable, rightPromise.cancellable)
 
@@ -63,8 +64,8 @@ final class CancellableAndTests: XCTestCase {
             case left
             case right
         }
-        let leftPromise: Promise<Int> = await .init()
-        let rightPromise: Promise<String> = await .init()
+        let leftPromise: AsyncPromise<Int> = .init()
+        let rightPromise: AsyncPromise<String> = .init()
 
         let anded = and(leftPromise.cancellable, rightPromise.cancellable)
 
@@ -74,7 +75,7 @@ final class CancellableAndTests: XCTestCase {
                 case .success:
                     XCTFail("Should not have received value")
                 case let .failure(error):
-                    guard error is CancellationError else {
+                    guard error is CancellationError || error is AlreadyWrittenError<Cancellables.Status> else {
                         XCTFail("received incorrect error: \(error)")
                         return
                     }

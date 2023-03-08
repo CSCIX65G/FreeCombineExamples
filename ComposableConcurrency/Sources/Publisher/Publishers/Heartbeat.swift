@@ -18,8 +18,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-import Dispatch
+import Clock
 import Core
+import Dispatch
 
 #if swift(>=5.7)
 @available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)
@@ -85,7 +86,7 @@ extension Publisher {
                 let start = clock.now
                 var ticks: Int64 = .zero
                 let components = interval.components
-                resumption.resume()
+                try resumption.resume()
                 do {
                     if tickAtStart { try await downstream(.value(clock.now)) }
                     while clock.now < (endingBefore ?? clock.now.advanced(by: .seconds(1))) {
@@ -95,7 +96,7 @@ extension Publisher {
                             until: start.advanced(by: fromStart),
                             tolerance: tolerance
                         )
-                        guard !Cancellables.isCancelled else {
+                        guard !Task.isCancelled else {
                             _ = try await downstream(.completion(.finished))
                             throw Publishers.Error.done
                         }

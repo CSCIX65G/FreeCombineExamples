@@ -14,9 +14,9 @@ final class FutureMapTests: XCTestCase {
     override func tearDownWithError() throws {  }
 
     func testSimpleFutureMap() async throws {
-        let expectation = await Promise<Void>()
+        let expectation = AsyncPromise<Void>()
 
-        let promise = await Promise<Int>()
+        let promise = AsyncPromise<Int>()
 
         let cancellation = await promise.future
             .map { $0 * 2 }

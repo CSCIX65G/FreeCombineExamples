@@ -47,9 +47,11 @@ extension MyOptional {
 struct Object<T> {
     let value: T
     init(_ value: T) { self.value = value }
-    func get() -> T { value }
     func apply<U>(_ f: (T) -> U) -> U { f(value) }
 }
+
+func pure<T>(_ t: T) -> Object<T> { .init(t) }
+func unpure<T>(_ o: Object<T>) -> T { o.value } // What a keypath does
 
 extension Object {
     func map<U>(_ f: (T) -> U) -> Object<U> {

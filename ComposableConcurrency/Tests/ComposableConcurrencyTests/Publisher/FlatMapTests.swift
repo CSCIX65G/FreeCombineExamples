@@ -22,6 +22,7 @@ import XCTest
 @testable import Core
 @testable import Future
 @testable import Publisher
+@testable import SendableAtomics
 
 class FlatMapTests: XCTestCase {
 
@@ -30,7 +31,7 @@ class FlatMapTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleFlatMap() async throws {
-        let expectation = await Promise<Void>()
+        let expectation = AsyncPromise<Void>()
 
         let checksum = Counter()
         let c1 = await UnfoldedSequence(0 ... 3)

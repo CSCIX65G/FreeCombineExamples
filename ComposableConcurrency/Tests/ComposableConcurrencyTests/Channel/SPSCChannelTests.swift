@@ -41,7 +41,7 @@ final class SPSCChannelTests: XCTestCase {
 
     func testSPSCChannelNonBlockingRead() async throws {
         let channel: SPSCSVChannel<Int> = .init(.none)
-        let promise = await Promise<Void>()
+        let promise = AsyncPromise<Void>()
 
         let reader = Cancellable<Void> {
             for _ in 0 ..< 100 {
@@ -66,11 +66,12 @@ final class SPSCChannelTests: XCTestCase {
         }
         _ = await reader.result
         _ = await writer.result
+        _ = await promise.result
     }
 
     func testSPSCChannelNonBlockingWrite() async throws {
         let channel: SPSCSVChannel<Int> = .init(.none)
-        let promise = await Promise<Void>()
+        let promise = AsyncPromise<Void>()
 
         let writer = Cancellable<Void> {
             for i in 0 ..< 100 {
@@ -90,6 +91,7 @@ final class SPSCChannelTests: XCTestCase {
         }
         _ = await reader.result
         _ = await writer.result
+        _ = await promise.result
     }
 
     func testSPSCChannelCancel() async throws {

@@ -20,6 +20,7 @@
 //
 import Core
 import Queue
+import SendableAtomics
 
 public struct InvocationError: Swift.Error, Sendable, Equatable { }
 
@@ -66,22 +67,22 @@ public extension ConcurrentFunc {
     }
 
     func callAsFunction(returnChannel: Queue<Next>, arg: Arg) throws -> Void {
-        try resumption.tryResume(returning: (returnChannel,.value(arg)))
+        try resumption.resume(returning: (returnChannel,.value(arg)))
     }
     func callAsFunction(returnChannel: Queue<Next>, error: Swift.Error) throws -> Void {
-        try resumption.tryResume(returning: (returnChannel, .completion(.failure(error))))
+        try resumption.resume(returning: (returnChannel, .completion(.failure(error))))
     }
     func callAsFunction(returnChannel: Queue<Next>, completion: Publishers.Completion) throws -> Void {
-        try resumption.tryResume(returning: (returnChannel, .completion(completion)))
+        try resumption.resume(returning: (returnChannel, .completion(completion)))
     }
     func callAsFunction(returnChannel: Queue<Next>, _ resultArg: Publisher<Arg>.Result) throws -> Void {
-        try resumption.tryResume(returning: (returnChannel, resultArg))
+        try resumption.resume(returning: (returnChannel, resultArg))
     }
 }
 
 public extension ConcurrentFunc where Arg == Void {
     func callAsFunction(returnChannel: Queue<Next>) -> Void {
-        resumption.resume(returning: (returnChannel, .value(())))
+        try! resumption.resume(returning: (returnChannel, .value(())))
     }
 }
 
@@ -107,7 +108,13 @@ public extension ConcurrentFunc {
 
             self.dispatch = asyncFunction
             self.cancellable = .init {
-                var (returnChannel, arg) = try await pause(resumption.resume)
+                var (returnChannel, arg) = try await pause(
+                    function: function,
+                    file: file,
+                    line: line
+                ) {
+                    try! resumption.resume(returning: $0)
+                }
                 var result = AsyncResult<Return, Swift.Error>.failure(InvocationError())
                 while true {
                     result = await AsyncResult { try await asyncFunction(arg) }
@@ -122,7 +129,7 @@ public extension ConcurrentFunc {
                                     .init(result: result, concurrentFunc: .init(dispatch: self, resumption: resumption))
                                 ) }
                                 catch {
-                                    resumption.resume(throwing: error)
+                                    try! resumption.resume(throwing: error)
                                 }
                             }
                     }
@@ -131,7 +138,7 @@ public extension ConcurrentFunc {
             }
         }
         public var result: AsyncResult<Return, Swift.Error> {
-            get async { await cancellable.result }
+            get async { await cancellable.result.asyncResult }
         }
         public var value: Return {
             get async throws { try await cancellable.value }

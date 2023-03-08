@@ -9,6 +9,7 @@ import XCTest
 @testable import Core
 @testable import Future
 @testable import Publisher
+@testable import SendableAtomics
 
 final class SelectTests: XCTestCase {
 
@@ -21,7 +22,7 @@ final class SelectTests: XCTestCase {
     }
 
     func testSimpleSelect() async throws {
-        let expectation = await Promise<Void>()
+        let expectation = AsyncPromise<Void>()
 
         let publisher1 = (0 ... 13).asyncPublisher
         let publisher2 = "abcdefghijklmnopqrstuvwxyz".asyncPublisher
@@ -47,10 +48,11 @@ final class SelectTests: XCTestCase {
             }
 
         _ = await m1.result
+        _ = await expectation.result
     }
 
     func testInlineSelect() async throws {
-        let expectation = await Promise<Void>()
+        let expectation = AsyncPromise<Void>()
 
         let fseq1 = (101 ... 150).asyncPublisher
         let fseq2 = (1 ... 100).asyncPublisher
@@ -77,5 +79,6 @@ final class SelectTests: XCTestCase {
             }
 
         _ = await c1.result
+        _ = await expectation.result
     }
 }

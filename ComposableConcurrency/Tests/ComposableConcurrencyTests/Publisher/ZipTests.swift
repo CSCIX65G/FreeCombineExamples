@@ -22,6 +22,7 @@ import XCTest
 @testable import Core
 @testable import Future
 @testable import Publisher
+@testable import SendableAtomics
 
 class ZipTests: XCTestCase {
 
@@ -34,7 +35,7 @@ class ZipTests: XCTestCase {
     }
 
     func testSimpleJustZip() async throws {
-        let promise = await Promise<Void>()
+        let promise = AsyncPromise<Void>()
 
         let publisher1 = Just(100)
         let publisher2 = Just("abcdefghijklmnopqrstuvwxyz")
@@ -69,7 +70,7 @@ class ZipTests: XCTestCase {
     }
 
     func testEmptyZip() async throws {
-        let promise = await Promise<Void>()
+        let promise = AsyncPromise<Void>()
 
         let publisher1 = Just(100)
         let publisher2 = Empty(String.self)
@@ -103,7 +104,7 @@ class ZipTests: XCTestCase {
     }
 
     func testSimpleSequenceZip() async throws {
-        let promise = await Promise<Void>()
+        let promise = AsyncPromise<Void>()
 
         let publisher1 = (0 ... 100).asyncPublisher
         let publisher2 = "abcdefghijklmnopqrstuvwxyz".asyncPublisher
@@ -133,9 +134,9 @@ class ZipTests: XCTestCase {
     }
 
     func testSimpleZipCancellation() async throws {
-        let expectation = await Promise<Void>()
-        let waiter = await Promise<Void>()
-        let startup = await Promise<Void>()
+        let expectation = AsyncPromise<Void>()
+        let waiter = AsyncPromise<Void>()
+        let startup = AsyncPromise<Void>()
 
         let publisher1 = (0 ... 100).asyncPublisher
         let publisher2 = "abcdefghijklmnopqrstuvwxyz".asyncPublisher
@@ -197,14 +198,19 @@ class ZipTests: XCTestCase {
             try startup.succeed()
             XCTFail("Should not have succeeded startup")
         } catch { }
+
+        _ = await expectation.result
+        _ = await waiter.result
+        _ = await startup.result
+        _ = await z1.result
     }
 
     func testMultiZipCancellation() async throws {
-        let expectation = await Promise<Void>()
-        let expectation2 = await Promise<Void>()
-        let waiter = await Promise<Void>()
-        let startup1 = await Promise<Void>()
-        let startup2 = await Promise<Void>()
+        let expectation = AsyncPromise<Void>()
+        let expectation2 = AsyncPromise<Void>()
+        let waiter = AsyncPromise<Void>()
+        let startup1 = AsyncPromise<Void>()
+        let startup2 = AsyncPromise<Void>()
 
         let publisher1 = UnfoldedSequence(0 ... 100)
         let publisher2 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
@@ -278,7 +284,7 @@ class ZipTests: XCTestCase {
     }
 
     func testSimpleZip() async throws {
-        let promise = await Promise<Void>()
+        let promise = AsyncPromise<Void>()
 
         let publisher1 = (0 ... 100).asyncPublisher
         let publisher2 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
@@ -310,7 +316,7 @@ class ZipTests: XCTestCase {
     }
 
     func testComplexZip() async throws {
-        let promise = await Promise<Void>()
+        let promise = AsyncPromise<Void>()
 
         let p1 = UnfoldedSequence(0 ... 100)
         let p2 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
@@ -349,8 +355,8 @@ class ZipTests: XCTestCase {
     }
 
     func testMultiComplexZip() async throws {
-        let promise1 = await Promise<Void>()
-        let promise2 = await Promise<Void>()
+        let promise1 = AsyncPromise<Void>()
+        let promise2 = AsyncPromise<Void>()
 
         let p1 = UnfoldedSequence(0 ... 100)
         let p2 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")

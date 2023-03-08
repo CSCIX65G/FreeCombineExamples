@@ -19,6 +19,7 @@
 //  limitations under the License.
 //
 import Core
+import SendableAtomics
 
 public extension Publisher {
     func reduce<T: Sendable>(
@@ -28,7 +29,7 @@ public extension Publisher {
         return .init { resumption, downstream in
             let currentValue: MutableBox<T> = MutableBox(value: initialValue)
             return self(onStartup: resumption) { r in
-                guard !Cancellables.isCancelled else {
+                guard !Task.isCancelled else {
                     return try await handleCancellation(of: downstream)
                 }
                 switch r {

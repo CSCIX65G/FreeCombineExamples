@@ -16,7 +16,7 @@ final class PromiseTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testPromiseSuccess() async throws {
-        let promise: Promise<Int> = await .init()
+        let promise: AsyncPromise<Int> = .init()
         let c: Cancellable<Void> = .init(operation: {
             do { try promise.succeed(13) }
             catch { XCTFail("Could not complete") }
@@ -34,7 +34,7 @@ final class PromiseTests: XCTestCase {
         enum Error: Swift.Error, Equatable {
             case iFailed
         }
-        let promise: Promise<Int> = await .init()
+        let promise: AsyncPromise<Int> = .init()
         let c: Cancellable<Void> = .init(operation: {
             do { try promise.fail(Error.iFailed) }
             catch { XCTFail("Could not complete") }
@@ -52,8 +52,8 @@ final class PromiseTests: XCTestCase {
     }
 
     func testSimplePromise() async throws {
-        let expectation = await Promise<Void>()
-        let promise = await Promise<Int>()
+        let expectation = AsyncPromise<Void>()
+        let promise = AsyncPromise<Int>()
         let cancellation = await promise.future
             .sink ({ result in
                 do { try expectation.succeed() }
@@ -78,8 +78,8 @@ final class PromiseTests: XCTestCase {
         enum PromiseError: Error, Equatable {
             case iFailed
         }
-        let expectation = await Promise<Void>()
-        let promise = await Promise<Int>()
+        let expectation = AsyncPromise<Void>()
+        let promise = AsyncPromise<Int>()
         let cancellation = await promise.future
             .sink { result in
                 do { try expectation.succeed() }
@@ -104,13 +104,13 @@ final class PromiseTests: XCTestCase {
     }
 
     func testMultipleSubscribers() async throws {
-        let promise = await Promise<Int>()
+        let promise = AsyncPromise<Int>()
         let max = 1_000
         let range = 0 ..< max
 
-        var pairs: [(Promise<Void>, Cancellable<Void>)] = .init()
+        var pairs: [(AsyncPromise<Void>, Cancellable<Void>)] = .init()
         for _ in range {
-            let expectation = await Promise<Void>()
+            let expectation = AsyncPromise<Void>()
             let cancellation = await promise.future
                 .map { $0 * 2 }
                 .sink ({ result in

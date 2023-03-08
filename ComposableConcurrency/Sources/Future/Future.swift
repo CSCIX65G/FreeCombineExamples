@@ -31,6 +31,7 @@
  to that.
  */
 import Core
+import SendableAtomics
 
 public struct Future<Output: Sendable>: Sendable {
     private let call: @Sendable (
@@ -55,7 +56,7 @@ public extension Future {
         _ downstream: @Sendable @escaping (AsyncResult<Output, Swift.Error>) async -> Void
     ) -> Cancellable<Void> {
         call(onStartup, { result in
-            guard !Cancellables.isCancelled else {
+            guard !Task.isCancelled else {
                 return await downstream(.failure(CancellationError()))
             }
             return await downstream(result)
@@ -91,12 +92,17 @@ public extension Future {
 
 public extension Future {
     func consume<A>(
-        into promise : UnbreakablePromise<AsyncResult<A, Swift.Error>>,
+        into promise : AsyncPromise<A>,
         with f: @Sendable @escaping (Output) -> A
     ) async -> Cancellable<Void> {
-        await self { switch $0 {
-            case let .success(value): try? promise(.success(f(value)))
-            case let .failure(error): try? promise(.failure(error))
-        } }
+        await self { result in
+            switch result {
+                case let .success(value):
+                    let a = f(value)
+                    try? promise.succeed(a)
+                case let .failure(error):
+                    try? promise.fail(error)
+            }
+        }
     }
 }

@@ -6,21 +6,20 @@
 //
 
 import XCTest
+@testable import Clock
 @testable import Core
 @testable import Future
 
 final class CancellableTests: XCTestCase {
 
-    override func setUpWithError() throws {
-        Assertion.runningTests = true
-    }
+    override func setUpWithError() throws { }
 
     override func tearDownWithError() throws { }
 
     func testIsCancelledThreadLocal() async throws {
-        let c = Cancellable<Void> {
+        let c = Cancellable<Void>(deinitBehavior: .cancel) {
             try? await Task.sleep(nanoseconds: Duration.seconds(10).inNanoseconds)
-            XCTAssert(Cancellables.isCancelled, "Not successfully cancelled")
+            XCTAssert(Task.isCancelled, "Not successfully cancelled")
         }
         XCTAssertNoThrow(try c.cancel(), "Couldn't cancel")
         let can: Void? = try? await c.value
@@ -32,25 +31,25 @@ final class CancellableTests: XCTestCase {
     }
 
     func testCancellable() async throws {
-        let expectation1 = await Promise<Void>()
-        let expectation2 = await Promise<Void>()
-        let expectation3 = await Promise<Void>()
+        let expectation1 = AsyncPromise<Void>()
+        let expectation2 = AsyncPromise<Void>()
+        let expectation3 = AsyncPromise<Void>()
 
-        let expectation1a = await Promise<Bool>()
-        let expectation2a = await Promise<Bool>()
-        let expectation3a = await Promise<Bool>()
+        let expectation1a = AsyncPromise<Bool>()
+        let expectation2a = AsyncPromise<Bool>()
+        let expectation3a = AsyncPromise<Bool>()
 
         var c: Cancellable<(Cancellable<Void>, Cancellable<Void>, Cancellable<Void>)>? = .none
         c = Cancellable {
-            let t1 = Cancellable() {
+            let t1 = Cancellable(deinitBehavior: .cancel) {
                 try await expectation1.value
                 try expectation1a.succeed(true)
             }
-            let t2 = Cancellable() {
+            let t2 = Cancellable(deinitBehavior: .cancel) {
                 try await expectation2.value
                 try expectation2a.succeed(true)
             }
-            let t3 = Cancellable() {
+            let t3 = Cancellable(deinitBehavior: .cancel) {
                 try await expectation3.value
                 try expectation3a.succeed(true)
             }

@@ -22,6 +22,7 @@ import XCTest
 @testable import Core
 @testable import Future
 @testable import Publisher
+@testable import SendableAtomics
 
 class CancellationTests: XCTestCase {
 
@@ -30,9 +31,9 @@ class CancellationTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleZipCancellation() async throws {
-        let expectation = await Promise<Void>()
-        let waiter = await Promise<Void>()
-        let startup = await Promise<Void>()
+        let expectation = AsyncPromise<Void>()
+        let waiter = AsyncPromise<Void>()
+        let startup = AsyncPromise<Void>()
 
         let publisher1 = (0 ... 100).asyncPublisher
         let publisher2 = "abcdefghijklmnopqrstuvwxyz".asyncPublisher
@@ -76,15 +77,16 @@ class CancellationTests: XCTestCase {
         try z1.cancel()
         try waiter.succeed()
 
+        _ = await expectation.result
         _ = await z1.result
     }
 
     func testMultiZipCancellation() async throws {
-        let expectation = await Promise<Void>()
-        let expectation2 = await Promise<Void>()
-        let waiter = await Promise<Void>()
-        let startup1 = await Promise<Void>()
-        let startup2 = await Promise<Void>()
+        let expectation = AsyncPromise<Void>()
+        let expectation2 = AsyncPromise<Void>()
+        let waiter = AsyncPromise<Void>()
+        let startup1 = AsyncPromise<Void>()
+        let startup2 = AsyncPromise<Void>()
 
         let publisher1 = UnfoldedSequence(0 ... 100)
         let publisher2 = UnfoldedSequence("abcdefghijklmnopqrstuvwxyz")
@@ -149,14 +151,17 @@ class CancellationTests: XCTestCase {
         try z2.cancel()
         try waiter.succeed()
 
+        _ = await expectation.result
+        _ = await expectation2.result
+
         _ = await z1.result
         _ = await z2.result
     }
 
     func testSimpleMergeCancellation() async throws {
-        let expectation = await Promise<Void>()
-        let waiter = await Promise<Void>()
-        let startup = await Promise<Void>()
+        let expectation = AsyncPromise<Void>()
+        let waiter = AsyncPromise<Void>()
+        let startup = AsyncPromise<Void>()
 
         let publisher1 = "zyxwvutsrqponmlkjihgfedcba".asyncPublisher
         let publisher2 = "abcdefghijklmnopqrstuvwxyz".asyncPublisher
@@ -197,6 +202,7 @@ class CancellationTests: XCTestCase {
         try await startup.value
         try z1.cancel()
         try waiter.succeed()
+        _ = await expectation.result
         _ = await z1.result
     }
 }

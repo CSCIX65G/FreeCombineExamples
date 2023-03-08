@@ -20,10 +20,12 @@
 //
 import Atomics
 
-public enum AsyncResult<Success: Sendable, Failure: Error>: Sendable {
+public enum AsyncResult<Success, Failure: Error> {
     case success(Success)
     case failure(Failure)
 }
+
+extension AsyncResult: Sendable where Success: Sendable { }
 
 public extension AsyncResult {
     init(_ result: Result<Success, Failure>) {
@@ -41,6 +43,13 @@ public extension AsyncResult {
     init(catching: () throws -> Success) where Failure == Swift.Error {
         do { self = try .success(catching()) }
         catch { self = .failure(error) }
+    }
+
+    var result: Result<Success, Failure> {
+        switch self {
+            case let .success(value): return .success(value)
+            case let .failure(error): return .failure(error)
+        }
     }
 
     func get() throws -> Success {
@@ -87,31 +96,6 @@ public extension AsyncResult {
     }
 }
 
-public extension AsyncResult where Failure == Swift.Error {
-    func set<R: AtomicValue>(
-        atomic: ManagedAtomic<R>,
-        from oldStatus: R,
-        to newStatus: R
-    ) -> Self {
-        .init {
-            let (success, original) = atomic.compareExchange(
-                expected: oldStatus,
-                desired: newStatus,
-                ordering: .sequentiallyConsistent
-            )
-            guard success else {
-                throw AtomicError.failedTransition(
-                    from: oldStatus,
-                    to: newStatus,
-                    current: original
-                )
-            }
-            return try get()
-        }
-    }
-}
-
-
 public extension Result {
     init(_ asyncResult: AsyncResult<Success, Failure>) {
         switch asyncResult {
@@ -119,4 +103,5 @@ public extension Result {
             case let .failure(error): self = .failure(error)
         }
     }
+    var asyncResult: AsyncResult<Success, Failure> { .init(self) }
 }

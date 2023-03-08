@@ -40,11 +40,11 @@ public extension Queue {
     ) async -> Cancellable<Void>  {
         await publisher { upstreamValue in
             try await pause(function: function, file: file, line: line) { resumption in
-                guard !Cancellables.isCancelled else {
-                    return resumption.resume(throwing: CancellationError())
+                guard !Task.isCancelled else {
+                    return try! resumption.resume(throwing: CancellationError())
                 }
                 do { try self.tryYield(action(upstreamValue, resumption)) }
-                catch { resumption.resume(throwing: error) }
+                catch { try! resumption.resume(throwing: error) }
             }
         }
     }
@@ -69,11 +69,11 @@ public extension AsyncStream.Continuation {
     ) async -> Cancellable<Void> where Element: Sendable {
         await publisher { upstreamValue in
             try await pause(function: function, file: file, line: line) { resumption in
-                guard !Cancellables.isCancelled else {
-                    return resumption.resume(throwing: CancellationError())
+                guard !Task.isCancelled else {
+                    return try! resumption.resume(throwing: CancellationError())
                 }
                 do { try self.tryYield(action(upstreamValue, resumption)) }
-                catch { resumption.resume(throwing: error) }
+                catch { try! resumption.resume(throwing: error) }
             }
         }
     }

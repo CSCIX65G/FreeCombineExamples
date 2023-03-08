@@ -24,8 +24,8 @@ public extension Cancellable {
     var future: Future<Output> {
         .init { resumption, downstream in
             .init {
-                resumption.resume()
-                await downstream(self.result)
+                try! resumption.resume()
+                await downstream(self.result.asyncResult)
             }
         }
     }

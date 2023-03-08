@@ -1,94 +1,83 @@
 //
 //  Uncancellable.swift
+//  
 //
+//  Created by Van Simmons on 2/12/23.
 //
-//  Created by Van Simmons on 9/7/22.
-//
-//  Copyright 2022, ComputeCycles, LLC
-//
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
-//
+import SendableAtomics
 import Atomics
 
 public enum Uncancellables {
-    enum Status: UInt8, Sendable, AtomicValue, Equatable {
-        case running
+    public enum LeakBehavior: UInt8, Sendable, AtomicValue, Equatable {
+        case assert
+        case fatal
+    }
+
+    public enum Status: UInt8, Sendable, AtomicValue, Equatable {
         case finished
-        case released
     }
 }
 
-extension ManagedAtomic: @unchecked Sendable { }
-
-public final class Uncancellable<Output: Sendable>: @unchecked Sendable {
+public final class Uncancellable<Output: Sendable>: Sendable {
     typealias Status = Uncancellables.Status
+
     private let function: StaticString
     private let file: StaticString
     private let line: UInt
+    private let deinitBehavior: Uncancellables.LeakBehavior
 
+    private let setStatus: @Sendable (Status) throws -> Void
     private let task: Task<Output, Never>
-    private let atomicStatus = ManagedAtomic<Status>(.running)
-
-    private var status: Status {
-        atomicStatus.load(ordering: .sequentiallyConsistent)
-    }
 
     private var leakFailureString: String {
-        "ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
+        "LEAKED \(type(of: Self.self)):\(self). CREATED in \(function) @ \(file): \(line)"
     }
 
     public init(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
-        released: Bool = false,
+        deinitBehavior: Uncancellables.LeakBehavior = .assert,
         operation: @Sendable @escaping () async -> Output
     ) {
+        let localSetStatus = Once<Status>().set
+
         self.function = function
         self.file = file
         self.line = line
-
-        atomicStatus.store(released ? .released : .running, ordering: .sequentiallyConsistent)
-        let atomic = atomicStatus
+        self.deinitBehavior = deinitBehavior
+        self.setStatus = localSetStatus
         self.task = .init {
-            let retValue = await operation()
-            (_, _) = atomic.compareExchange(expected: .running, desired: .finished, ordering: .sequentiallyConsistent)
-            return retValue
+            let value = await operation()
+            do { try localSetStatus(.finished) }
+            catch {
+                guard Output.self == Void.self else {
+                    fatalError("Cannot fail")
+                }
+                return value
+            }
+            return value
         }
     }
 
-    @Sendable public func release() throws {
-        try AsyncResult<Void, Swift.Error>.success(())
-            .set(atomic: atomicStatus, from: Status.running, to: Status.released)
-            .mapError {_ in ReleasedError() }
-            .get()
-    }
-
-    /*:
-     [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
-     */
     deinit {
-        guard status != .running else {
-            Assertion.assertionFailure(leakFailureString)
-            return
+        do { try setStatus(.finished) }
+        catch { return }
+        switch deinitBehavior {
+            case .assert: // Taking the NIO approach...
+                assertionFailure("ASSERTION FAILURE: \(self.leakFailureString)") // Taking the NIO approach
+            case .fatal:  // Taking the Chuck Norris approach
+                fatalError("FATAL ERROR: \(self.leakFailureString)")
         }
-    }
-
-    public var value: Output {
-        get async { await task.value }
     }
 }
 
-extension Uncancellable: Identifiable {
-    public var id: ObjectIdentifier { ObjectIdentifier(self) }
+public extension Uncancellable {
+    var value: Output { get async { await task.value } }
+}
+
+public extension Uncancellable where Output == Void {
+    func release() throws -> Void {
+        try setStatus(.finished)
+    }
 }

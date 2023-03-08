@@ -22,6 +22,7 @@ import XCTest
 @testable import Core
 @testable import Future
 @testable import Publisher
+@testable import SendableAtomics
 
 final class ShareTests: XCTestCase {
 
@@ -36,8 +37,8 @@ final class ShareTests: XCTestCase {
          is connected.  The second subscriber will see only those published
          values that occur after it subscribes.  In some cases it will see zero
          */
-        let promise1 = await Promise<Void>()
-        let promise2 = await Promise<Void>()
+        let promise1 = AsyncPromise<Void>()
+        let promise2 = AsyncPromise<Void>()
 
         let n = 100
         let upstreamCounter = Counter()
@@ -137,6 +138,7 @@ final class ShareTests: XCTestCase {
             let last = value2.value
             XCTFail("u2 Timed out count = \(counter2.count), last = \(last)")
         }
-
+        _ = await promise1.result
+        _ = await promise2.result
     }
 }

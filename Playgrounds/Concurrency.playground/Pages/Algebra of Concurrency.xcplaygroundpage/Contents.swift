@@ -1,4 +1,12 @@
 //: [Previous](@previous)
+
+/*:
+ # From SE-304:
+
+ All unstructured tasks are represented by a task handle, which can be used to retrieve the value (or thrown error) produced by the task, cancel the task, or perform queries of the task's status. A new task can be created with the Task { ... } initializer
+
+ Let's add to that...
+ */
 func pure<A>(_ a: A) -> Task<A, Never> {
     .init { a }
 }
@@ -13,10 +21,6 @@ func unpure<A>(_ t: Task<A, Never>) async -> A {
     await t.value
 }
 
-extension Task where Failure == Never {
-    func get() async -> Success { await value }
-}
-
 //func join<A>(_ outer: Task<Task<A, Never>, Never>) async -> Task<A, Never> {
 //    await outer.value
 //}
@@ -29,6 +33,7 @@ extension Task where Failure == Never {
 
 func unpureUnpure<A>(_ outer: Task<Task<A, Never>, Never>) async -> A {
     await outer.value.value
+    // await unpure(unpure(outer))
 }
 
 func forked<A, B>(_ f: @escaping (A) async -> B) -> (A) -> Task<B, Never> {
@@ -37,6 +42,24 @@ func forked<A, B>(_ f: @escaping (A) async -> B) -> (A) -> Task<B, Never> {
 
 func rejoined<A, B>(_ f: @escaping (A) -> Task<B, Never>) -> (A) async -> B {
     { a in await f(a).value }
+}
+
+func coalesceAsync<A, B, C>(
+    _ f: @escaping (A) async -> (B) async -> C
+) -> (A) -> (B) async -> C {
+    { a in { b in await f(a)(b) } }
+}
+
+func coalesceThrows<A, B, C>(
+    _ f: @escaping (A) throws -> (B) throws -> C
+) -> (A) -> (B) throws -> C {
+    { a in { b in try f(a)(b) } }
+}
+
+func coalesceThrows<A, B, C>(
+    _ f: @escaping (A) async throws -> (B) async throws -> C
+) -> (A) -> (B) async throws -> C {
+    { a in { b in try await f(a)(b) } }
 }
 
 // join = compose(unpureUnpure, pure)

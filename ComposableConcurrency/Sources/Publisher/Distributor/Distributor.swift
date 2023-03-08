@@ -20,6 +20,7 @@
 //
 import Core
 import Queue
+import SendableAtomics
 
 public struct SubscriptionError: Swift.Error, Sendable, Equatable { }
 
@@ -92,8 +93,8 @@ public extension Distributor {
                 try distributionFold.send(.subscribe(invocation, idResumption))
             }
             catch {
-                invocation.resumption.resume(throwing: error)
-                try? idResumption.tryResume(throwing: error)
+                try! invocation.resumption.resume(throwing: error)
+                try? idResumption.resume(throwing: error)
             }
         }
 
@@ -122,7 +123,7 @@ public extension Distributor {
     func send(_ value: Output) async throws {
         try await pause { resumption in
             do { try valueFold.send(.syncValue(.value(value), resumption)) }
-            catch {  resumption.resume(throwing: error) }
+            catch { try! resumption.resume(throwing: error) }
         }
     }
 
@@ -136,7 +137,7 @@ public extension Distributor {
     func finish(_ completion: Publishers.Completion = .finished) async throws {
         _ = try await pause { resumption in
             do { try valueFold.send(.syncCompletion(completion, resumption)) }
-            catch { resumption.resume(throwing: error) }
+            catch { try! resumption.resume(throwing: error) }
         }
         valueFold.finish()
         _ = await valueFold.result

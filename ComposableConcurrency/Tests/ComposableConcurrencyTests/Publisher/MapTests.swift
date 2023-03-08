@@ -30,7 +30,7 @@ class MapTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimplePublisherMap() async throws {
-        let expectation1 = await Promise<Void>()
+        let expectation1 = AsyncPromise<Void>()
 
         let just = Just(7)
 

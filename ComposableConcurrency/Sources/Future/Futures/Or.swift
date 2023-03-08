@@ -20,28 +20,50 @@
 //
 import Atomics
 import Core
-import Queue
+import SendableAtomics
 
 public func or<Left, Right>(
     _ left: Future<Left>,
     _ right: Future<Right>
 ) -> Future<Either<Left, Right>> {
-    .init { resumption, downstream in .init {
-        let promise = await UnbreakablePromise<AsyncResult<Either<Left, Right>, Swift.Error>>()
-        return try await withTaskCancellationHandler(
-            operation: {
-                let leftCancellable = await left.consume(into: promise, with: Either.sendableLeft)
-                let rightCancellable = await right.consume(into: promise, with: Either.sendableRight)
-                resumption.resume()
-                try await downstream(promise.value)
-                try? leftCancellable.cancel()
-                try? rightCancellable.cancel()
-            },
-            onCancel: {
-                try? promise(.failure(CancellationError()))
+    .init { resumption, downstream in
+        let promise = Promise<Either<Left, Right>>()
+        return .init {
+            let leftCancellable: Cancellable<Void> = await left { result in
+                switch result {
+                    case let .success(value):
+                        do { try promise.succeed(.left(value)) }
+                        catch { try? promise.fail(error) }
+                    case let .failure(error):
+                        try? promise.fail(error)
+                }
             }
-        )
-    } }
+
+            let rightCancellable: Cancellable<Void> = await right { result in
+                switch result {
+                    case let .success(value):
+                        do { try promise.succeed(.right(value)) }
+                        catch { try? promise.fail(error) }
+                    case let .failure(error):
+                        try? promise.fail(error)
+                }
+            }
+
+            try? resumption.resume()
+
+            await withTaskCancellationHandler(
+                operation: {
+                    let result = await promise.result.asyncResult
+                    try? leftCancellable.cancel()
+                    try? rightCancellable.cancel()
+                    return await downstream(result)
+                },
+                onCancel: {
+                    try? promise.fail(CancellationError())
+                }
+            )
+        }
+    }
 }
 
 @inlinable

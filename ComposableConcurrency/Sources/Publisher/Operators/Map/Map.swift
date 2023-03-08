@@ -28,7 +28,7 @@ public extension Publisher {
             self(onStartup: resumption) { r in switch r {
                 case .value(let a):
                     let b = await transform(a)
-                    try Cancellables.checkCancellation()
+                    try Task.checkCancellation()
                     return try await downstream(.value(b))
                 case let .completion(value):
                     return try await downstream(.completion(value))

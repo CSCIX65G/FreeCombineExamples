@@ -30,7 +30,7 @@ public extension Future {
         error: Swift.Error
     ) {
         self = .init { resumption, downstream in .init {
-            resumption.resume()
+            try! resumption.resume()
             return await downstream(.failure(error))
         } }
     }
@@ -49,7 +49,7 @@ public extension Future {
          generator: @Sendable @escaping () async -> Swift.Error
     ) {
         self = .init { resumption, downstream in  .init {
-            resumption.resume()
+            try! resumption.resume()
             return await downstream(.failure(generator()))
         } }
     }

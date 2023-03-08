@@ -20,6 +20,7 @@
 //
 import Core
 import Queue
+import SendableAtomics
 
 public struct Select<Left: Sendable, Right: Sendable>: Sendable {
     enum Current: Sendable {
@@ -72,13 +73,13 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
         switch (state.current) {
             case .nothing:
                 state.current = .hasLeft(value, resumption)
-                return Cancellables.isCancelled ? .completion(.failure(CancellationError())): .none
+                return Task.isCancelled ? .completion(.failure(CancellationError())): .none
             case .finished, .errored, .hasLeft, .hasRight:
                 fatalError("Invalid state")
         }
     }
     @Sendable static func reduceLeft(state: inout State, error: Swift.Error, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
-        resumption.resume(throwing: error)
+        try! resumption.resume(throwing: error)
         switch (state.current) {
             case .nothing:
                 state.current = .errored(error)
@@ -89,7 +90,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
     }
 
     @Sendable static func reduceLeft(state: inout State, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
-        resumption.resume(throwing: Publishers.Error.done)
+        try! resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
                 try? state.leftCancellable?.cancel()
@@ -104,13 +105,13 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
         switch (state.current) {
             case .nothing:
                 state.current = .hasRight(value, resumption)
-                return Cancellables.isCancelled ? .completion(.failure(CancellationError())) : .none
+                return Task.isCancelled ? .completion(.failure(CancellationError())) : .none
             case .finished, .errored, .hasRight, .hasLeft:
                 fatalError("Invalid state")
         }
     }
     @Sendable static func reduceRight(state: inout State, error: Swift.Error, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
-        resumption.resume(throwing: error)
+        try! resumption.resume(throwing: error)
         switch (state.current) {
             case .nothing:
                 state.current = .errored(error)
@@ -120,7 +121,7 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
         }
     }
     @Sendable static func reduceRight(state: inout State, resumption: Resumption<Void>) -> AsyncFolder<State, Action>.Effect {
-        resumption.resume(throwing: Publishers.Error.done)
+        try! resumption.resume(throwing: Publishers.Error.done)
         switch (state.current) {
             case .nothing:
                 try? state.rightCancellable?.cancel()
@@ -172,11 +173,11 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
                     try await state.downstream(.value(value))
                 }
                 .map {
-                    resumption.resume()
+                    try! resumption.resume()
                     return Select<Left, Right>.Current.nothing
                 }
                 .mapError {
-                    resumption.resume(throwing: $0)
+                    try! resumption.resume(throwing: $0)
                     return $0
                 }
                 .get()
@@ -196,8 +197,8 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
             case let .right(_, rResumption): resumption = rResumption
         }
         switch completion {
-            case .finished: resumption.resume(throwing: Publishers.Error.done)
-            case let .failure(error): resumption.resume(throwing: error)
+            case .finished: try! resumption.resume(throwing: Publishers.Error.done)
+            case let .failure(error): try! resumption.resume(throwing: error)
         }
     }
 
@@ -222,10 +223,10 @@ public struct Select<Left: Sendable, Right: Sendable>: Sendable {
         switch completion {
             case .finished:
                 _ = try? await state.downstream(.completion(.finished))
-                resumption?.resume(throwing: Publishers.Error.done)
+                try? resumption?.resume(throwing: Publishers.Error.done)
             case let .failure(error):
                 _ = try? await state.downstream(.completion(.failure(error)))
-                resumption?.resume(throwing: error)
+                try? resumption?.resume(throwing: error)
         }
         state.current = .nothing
     }

@@ -79,8 +79,38 @@ func fork<A, B>(
     { a in  Uncancellable { await f(a) } }
 }
 
+func fork<A, B>(
+    _ f: @Sendable @escaping (A) async throws -> B
+) -> (A) -> Cancellable<B> {
+    { a in  Cancellable { try await f(a) } }
+}
+
 func join<A, B>(
     _ f: @Sendable @escaping (A) async -> Uncancellable<B>
 ) -> (A) async -> B {
     { a in await f(a).value }
+}
+
+func join<A, B>(
+    _ f: @Sendable @escaping (A) async throws -> Cancellable<B>
+) -> (A) async throws -> B {
+    { a in try await f(a).value }
+}
+
+func coalesceEffects<A, B, C>(
+    _ f: @Sendable @escaping (A) async throws -> (B) async throws -> C
+) -> (A) -> (B) async throws -> C {
+    { a in { b in try await f(a)(b) } }
+}
+
+func coalesceEffects<A, B, C>(
+    _ f: @Sendable @escaping (A) throws -> (B) throws -> C
+) -> (A) -> (B) throws -> C {
+    { a in { b in try f(a)(b) } }
+}
+
+func coalesceEffects<A, B, C>(
+    _ f: @Sendable @escaping (A) async -> (B) async -> C
+) -> (A) -> (B) async -> C {
+    { a in { b in await f(a)(b) } }
 }

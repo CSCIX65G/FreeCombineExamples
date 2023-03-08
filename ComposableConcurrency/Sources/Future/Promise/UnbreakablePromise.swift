@@ -1,107 +1,88 @@
 //
-//  UnbreakablePromise.swift
-//  
+//  Promise.swift
 //
-//  Created by Van Simmons on 9/15/22.
 //
-//  Copyright 2022, ComputeCycles, LLC
-//
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+//  Created by Van Simmons on 2/15/23.
 //
 import Atomics
 import Core
+import SendableAtomics
 
-public enum UnbreakablePromises {
-    public enum Status: UInt8, Equatable, AtomicValue {
-        case waiting
-        case succeeded
-    }
-}
+public final class UnbreakablePromise<Value: Sendable>: Sendable {
+    public typealias Producer = Value
+    public typealias Consumer = @Sendable (Value) throws -> Void
 
-public final class UnbreakablePromise<Output: Sendable>: @unchecked Sendable {
-    typealias Status = UnbreakablePromises.Status
     private let function: StaticString
     private let file: StaticString
     private let line: UInt
+    private let deinitBehavior: Uncancellables.LeakBehavior
 
-    private let atomicStatus = ManagedAtomic<Status>(.waiting)
-    private let resumption: UnfailingResumption<Output>
+    private let setProducer: @Sendable (Producer) throws -> (Producer, Consumer)?
+    private let setConsumer: @Sendable (@escaping Consumer) throws -> (Producer, Consumer)?
 
-    public let uncancellable: Uncancellable<Output>
+    private var leakFailureString: String {
+        "LEAKED \(type(of: Self.self)):\(self). CREATED in \(function) @ \(file): \(line)"
+    }
 
     public init(
         function: StaticString = #function,
         file: StaticString = #file,
-        line: UInt = #line
-    ) async {
+        line: UInt = #line,
+        deinitBehavior: Uncancellables.LeakBehavior = .assert,
+        _ value: Value? = .none
+    ) {
+        let localPair = Pair<Producer, Consumer>.init(left: value)
+
         self.function = function
         self.file = file
         self.line = line
-        var uc: Uncancellable<Output>!
-        self.resumption = await unfailingPause { outer in
-            uc = .init(function: function, file: file, line: line) { await unfailingPause(outer.resume) }
-        }
-        self.uncancellable = uc
+        self.deinitBehavior = deinitBehavior
+        self.setProducer = localPair.setLeft
+        self.setConsumer = localPair.setRight
     }
 
-    var status: Status {
-        atomicStatus.load(ordering: .sequentiallyConsistent)
-    }
-
-    /*:
-     This is similar to how [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431) are treated
-     */
     deinit {
-        guard status != .waiting else {
-            Assertion.assertionFailure("ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)")
+        do {
+            _ = try setConsumer { _ in }
             return
         }
-    }
-
-    private func setSucceeded() throws -> UnfailingResumption<Output> {
-        let (success, original) = atomicStatus.compareExchange(
-            expected: Status.waiting,
-            desired: Status.succeeded,
-            ordering: .sequentiallyConsistent
-        )
-        guard success else {
-            throw AtomicError.failedTransition(
-                from: .waiting,
-                to: .succeeded,
-                current: original
-            )
+        catch {
+            switch deinitBehavior {
+                case .assert: // Taking the NIO approach...
+                    assertionFailure("ASSERTION FAILURE: \(self.leakFailureString)") // Taking the NIO approach
+                case .fatal:  // Taking the Chuck Norris approach
+                    fatalError("FATAL ERROR: \(self.leakFailureString)")
+            }
         }
-        return resumption
-    }
-}
-
-// async variables
-public extension UnbreakablePromise {
-    var value: Output {
-        get async throws { await uncancellable.value  }
     }
 }
 
 public extension UnbreakablePromise {
-    func succeed(_ arg: Output) throws {
-        try setSucceeded().resume(returning: arg)
+    func wait(with resumption: UnfailingResumption<Value>) throws -> Void {
+        try wait(with: resumption.resume(returning:))
     }
-    func callAsFunction(_ arg: Output) throws {
-        try succeed(arg)
+
+    func wait(with consumer: @escaping Consumer) throws -> Void {
+        guard let (result, _) = try setConsumer(consumer) else { return }
+        try consumer(result)
+    }
+
+    func succeed(_ value: Value) throws -> Void {
+        guard let (_, consumer) = try setProducer(value) else { return }
+        try? consumer(value)
+    }
+
+    var value: Value {
+        get async {
+            await unfailingPause(for: Value.self) { resumption in
+                guard let (result, _) = try? setConsumer(resumption.resume(returning:)) else { return }
+                try! resumption.resume(returning: result)
+            }
+        }
     }
 }
 
-public extension UnbreakablePromise where Output == Void {
+public extension UnbreakablePromise where Value == Void {
     func succeed() throws -> Void {
         try succeed(())
     }

@@ -13,7 +13,7 @@ public extension AsyncContinuation {
         .init { resumption, downstream in
             self(onStartup: resumption) { a in
                 let t = await transform(a)
-                try Cancellables.checkCancellation()
+                try Task.checkCancellation()
                 return try await downstream(t)
             }
         }

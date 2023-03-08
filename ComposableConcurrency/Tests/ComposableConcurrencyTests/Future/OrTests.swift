@@ -14,10 +14,10 @@ final class OrTests: XCTestCase {
     override func tearDownWithError() throws { }
 
     func testSimpleOr() async throws {
-        let expectation = await Promise<Void>()
-        let promise1 = await Promise<Int>()
+        let expectation = AsyncPromise<Void>()
+        let promise1 = AsyncPromise<Int>()
         let future1 = promise1.future
-        let promise2 = await Promise<Int>()
+        let promise2 = AsyncPromise<Int>()
         let future2 = promise2.future
 
         let orFuture = or(future1, future2)
@@ -39,6 +39,7 @@ final class OrTests: XCTestCase {
         try promise1.succeed(13)
         try promise2.succeed(14)
 
+        _ = await expectation.result
         _ = await cancellation.result
     }
 
@@ -47,10 +48,10 @@ final class OrTests: XCTestCase {
             case iFailed
         }
 
-        let expectation = await Promise<Void>()
-        let promise1 = await Promise<Int>()
+        let expectation = AsyncPromise<Void>()
+        let promise1 = AsyncPromise<Int>()
         let future1 = promise1.future
-        let promise2 = await Promise<Int>()
+        let promise2 = AsyncPromise<Int>()
         let future2 = promise2.future
 
         let orFuture = or(future1, future2)
@@ -66,26 +67,27 @@ final class OrTests: XCTestCase {
         try promise2.fail(Error.iFailed)
         try promise1.cancel()
 
+        _ = await expectation.result
         _ = await cancellation.result
     }
 
     func testComplexOr() async throws {
-        let expectation = await Promise<Void>()
-        let promise1 = await Promise<Int>()
+        let expectation = AsyncPromise<Void>()
+        let promise1 = AsyncPromise<Int>()
         let future1 = promise1.future
-        let promise2 = await Promise<Int>()
+        let promise2 = AsyncPromise<Int>()
         let future2 = promise2.future
-        let promise3 = await Promise<Int>()
+        let promise3 = AsyncPromise<Int>()
         let future3 = promise3.future
-        let promise4 = await Promise<Int>()
+        let promise4 = AsyncPromise<Int>()
         let future4 = promise4.future
-        let promise5 = await Promise<Int>()
+        let promise5 = AsyncPromise<Int>()
         let future5 = promise5.future
-        let promise6 = await Promise<Int>()
+        let promise6 = AsyncPromise<Int>()
         let future6 = promise6.future
-        let promise7 = await Promise<Int>()
+        let promise7 = AsyncPromise<Int>()
         let future7 = promise7.future
-        let promise8 = await Promise<Int>()
+        let promise8 = AsyncPromise<Int>()
         let future8 = promise8.future
 
         let orFuture = or(future1, future2, future3, future4, future5, future6, future7, future8)
@@ -119,6 +121,7 @@ final class OrTests: XCTestCase {
         try promise7.succeed(19)
         try promise8.succeed(20)
 
+        _ = await expectation.result
         _ = await cancellation.result
     }
 }

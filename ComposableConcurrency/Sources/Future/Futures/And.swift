@@ -21,6 +21,7 @@
 import Atomics
 import Core
 import Queue
+import SendableAtomics
 
 extension ManagedAtomic: @unchecked Sendable where Value: Sendable { }
 
@@ -28,45 +29,53 @@ extension ManagedAtomic: @unchecked Sendable where Value: Sendable { }
     _ left: Future<Left>,
     _ right: Future<Right>
 ) -> Future<(Left, Right)> {
-    .init { resumption, downstream in .init {
-        let queue = Queue<AsyncResult<(Left, Right), Swift.Error>>.init(buffering: .bufferingOldest(1))
-        return await withTaskCancellationHandler(
-            operation: {
-                var iterator = queue.stream.makeAsyncIterator()
-                let leftValue = ManagedAtomic(Box(value: Left?.none))
-                let rightValue = ManagedAtomic(Box(value: Right?.none))
-                let leftCancellable = await left { lResult in
-                    switch lResult {
-                        case let .failure(error):
-                            try? queue.tryYield(.failure(error))
-                        case let .success(lValue):
-                            _ = leftValue.exchange(.init(value: lValue), ordering: .sequentiallyConsistent)
-                            guard let rValue = rightValue.load(ordering: .sequentiallyConsistent).value else { return }
-                            try? queue.tryYield(.success((lValue, rValue)))
-                    }
-                    queue.finish()
+    .init { resumption, downstream in
+        let promise = Promise<(Left, Right)>()
+        let asyncPair = Pair<Left, Right>()
+        
+        return .init {
+            let leftCancellable: Cancellable<Void> = await left { result in
+                switch result {
+                    case let .success(value):
+                        do {
+                            guard let pair = try asyncPair.setLeft(value) else { return }
+                            try promise.succeed(pair)
+                        }
+                        catch { try? promise.fail(error) }
+                    case let .failure(error):
+                        try? promise.fail(error)
                 }
-                let rightCancellable = await right { rResult in
-                    switch rResult {
-                        case let .failure(error):
-                            try? queue.tryYield(.failure(error))
-                        case let .success(rValue):
-                            _ = rightValue.exchange(.init(value: rValue), ordering: .sequentiallyConsistent)
-                            guard let lValue = leftValue.load(ordering: .sequentiallyConsistent).value else { return }
-                            try? queue.tryYield(.success((lValue, rValue)))
-                    }
-                    queue.finish()
-                }
-                resumption.resume()
-                await downstream(iterator.next() ?? .failure(CancellationError()))
-                try? leftCancellable.cancel()
-                try? rightCancellable.cancel()
-            },
-            onCancel: {
-                try? queue.tryYield(.failure(CancellationError()))
             }
-        )
-    } }
+
+            let rightCancellable: Cancellable<Void> = await right { result in
+                switch result {
+                    case let .success(value):
+                        do {
+                            guard let pair = try asyncPair.setRight(value) else { return }
+                            try promise.succeed(pair)
+                        }
+                        catch { try? promise.fail(error) }
+                    case let .failure(error):
+                        try? promise.fail(error)
+                }
+            }
+
+            try? resumption.resume()
+
+            await withTaskCancellationHandler(
+                operation: {
+                    let result = await promise.result.asyncResult
+                    try? leftCancellable.cancel()
+                    try? rightCancellable.cancel()
+                    return await downstream(result)
+                },
+                onCancel: {
+                    try? promise.fail(CancellationError())
+                }
+            )
+        }
+
+    }
 }
 
 public func Anded<Left, Right>(

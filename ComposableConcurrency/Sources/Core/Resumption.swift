@@ -1,166 +1,109 @@
 //
 //  Resumption.swift
-//  UsingFreeCombine
 //
 //  Created by Van Simmons on 9/5/22.
 //
-//  Copyright 2022, ComputeCycles, LLC
-//
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
-//
 import Atomics
+import SendableAtomics
 
 enum Resumptions {
     enum Status: UInt8, AtomicValue, Equatable, Sendable {
-        case waiting
         case resumed
     }
 }
 
-public final class Resumption<Output: Sendable>: @unchecked Sendable {
-    typealias Status = Resumptions.Status
+public final class Resumption<Output: Sendable>: Sendable {
+    private typealias Status = Resumptions.Status
+
     private let function: StaticString
     private let file: StaticString
     private let line: UInt
 
-    private let atomicStatus = ManagedAtomic<Status>(.waiting)
+    private let deinitBehavior: Cancellables.LeakBehavior
+    private let status: @Sendable (Status) throws -> Void = Once<Status>().set
     private let continuation: UnsafeContinuation<Output, Swift.Error>
 
-    private var status: Status {
-        atomicStatus.load(ordering: .sequentiallyConsistent)
-    }
-
     private var leakFailureString: String {
-        "ABORTING DUE TO LEAKED \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
-    }
-
-    private var multipleResumeFailureString: String {
-        "ABORTING DUE TO PREVIOUS RESUMPTION: \(type(of: Self.self)):\(self)  CREATED in \(function) @ \(file): \(line)"
+        "LEAKED \(type(of: Self.self)):\(self). CREATED in \(function) @ \(file): \(line)"
     }
 
     public init(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
+        deinitBehavior: Cancellables.LeakBehavior = .assert,
         continuation: UnsafeContinuation<Output, Swift.Error>
     ) {
         self.function = function
         self.file = file
         self.line = line
+        self.deinitBehavior = deinitBehavior
         self.continuation = continuation
     }
 
-    /*:
-     [leaks of NIO EventLoopPromises](https://github.com/apple/swift-nio/blob/48916a49afedec69275b70893c773261fdd2cfde/Sources/NIOCore/EventLoopFuture.swift#L431)
-     */
     deinit {
-        guard status == .resumed else {
-            continuation.resume(throwing: LeakedError())
-            return
+        do { try status(.resumed) }
+        catch { return }
+        
+        switch deinitBehavior {
+            case .cancel: // Taking the combine approach...
+                continuation.resume(throwing: LeakedError())
+            case .assert: // Taking the NIO approach...
+                assertionFailure("ASSERTION FAILURE: \(self.leakFailureString)") // Taking the NIO approach
+            case .fatal:  // Taking the Chuck Norris approach
+                fatalError("FATAL ERROR: \(self.leakFailureString)")
         }
     }
+}
 
-    private func set(status newStatus: Status) -> AsyncResult<Void, Swift.Error> {
-        AsyncResult.success(()).set(atomic: self.atomicStatus, from: .waiting, to: newStatus)
+extension Resumption: Identifiable, Equatable, Hashable {
+    public var id: ObjectIdentifier { ObjectIdentifier(self) }
+
+    public static func == (lhs: Resumption<Output>, rhs: Resumption<Output>) -> Bool {
+        lhs.id == rhs.id
+    }
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self)
+    }
+}
+
+public extension Resumption {
+    @Sendable func resume(returning output: Output) throws -> Void {
+        try status(.resumed)
+        continuation.resume(returning: output)
     }
 
-    public func resume(returning output: Output) -> Void {
-        do { try tryResume(returning: output) }
-        catch { preconditionFailure(multipleResumeFailureString) }
+    @Sendable func resume(throwing error: Swift.Error) throws -> Void {
+        try status(.resumed)
+        continuation.resume(throwing: error)
     }
 
-    public func tryResume(returning output: Output) throws -> Void {
-        switch set(status: .resumed) {
-            case .success: return continuation.resume(returning: output)
-            case .failure(let error): throw error
-        }
-    }
-
-    public func resume(throwing error: Swift.Error) -> Void {
-        do { try tryResume(throwing: error) }
-        catch { preconditionFailure(multipleResumeFailureString) }
-    }
-
-    public func tryResume(throwing error: Swift.Error) throws -> Void {
-        switch set(status: .resumed) {
-            case .success: return continuation.resume(throwing: error)
-            case .failure(let error): throw error
+    @Sendable func resume(with result: Result<Output, Swift.Error>) throws -> Void {
+        try status(.resumed)
+        switch result {
+            case let .success(value): continuation.resume(returning: value)
+            case let .failure(error): continuation.resume(throwing: error)
         }
     }
 }
 
 public extension Resumption where Output == Void {
-    func resume() -> Void {
-        resume(returning: ())
-    }
-
-    func tryResume() throws -> Void {
-        try tryResume(returning: ())
+    @Sendable func resume() throws -> Void {
+        try resume(returning: ())
     }
 }
 
-extension Resumption: Identifiable {
-    public var id: ObjectIdentifier { .init(self) }
-}
-
-extension Resumption: Equatable {
-    public static func == (lhs: Resumption<Output>, rhs: Resumption<Output>) -> Bool {
-        lhs.id == rhs.id
-    }
-}
-
-extension Resumption: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(self.id)
-    }
-}
-
-@Sendable public func pause<Output>(
+public func pause<Output>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,
+    deinitBehavior: Cancellables.LeakBehavior = .assert,
     for: Output.Type = Output.self,
     _ resumingWith: (Resumption<Output>) -> Void
 ) async throws -> Output {
-    try await withUnsafeThrowingContinuation { resumption in
+    try await withUnsafeThrowingContinuation { continuation in
         resumingWith(
-            .init(
-                function: function,
-                file: file,
-                line: line,
-                continuation: resumption
-            )
+            .init(function: function, file: file, line: line, deinitBehavior: deinitBehavior, continuation: continuation)
         )
-    }
-}
-
-@Sendable public func futurePause<Output>(
-    function: StaticString = #function,
-    file: StaticString = #file,
-    line: UInt = #line,
-    for: Output.Type = Output.self,
-    _ resumingWith: @Sendable @escaping (Resumption<Output>) -> Void
-) -> Task<Output, Swift.Error> {
-    .init {
-        try await withUnsafeThrowingContinuation { resumption in
-            resumingWith(
-                .init(
-                    function: function,
-                    file: file,
-                    line: line,
-                    continuation: resumption
-                )
-            )
-        }
     }
 }

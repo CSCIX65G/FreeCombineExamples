@@ -22,12 +22,19 @@ public enum OneOfTwo<One, Two> {
     case one(One)
     case two(Two)
 }
+extension OneOfTwo: Sendable
+    where One: Sendable,
+        Two: Sendable { }
 
 public enum OneOfThree<One, Two, Three> {
     case one(One)
     case two(Two)
     case three(Three)
 }
+extension OneOfThree: Sendable
+    where One: Sendable,
+        Two: Sendable,
+        Three: Sendable { }
 
 public enum OneOfFour<One, Two, Three, Four> {
     case one(One)
@@ -35,6 +42,11 @@ public enum OneOfFour<One, Two, Three, Four> {
     case three(Three)
     case four(Four)
 }
+extension OneOfFour: Sendable
+    where One: Sendable,
+        Two: Sendable,
+        Three: Sendable,
+        Four: Sendable { }
 
 public enum OneOfFive<One, Two, Three, Four, Five> {
     case one(One)
@@ -43,6 +55,12 @@ public enum OneOfFive<One, Two, Three, Four, Five> {
     case four(Four)
     case five(Five)
 }
+extension OneOfFive: Sendable
+    where One: Sendable,
+        Two: Sendable,
+        Three: Sendable,
+        Four: Sendable,
+        Five: Sendable { }
 
 public enum OneOfSix<One, Two, Three, Four, Five, Six> {
     case one(One)
@@ -52,6 +70,13 @@ public enum OneOfSix<One, Two, Three, Four, Five, Six> {
     case five(Five)
     case six(Six)
 }
+extension OneOfSix: Sendable
+    where One: Sendable,
+        Two: Sendable,
+        Three: Sendable,
+        Four: Sendable,
+        Five: Sendable,
+        Six: Sendable { }
 
 public enum OneOfSeven<One, Two, Three, Four, Five, Six, Seven> {
     case one(One)
@@ -62,8 +87,16 @@ public enum OneOfSeven<One, Two, Three, Four, Five, Six, Seven> {
     case six(Six)
     case seven(Seven)
 }
+extension OneOfSeven: Sendable
+    where One: Sendable,
+        Two: Sendable,
+        Three: Sendable,
+        Four: Sendable,
+        Five: Sendable,
+        Six: Sendable,
+        Seven: Sendable { }
 
-public enum OneOfEight<One: Sendable, Two: Sendable, Three: Sendable, Four: Sendable, Five: Sendable, Six: Sendable, Seven: Sendable, Eight: Sendable>: Sendable {
+public enum OneOfEight<One, Two, Three, Four, Five, Six, Seven, Eight> {
     case one(One)
     case two(Two)
     case three(Three)
@@ -73,3 +106,12 @@ public enum OneOfEight<One: Sendable, Two: Sendable, Three: Sendable, Four: Send
     case seven(Seven)
     case eight(Eight)
 }
+extension OneOfEight: Sendable
+    where One: Sendable,
+        Two: Sendable,
+        Three: Sendable,
+        Four: Sendable,
+        Five: Sendable,
+        Six: Sendable,
+        Seven: Sendable,
+        Eight: Sendable { }
