@@ -198,6 +198,11 @@ class ZipTests: XCTestCase {
             try startup.succeed()
             XCTFail("Should not have succeeded startup")
         } catch { }
+
+        _ = await expectation.result
+        _ = await waiter.result
+        _ = await startup.result
+        _ = await z1.result
     }
 
     func testMultiZipCancellation() async throws {
