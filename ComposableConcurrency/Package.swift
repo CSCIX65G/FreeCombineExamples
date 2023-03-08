@@ -59,13 +59,15 @@ let package = Package(
         .target(
             name: "Continuation",
             dependencies: [
-                "Core"
+                "Core",
+                .product(name: "Atomics", package: "swift-atomics"),
             ]
         ),
         .target(
             name: "Func",
             dependencies: [
-                "Core"
+                "Core",
+                .product(name: "Atomics", package: "swift-atomics"),
             ]
         ),
         .target(
