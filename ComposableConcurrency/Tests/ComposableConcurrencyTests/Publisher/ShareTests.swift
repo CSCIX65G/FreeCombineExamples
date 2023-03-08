@@ -138,6 +138,7 @@ final class ShareTests: XCTestCase {
             let last = value2.value
             XCTFail("u2 Timed out count = \(counter2.count), last = \(last)")
         }
-
+        _ = await promise1.result
+        _ = await promise2.result
     }
 }

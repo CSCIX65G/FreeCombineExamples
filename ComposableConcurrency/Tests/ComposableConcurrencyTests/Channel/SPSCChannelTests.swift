@@ -66,6 +66,7 @@ final class SPSCChannelTests: XCTestCase {
         }
         _ = await reader.result
         _ = await writer.result
+        _ = await promise.result
     }
 
     func testSPSCChannelNonBlockingWrite() async throws {
@@ -90,6 +91,7 @@ final class SPSCChannelTests: XCTestCase {
         }
         _ = await reader.result
         _ = await writer.result
+        _ = await promise.result
     }
 
     func testSPSCChannelCancel() async throws {

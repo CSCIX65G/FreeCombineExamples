@@ -86,6 +86,8 @@ class UnfoldedTests: XCTestCase {
         }
         _ = await u1.result
         _ = await u2.result
+        _ = await expectation1.result
+        _ = await expectation2.result
     }
 
     func testVariableUnfolded() async throws {
@@ -144,5 +146,7 @@ class UnfoldedTests: XCTestCase {
         }
         let _ = await u1.result
         let _ = await u2.result
+        _ = await expectation1.result
+        _ = await expectation2.result
     }
 }

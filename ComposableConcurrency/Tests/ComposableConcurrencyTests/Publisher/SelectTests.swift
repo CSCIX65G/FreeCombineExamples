@@ -48,6 +48,7 @@ final class SelectTests: XCTestCase {
             }
 
         _ = await m1.result
+        _ = await expectation.result
     }
 
     func testInlineSelect() async throws {
@@ -78,5 +79,6 @@ final class SelectTests: XCTestCase {
             }
 
         _ = await c1.result
+        _ = await expectation.result
     }
 }

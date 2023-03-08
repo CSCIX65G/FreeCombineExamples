@@ -109,6 +109,7 @@ class SubjectTests: XCTestCase {
         }
         try await subject.finish()
         _ = await subject.result
+        _ = await expectation.result
     }
 
     func testSimpleTermination() async throws {
@@ -149,6 +150,7 @@ class SubjectTests: XCTestCase {
         }
         _ = await c1.result
         _ = await subject.result
+        _ = await expectation.result
     }
 
     func testSimpleSubjectSend() async throws {
@@ -189,6 +191,7 @@ class SubjectTests: XCTestCase {
         }
         _ = await c1.result
         _ = await subject.result
+        _ = await expectation.result
     }
 
     func testSyncAsync() async throws {
@@ -241,7 +244,7 @@ class SubjectTests: XCTestCase {
 
         _ = await fsubject1.result
         _ = await fsubject2.result
-
+        _ = await expectation.result
     }
 
     func testSimpleSubject() async throws {
@@ -293,6 +296,7 @@ class SubjectTests: XCTestCase {
         }
 
         _ = await c1.result
+        _ = await expectation.result
     }
 
     func testMultisubscriptionSubject() async throws {
@@ -366,5 +370,7 @@ class SubjectTests: XCTestCase {
         }
         _ = await c1.result
         _ = await c2.result
+        _ = await expectation1.result
+        _ = await expectation2.result
     }
 }

@@ -83,10 +83,10 @@ public final class DiscreteClock: Clock, @unchecked Sendable {
             ObjectIdentifier(resumption)
         }
         public func release() -> Void {
-            try! resumption.resume()
+            try! resumption.resume(with: .success(()))
         }
         public func fail(with error: Error) -> Void {
-            try! resumption.resume(throwing: error)
+            try! resumption.resume(with: .failure(error))
         }
     }
 
