@@ -18,7 +18,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-@Sendable public func void<T>(_ t: T) -> Void { }
+@Sendable public func void0() -> Void { }
+@Sendable public func void1<T>(_ t: T) -> Void { }
+@Sendable public func void2<T, U>(_ t: T, _ u: U) -> Void { }
 @Sendable public func identity<T>(_ t: T) -> T { return t }
 
 precedencegroup CompositionPrecedence {
@@ -75,13 +77,13 @@ func <*><A, B, C>(
 
 func fork<A, B>(
     _ f: @Sendable @escaping (A) async -> B
-) -> (A) -> Uncancellable<B> {
+) -> @Sendable (A) -> Uncancellable<B> {
     { a in  Uncancellable { await f(a) } }
 }
 
 func fork<A, B>(
     _ f: @Sendable @escaping (A) async throws -> B
-) -> (A) -> Cancellable<B> {
+) -> @Sendable (A) -> Cancellable<B> {
     { a in  Cancellable { try await f(a) } }
 }
 
@@ -93,24 +95,24 @@ func join<A, B>(
 
 func join<A, B>(
     _ f: @Sendable @escaping (A) async throws -> Cancellable<B>
-) -> (A) async throws -> B {
+) -> @Sendable (A) async throws -> B {
     { a in try await f(a).value }
 }
 
 func coalesceEffects<A, B, C>(
     _ f: @Sendable @escaping (A) async throws -> (B) async throws -> C
-) -> (A) -> (B) async throws -> C {
+) -> @Sendable (A) -> (B) async throws -> C {
     { a in { b in try await f(a)(b) } }
 }
 
 func coalesceEffects<A, B, C>(
     _ f: @Sendable @escaping (A) throws -> (B) throws -> C
-) -> (A) -> (B) throws -> C {
+) -> @Sendable (A) -> (B) throws -> C {
     { a in { b in try f(a)(b) } }
 }
 
 func coalesceEffects<A, B, C>(
     _ f: @Sendable @escaping (A) async -> (B) async -> C
-) -> (A) -> (B) async -> C {
+) -> @Sendable (A) -> (B) async -> C {
     { a in { b in await f(a)(b) } }
 }
