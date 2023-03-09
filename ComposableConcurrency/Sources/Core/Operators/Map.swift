@@ -19,7 +19,7 @@
 //  limitations under the License.
 //
 public extension Cancellable {
-    func map<T: Sendable>(
+    @Sendable func map<T: Sendable>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
@@ -34,7 +34,7 @@ public extension Cancellable {
 }
 
 extension Uncancellable {
-    public func map<T: Sendable>(
+    @Sendable public func map<T: Sendable>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,

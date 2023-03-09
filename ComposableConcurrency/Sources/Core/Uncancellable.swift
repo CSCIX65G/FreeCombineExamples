@@ -18,7 +18,7 @@ public enum Uncancellables {
     }
 }
 
-public final class Uncancellable<Output: Sendable>: Sendable {
+public final class Uncancellable<Output> {
     typealias Status = Uncancellables.Status
 
     private let function: StaticString
@@ -33,7 +33,7 @@ public final class Uncancellable<Output: Sendable>: Sendable {
         "LEAKED \(type(of: Self.self)):\(self). CREATED in \(function) @ \(file): \(line)"
     }
 
-    public init(
+    @Sendable public init(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
@@ -72,12 +72,14 @@ public final class Uncancellable<Output: Sendable>: Sendable {
     }
 }
 
+extension Uncancellable: Sendable where Output: Sendable { }
+
 public extension Uncancellable {
     var value: Output { get async { await task.value } }
 }
 
 public extension Uncancellable where Output == Void {
-    func release() throws -> Void {
+    @Sendable func release() throws -> Void {
         try setStatus(.finished)
     }
 }

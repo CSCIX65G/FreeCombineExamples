@@ -21,7 +21,7 @@
 import Foundation
 
 public extension Cancellable {
-    func flatMap<T: Sendable>(
+    @Sendable func flatMap<T: Sendable>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
@@ -32,7 +32,7 @@ public extension Cancellable {
 }
 
 extension Uncancellable {
-    public func flatMap<T: Sendable>(
+    @Sendable public func flatMap<T: Sendable>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,

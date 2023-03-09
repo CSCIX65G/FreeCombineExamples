@@ -12,7 +12,7 @@ enum Resumptions {
     }
 }
 
-public final class Resumption<Output: Sendable>: Sendable {
+public final class Resumption<Output>: Sendable {
     private typealias Status = Resumptions.Status
 
     private let function: StaticString
@@ -27,7 +27,7 @@ public final class Resumption<Output: Sendable>: Sendable {
         "LEAKED \(type(of: Self.self)):\(self). CREATED in \(function) @ \(file): \(line)"
     }
 
-    public init(
+    @Sendable public init(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line,
@@ -93,7 +93,7 @@ public extension Resumption where Output == Void {
     }
 }
 
-public func pause<Output>(
+@Sendable public func pause<Output>(
     function: StaticString = #function,
     file: StaticString = #file,
     line: UInt = #line,

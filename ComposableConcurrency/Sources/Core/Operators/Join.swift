@@ -19,7 +19,7 @@
 //  limitations under the License.
 //
 public extension Cancellable {
-    func join<T>(
+    @Sendable func join<T>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line
@@ -42,7 +42,7 @@ public extension Cancellable {
 }
 
 extension Uncancellable {
-    public func join<T>(
+    @Sendable public func join<T>(
         function: StaticString = #function,
         file: StaticString = #file,
         line: UInt = #line

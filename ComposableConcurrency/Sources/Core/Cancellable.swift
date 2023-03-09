@@ -22,7 +22,7 @@ public extension Cancellables {
     }
 }
 
-public final class Cancellable<Output: Sendable>: Sendable {
+public final class Cancellable<Output> {
     public typealias Status = Cancellables.Status
     public typealias LeakBehavior = Cancellables.LeakBehavior
 
@@ -72,6 +72,8 @@ public final class Cancellable<Output: Sendable>: Sendable {
         }
     }
 }
+
+extension Cancellable: Sendable where Output: Sendable { }
 
 public extension Cancellable {
     @Sendable func cancel() throws -> Void {
