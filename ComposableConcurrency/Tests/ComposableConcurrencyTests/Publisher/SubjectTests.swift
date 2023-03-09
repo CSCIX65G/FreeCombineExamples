@@ -110,6 +110,8 @@ class SubjectTests: XCTestCase {
         try await subject.finish()
         _ = await subject.result
         _ = await expectation.result
+        _ = await expectation3.result
+        _ = await release.result
     }
 
     func testSimpleTermination() async throws {

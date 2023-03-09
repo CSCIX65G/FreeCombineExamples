@@ -41,6 +41,7 @@ final class OrTests: XCTestCase {
 
         _ = await expectation.result
         _ = await cancellation.result
+        _ = await expectation.result
     }
 
     func testSimpleOrFailure() async throws {

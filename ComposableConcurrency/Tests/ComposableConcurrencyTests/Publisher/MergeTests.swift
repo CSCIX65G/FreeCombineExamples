@@ -58,6 +58,7 @@ class MergeTests: XCTestCase {
             }
 
         _ = await m1.result
+        _ = await expectation.result
     }
 
     func testInlineMerge() async throws {
@@ -83,5 +84,6 @@ class MergeTests: XCTestCase {
             })
 
         _ = await c1.result
+        _ = await expectation.result
     }
 }
