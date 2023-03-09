@@ -17,7 +17,7 @@ public struct Once<Value> {
 extension Once: Sendable where Value: Sendable { }
 
 private extension ManagedAtomic {
-    @Sendable convenience init<Once: Sendable>(once: Once.Type = Once.self) where Value == Box<Once>? {
+    convenience init<Once: Sendable>(once: Once.Type = Once.self) where Value == Box<Once>? {
         self.init(.none)
     }
 }

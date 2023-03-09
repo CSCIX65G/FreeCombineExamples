@@ -20,13 +20,13 @@
 //
 import Atomics
 
-public final class Box<Value: Sendable> {
+public final class Box<Value> {
     public let value: Value
     public init(value: Value) { self.value = value }
 }
 
 extension Box: AtomicReference { }
-extension Box: Sendable { }
+extension Box: Sendable where Value: Sendable { }
 
 extension Box: Identifiable {
     public var id: ObjectIdentifier { ObjectIdentifier(self) }
