@@ -67,6 +67,7 @@ class ZipTests: XCTestCase {
             XCTFail("Timed out, count = \(counter.count)")
         }
         _ = await c1.result
+        _ = await promise.result
     }
 
     func testEmptyZip() async throws {
@@ -101,6 +102,7 @@ class ZipTests: XCTestCase {
             XCTFail("Timed out, count = \(count)")
         }
         _ = await z1.result
+        _ = await promise.result
     }
 
     func testSimpleSequenceZip() async throws {
@@ -131,6 +133,7 @@ class ZipTests: XCTestCase {
         do { _ = try await promise.value }
         catch { XCTFail("Timed out, count = \(counter.count)") }
         _ = await z1.result
+        _ = await promise.result
     }
 
     func testSimpleZipCancellation() async throws {
@@ -279,6 +282,9 @@ class ZipTests: XCTestCase {
 
         _ = await expectation.result
         _ = await expectation2.result
+        _ = await waiter.result
+        _ = await startup1.result
+        _ = await startup2.result
         _ = await z1.result
         _ = await z2.result
     }
@@ -313,6 +319,7 @@ class ZipTests: XCTestCase {
         do { _ = try await promise.value }
         catch { XCTFail("Timed out, count = \(counter.count)") }
         _ = await z1.result
+        _ = await promise.result
     }
 
     func testComplexZip() async throws {
@@ -352,6 +359,7 @@ class ZipTests: XCTestCase {
         do { _ = try await promise.value }
         catch { XCTFail("Timed out, count = \(counter.count)") }
         let _ = await z1.result
+        _ = await promise.result
     }
 
     func testMultiComplexZip() async throws {
@@ -419,5 +427,7 @@ class ZipTests: XCTestCase {
         }
         _ = await z1.result
         _ = await z2.result
+        _ = await promise1.result
+        _ = await promise2.result
     }
 }
